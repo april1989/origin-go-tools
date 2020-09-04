@@ -42,7 +42,6 @@ func (prog *Program) MethodValue(sel *types.Selection) *Function {
 // LookupMethod returns the implementation of the method of type T
 // identified by (pkg, name).  It returns nil if the method exists but
 // is abstract, and panics if T has no such method.
-//
 func (prog *Program) LookupMethod(T types.Type, pkg *types.Package, name string) *Function {
 	sel := prog.MethodSets.MethodSet(T).Lookup(pkg, name)
 	if sel == nil {

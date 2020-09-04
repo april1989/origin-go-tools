@@ -35,7 +35,7 @@ func (a *analysis) solve() {
 
 		var x int
 		if !a.work.TakeMin(&x) {
-			break // empty
+			break // empty worklist
 		}
 		id := nodeid(x)
 		if a.log != nil {
@@ -109,7 +109,7 @@ func (a *analysis) processNewConstraints() {
 			// have other constraints attached.
 			// (A no-op in round 1.)
 			if !dst.solve.copyTo.IsEmpty() || len(dst.solve.complex) > 0 {
-				a.addWork(c.dst)
+				a.addWork(c.dst) //bz: add to worklist
 			}
 		}
 	}
@@ -125,7 +125,7 @@ func (a *analysis) processNewConstraints() {
 		case *copyConstraint:
 			// simple (copy) constraint
 			id = c.src
-			a.nodes[id].solve.copyTo.add(c.dst)
+			a.nodes[id].solve.copyTo.add(c.dst) //bz: ?? dst.solve.copyTo.add(src) ??
 		default:
 			// complex constraint
 			id = c.ptr()
@@ -232,7 +232,7 @@ func (a *analysis) onlineCopyN(dst, src nodeid, sizeof uint32) uint32 {
 	}
 	return sizeof
 }
-
+//bz: different solves for complex instructions
 func (c *loadConstraint) solve(a *analysis, delta *nodeset) {
 	var changed bool
 	for _, x := range delta.AppendTo(a.deltaSpace) {

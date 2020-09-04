@@ -83,8 +83,8 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 	// Due to context-sensitivity, we may encounter the same Value
 	// in many contexts. We merge them to a canonical node, since
 	// that's what all clients want.
-
-	// Record the (v, id) relation if the client has queried pts(v).
+    // bz: will this (merge) affect our precision ??
+	// Record the (v, id) relation if the client has queried pts(v). -> bz: just in case later user issues the same query again ...
 	if _, ok := a.config.Queries[v]; ok {
 		t := v.Type()
 		ptr, ok := a.result.Queries[v]
@@ -1204,7 +1204,7 @@ func (a *analysis) genFunc(cgn *cgnode) {
 	// since SSA may contain forward references.
 	var space [10]*ssa.Value
 	for _, b := range fn.Blocks {
-		for _, instr := range b.Instrs {
+		for _, instr := range b.Instrs { //
 			switch instr := instr.(type) {
 			case *ssa.Range:
 				// do nothing: it has a funky type,

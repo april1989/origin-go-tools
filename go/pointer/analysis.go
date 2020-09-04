@@ -287,9 +287,9 @@ func Analyze(config *Config) (result *Result, err error) {
 	if runtime := a.prog.ImportedPackage("runtime"); runtime != nil {
 		a.runtimeSetFinalizer = runtime.Func("SetFinalizer")
 	}
-	a.computeTrackBits()
+	a.computeTrackBits() //bz: use when there is input queries before running this analysis
 
-	a.generate()
+	a.generate() //bz: a preprocess for reflection/runtime/import libs
 	a.showCounts()
 
 	if optRenumber {
@@ -328,7 +328,7 @@ func Analyze(config *Config) (result *Result, err error) {
 		runtime.GC()
 	}
 
-	a.solve()
+	a.solve() //bz: officially starts here
 
 	// Compare solutions.
 	if optHVN && debugHVNCrossCheck {
@@ -361,7 +361,6 @@ func Analyze(config *Config) (result *Result, err error) {
 
 // callEdge is called for each edge in the callgraph.
 // calleeid is the callee's object node (has otFunction flag).
-//
 func (a *analysis) callEdge(caller *cgnode, site *callsite, calleeid nodeid) {
 	obj := a.nodes[calleeid].obj
 	if obj.flags&otFunction == 0 {

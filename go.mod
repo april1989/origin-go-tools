@@ -3,6 +3,7 @@ module golang.org/x/tools
 go 1.11
 
 require (
+	github.com/sirupsen/logrus v1.6.0
 	github.com/yuin/goldmark v1.2.1
 	golang.org/x/mod v0.3.0
 	golang.org/x/net v0.0.0-20200822124328-c89045814202
