@@ -17,6 +17,7 @@ import (
 
 	"golang.org/x/tools/go/callgraph"
 	"golang.org/x/tools/go/ssa"
+	"strings"
 )
 
 var (
@@ -154,6 +155,10 @@ func (a *analysis) endObject(obj nodeid, cgn *cgnode, data interface{}) *object 
 func (a *analysis) makeFunctionObject(fn *ssa.Function, callersite *callsite) nodeid {
 	if a.log != nil {
 		fmt.Fprintf(a.log, "\t---- makeFunctionObject %s\n", fn)
+
+		//if strings.Contains(fn.String(), "command-line-arguments") {
+		//	fmt.Println(fn.String())
+		//}
 	}
 
 	// obj is the function object (identity, params, results).
@@ -581,7 +586,44 @@ func (a *analysis) shouldUseContext(fn *ssa.Function) bool {
 	return true
 }
 
+//bz: !!!!! brute force solution
+//temporarily use "command-line-arguments" to find app methods ... need to update
+func (a *analysis) genCallSiteSensitiveCall(caller *cgnode, site *callsite, call *ssa.CallCommon, result nodeid) {
+	fn := call.StaticCallee()
+	var obj nodeid //bz: we always need a new contour
+	obj = a.makeFunctionObject(fn, site) // new contour
+
+	a.callEdge(caller, site, obj)
+
+	sig := call.Signature()
+
+	// Copy receiver, if any.
+	params := a.funcParams(obj)
+	args := call.Args
+	if sig.Recv() != nil {
+		sz := a.sizeof(sig.Recv().Type())
+		a.copy(params, a.valueNode(args[0]), sz)
+		params += nodeid(sz)
+		args = args[1:]
+	}
+
+	// Copy actual parameters into formal params block.
+	// Must loop, since the actuals aren't contiguous.
+	for i, arg := range args {
+		sz := a.sizeof(sig.Params().At(i).Type())
+		a.copy(params, a.valueNode(arg), sz)
+		params += nodeid(sz)
+	}
+
+	// Copy formal results block to actual result.
+	if result != 0 {
+		a.copy(result, a.funcResults(obj), a.sizeof(sig.Results()))
+	}
+}
+
+//  ------------- bz : the following several functions generata constraints for method calls --------------
 // genStaticCall generates constraints for a statically dispatched function call.
+// bz: force call site here
 func (a *analysis) genStaticCall(caller *cgnode, site *callsite, call *ssa.CallCommon, result nodeid) {
 	fn := call.StaticCallee()
 
@@ -607,8 +649,14 @@ func (a *analysis) genStaticCall(caller *cgnode, site *callsite, call *ssa.CallC
 		return
 	}
 
+	if a.config.CallSiteSensitive == true && strings.Contains(fn.String(), "command-line-arguments") {
+		fmt.Println("CAUGHT -- " + fn.String())
+		a.genCallSiteSensitiveCall(caller, site, call, result)
+		return
+	}
+
 	// Ascertain the context (contour/cgnode) for a particular call.
-	var obj nodeid
+	var obj nodeid //bz: we always need a new contour
 	if a.shouldUseContext(fn) {
 		obj = a.makeFunctionObject(fn, site) // new contour
 	} else {
@@ -643,6 +691,7 @@ func (a *analysis) genStaticCall(caller *cgnode, site *callsite, call *ssa.CallC
 }
 
 // genDynamicCall generates constraints for a dynamic function call.
+// bz: force call site here
 func (a *analysis) genDynamicCall(caller *cgnode, site *callsite, call *ssa.CallCommon, result nodeid) {
 	// pts(targets) will be the set of possible call targets.
 	site.targets = a.valueNode(call.Value)
@@ -809,7 +858,7 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 				a.endObject(obj, nil, v)
 
 			case *ssa.Function:
-				obj = a.makeFunctionObject(v, nil)
+				obj = a.makeFunctionObject(v, nil) //bz: create cgnode here with call site; what can we do for offline?
 
 			case *ssa.Const:
 				// not addressable
@@ -1157,6 +1206,9 @@ func (a *analysis) genFunc(cgn *cgnode) {
 
 	if a.log != nil {
 		fmt.Fprintf(a.log, "\n\n==== Generating constraints for %s, %s\n", cgn, cgn.contour())
+		//if strings.Contains(cgn.String(), "command-line-arguments") {
+		//	fmt.Println(cgn.String())
+		//}
 
 		// Hack: don't display body if intrinsic.
 		if impl != nil {

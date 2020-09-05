@@ -19,6 +19,7 @@ type solverState struct {
 	prevPTS nodeset      // pts(n) in previous iteration (for difference propagation)
 }
 
+//bz: start to change here
 func (a *analysis) solve() {
 	start("Solving")
 	if a.log != nil {

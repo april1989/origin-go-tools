@@ -66,7 +66,7 @@ type object struct {
 
 	// The call-graph node (=context) in which this object was allocated.
 	// May be nil for global objects: Global, Const, some Functions.
-	cgn *cgnode
+	cgn *cgnode //bz: -> make call-site sensitive here
 }
 
 // nodeid denotes a node.
@@ -88,7 +88,7 @@ type node struct {
 	// (addressable memory location).
 	// The following obj.size nodes implicitly belong to the object;
 	// they locate their object by scanning back.
-	obj *object
+	obj *object //bz: see type object in this package
 
 	// The type of the field denoted by this node.  Non-aggregate,
 	// unless this is an tagged.T node (i.e. the thing
@@ -111,11 +111,11 @@ type analysis struct {
 	prog        *ssa.Program                // the program being analyzed
 	log         io.Writer                   // log stream; nil to disable
 	panicNode   nodeid                      // sink for panic, source for recover
-	nodes       []*node                     // indexed by nodeid
+	nodes       []*node                     // indexed by nodeid --> bz: pointer/reference/var
 	flattenMemo map[types.Type][]*fieldInfo // memoization of flatten()
 	trackTypes  map[types.Type]bool         // memoization of shouldTrack()
 	constraints []constraint                // set of constraints
-	cgnodes     []*cgnode                   // all cgnodes
+	cgnodes     []*cgnode                   // all cgnodes       --> bz: nodes in cg; will copy to callgraph.cg at the end
 	genq        []*cgnode                   // queue of functions to generate constraints for
 	intrinsics  map[*ssa.Function]intrinsic // non-nil values are summaries for intrinsic fns
 	globalval   map[ssa.Value]nodeid        // node for each global ssa.Value
@@ -287,10 +287,10 @@ func Analyze(config *Config) (result *Result, err error) {
 	if runtime := a.prog.ImportedPackage("runtime"); runtime != nil {
 		a.runtimeSetFinalizer = runtime.Func("SetFinalizer")
 	}
-	a.computeTrackBits() //bz: use when there is input queries before running this analysis
+	a.computeTrackBits() //bz: use when there is input queries before running this analysis; we do not need this
 
 	a.generate() //bz: a preprocess for reflection/runtime/import libs
-	a.showCounts()
+	a.showCounts() //bz: print out size ...
 
 	if optRenumber {
 		a.renumber()
@@ -298,7 +298,7 @@ func Analyze(config *Config) (result *Result, err error) {
 
 	N := len(a.nodes) // excludes solver-created nodes
 
-	if optHVN {
+	if optHVN { //bz: turned off in default
 		if debugHVNCrossCheck {
 			// Cross-check: run the solver once without
 			// optimization, once with, and compare the

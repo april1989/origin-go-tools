@@ -13,6 +13,7 @@ import (
 	"golang.org/x/tools/go/ssa"
 )
 
+//bz: this is the cg node created by pointer analysis here -> we force to use callersite
 type cgnode struct {
 	fn         *ssa.Function
 	obj        nodeid      // start of this contour's object block
@@ -39,7 +40,7 @@ func (n *cgnode) String() string {
 // it is implicitly context-sensitive.
 // callsites never represent calls to built-ins;
 // they are handled as intrinsics.
-//
+// bz: this is the call site we used
 type callsite struct {
 	targets nodeid              // pts(·) contains objects for dynamically called functions
 	instr   ssa.CallInstruction // the call instruction; nil for synthetic/intrinsic

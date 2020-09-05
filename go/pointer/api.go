@@ -68,6 +68,8 @@ type Config struct {
 	// If Log is non-nil, log messages are written to it.
 	// Logging is extremely verbose.
 	Log io.Writer
+
+	CallSiteSensitive bool
 }
 
 type track uint32
