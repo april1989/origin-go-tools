@@ -592,6 +592,8 @@ func (a *analysis) genCallSiteSensitiveCall(caller *cgnode, site *callsite, call
 	var obj nodeid //bz: we always need a new contour
 	obj = a.makeFunctionObject(fn, site) // new contour
 
+	fmt.Println("       K-CALLSITE -- " + a.nodes[obj].obj.cgn.contourKfull()) //debug
+
 	a.callEdge(caller, site, obj)
 
 	sig := call.Signature()
@@ -648,9 +650,9 @@ func (a *analysis) genStaticCall(caller *cgnode, site *callsite, call *ssa.CallC
 		return
 	}
 
-	//bz: simple solution
+	//bz: simple solution TODO: why it is command-line-argument ???
 	if a.config.CallSiteSensitive == true && strings.Contains(fn.String(), "command-line-arguments") {
-		fmt.Println("CAUGHT -- " + fn.String())
+		fmt.Println("CAUGHT APP METHOD -- " + fn.String())
 		a.genCallSiteSensitiveCall(caller, site, call, result)
 		return
 	}
@@ -858,7 +860,7 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 				a.endObject(obj, nil, v)
 
 			case *ssa.Function:
-				obj = a.makeFunctionObject(v, nil) //bz: create cgnode here with call site; what can we do for offline?
+				obj = a.makeFunctionObject(v, nil) //bz: create cgnode here with call site
 
 			case *ssa.Const:
 				// not addressable
@@ -1181,10 +1183,13 @@ func (a *analysis) makeCGNode(fn *ssa.Function, obj nodeid, callersite *callsite
 			return cgn
 		}
 	}
-	return nil
-	//cgn := &cgnode{fn: fn, obj: obj, callersite: callersite}
-	//a.cgnodes = append(a.cgnodes, cgn)
-	//return cgn
+
+	//bz: context-insensitive default code;
+	//-> the same with 1callsite, where callersite can be null
+	singlecs := a.createSingleCallSite(callersite)
+	cgn := &cgnode{fn: fn, obj: obj, callersite: singlecs}
+	a.cgnodes = append(a.cgnodes, cgn)
+	return cgn
 }
 
 //bz: create a kcallsite array with a single element

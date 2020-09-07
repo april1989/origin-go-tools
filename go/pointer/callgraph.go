@@ -22,15 +22,45 @@ type cgnode struct {
 }
 
 // contour returns a description of this node's contour.
+//bz: only used for log
 func (n *cgnode) contour() string {
 	//bz: adjust to kcfa, only showing the most recent callersite info
-	if n.callersite == nil {
+	if n.callersite == nil || len(n.callersite) == 0 || n.callersite[0] == nil{
 		return "shared contour"
 	}
 	if n.callersite[0].instr != nil {
-		return fmt.Sprintf("as called from %s", n.callersite[0].instr.Parent())
+		//return fmt.Sprintf("as called from %s", n.callersite.instr.Parent())
+		return fmt.Sprintf("as called from %s", n.contourKinstr())
 	}
-	return fmt.Sprintf("as called from intrinsic (targets=n%d)", n.callersite[0].targets)
+	//return fmt.Sprintf("as called from intrinsic (targets=n%d)", n.callersite.targets)
+	return fmt.Sprintf("as called from intrinsic (targets=n%d)", n.contourKtargets())
+}
+
+//bz: adjust contour()  to kcfa
+func (n *cgnode) contourKinstr() string {
+	var s string
+	for _, cs := range n.callersite {
+		s = s + cs.instr.Parent().String() + "; "
+	}
+	return s
+}
+
+//bz: adjust contour()  to kcfa
+func (n *cgnode) contourKtargets() string {
+	var s string
+	for _, cs := range n.callersite {
+		s = s + cs.targets.String() + "; "
+	}
+	return s
+}
+
+//bz: adjust contour()  to kcfa
+func (n *cgnode) contourKfull() string {
+	var s string
+	for _, cs := range n.callersite {
+		s = s + cs.instr.String() + "@" + cs.instr.Parent().String() + "; "
+	}
+	return s
 }
 
 func (n *cgnode) String() string {

@@ -89,5 +89,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer logfile.Close()
+	log.SetOutput(logfile)
 	fmt.Println("Done  -- PTA/CG Build; Go check gologfile for detail. " + strconv.Itoa(len(result.CallGraph.Nodes)))
 }

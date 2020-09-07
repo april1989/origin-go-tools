@@ -1023,7 +1023,7 @@ func ext۰reflect۰ChanOf(a *analysis, cgn *cgnode) {
 	// only generate the requested direction.
 	var dir reflect.ChanDir // unknown
 	if site := cgn.callersite; site != nil {
-		if c, ok := site.instr.Common().Args[0].(*ssa.Const); ok {
+		if c, ok := site[0].instr.Common().Args[0].(*ssa.Const); ok { //bz: adjust to kcfa
 			v, _ := constant.Int64Val(c.Value)
 			if 0 <= v && v <= int64(reflect.BothDir) {
 				dir = reflect.ChanDir(v)
@@ -1332,7 +1332,7 @@ func ext۰reflect۰NewAt(a *analysis, cgn *cgnode) {
 
 	// TODO(adonovan): also report dynamic calls to unsound intrinsics.
 	if site := cgn.callersite; site != nil {
-		a.warnf(site.pos(), "unsound: %s contains a reflect.NewAt() call", site.instr.Parent())
+		a.warnf(site[0].pos(), "unsound: %s contains a reflect.NewAt() call", site[0].instr.Parent()) //bz: adjust to kcfa
 	}
 }
 
@@ -1667,7 +1667,7 @@ func ext۰reflect۰rtype۰FieldByName(a *analysis, cgn *cgnode) {
 	// return only that field.
 	var name string
 	if site := cgn.callersite; site != nil {
-		if c, ok := site.instr.Common().Args[0].(*ssa.Const); ok {
+		if c, ok := site[0].instr.Common().Args[0].(*ssa.Const); ok { //bz: adjust to kcfa
 			name = constant.StringVal(c.Value)
 		}
 	}
@@ -1750,7 +1750,7 @@ func ext۰reflect۰rtype۰InOut(a *analysis, cgn *cgnode, out bool) {
 	// return only that parameter.
 	index := -1
 	if site := cgn.callersite; site != nil {
-		if c, ok := site.instr.Common().Args[0].(*ssa.Const); ok {
+		if c, ok := site[0].instr.Common().Args[0].(*ssa.Const); ok {//bz: adjust to kcfa
 			v, _ := constant.Int64Val(c.Value)
 			index = int(v)
 		}
@@ -1909,7 +1909,7 @@ func ext۰reflect۰rtype۰MethodByName(a *analysis, cgn *cgnode) {
 	// return only that method.
 	var name string
 	if site := cgn.callersite; site != nil {
-		if c, ok := site.instr.Common().Args[0].(*ssa.Const); ok {
+		if c, ok := site[0].instr.Common().Args[0].(*ssa.Const); ok { //bz: adjust to kcfa
 			name = constant.StringVal(c.Value)
 		}
 	}
