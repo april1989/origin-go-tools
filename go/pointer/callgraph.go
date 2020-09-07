@@ -13,23 +13,24 @@ import (
 	"golang.org/x/tools/go/ssa"
 )
 
-//bz: this is the cg node created by pointer analysis here -> we force to use callersite
+//bz: this is the cg node created by pointer analysis -> we force to use k callersite
 type cgnode struct {
 	fn         *ssa.Function
 	obj        nodeid      // start of this contour's object block
 	sites      []*callsite // ordered list of callsites within this function
-	callersite *callsite   // where called from, if known; nil for shared contours
+	callersite []*callsite   // where called from, if known; nil for shared contours ----> bz: k-caller site
 }
 
 // contour returns a description of this node's contour.
 func (n *cgnode) contour() string {
+	//bz: adjust to kcfa, only showing the most recent callersite info
 	if n.callersite == nil {
 		return "shared contour"
 	}
-	if n.callersite.instr != nil {
-		return fmt.Sprintf("as called from %s", n.callersite.instr.Parent())
+	if n.callersite[0].instr != nil {
+		return fmt.Sprintf("as called from %s", n.callersite[0].instr.Parent())
 	}
-	return fmt.Sprintf("as called from intrinsic (targets=n%d)", n.callersite.targets)
+	return fmt.Sprintf("as called from intrinsic (targets=n%d)", n.callersite[0].targets)
 }
 
 func (n *cgnode) String() string {

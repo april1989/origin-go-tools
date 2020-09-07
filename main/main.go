@@ -82,6 +82,7 @@ func main() {
 		BuildCallGraph: true,
 		Log:            logfile,
 		CallSiteSensitive: true,
+		K: 1,
 	}
 
 	result, err := pointer.Analyze(ptaConfig) // conduct pointer analysis

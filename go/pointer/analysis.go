@@ -139,6 +139,9 @@ type analysis struct {
 	rtypes              typeutil.Map    // nodeid of canonical *rtype-tagged object for type T
 	reflectZeros        typeutil.Map    // nodeid of canonical T-tagged object for zero value
 	runtimeSetFinalizer *ssa.Function   // runtime.SetFinalizer
+
+	//bz: record
+	fn2nodeid   map[*ssa.Function][]int  //bz: a map of fn with a set of its cgnodes represented by nodeid
 }
 
 // enclosingObj returns the first node of the addressable memory
@@ -244,6 +247,7 @@ func Analyze(config *Config) (result *Result, err error) {
 			IndirectQueries: make(map[ssa.Value]Pointer),
 		},
 		deltaSpace: make([]int, 0, 100),
+		fn2nodeid:   make(map[*ssa.Function][]int),
 	}
 
 	if false {

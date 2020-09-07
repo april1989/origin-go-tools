@@ -69,7 +69,10 @@ type Config struct {
 	// Logging is extremely verbose.
 	Log io.Writer
 
+	//bz: kcfa
 	CallSiteSensitive bool
+	K int //must be capital ...
+
 }
 
 type track uint32

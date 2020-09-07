@@ -155,7 +155,6 @@ func (a *analysis) endObject(obj nodeid, cgn *cgnode, data interface{}) *object 
 func (a *analysis) makeFunctionObject(fn *ssa.Function, callersite *callsite) nodeid {
 	if a.log != nil {
 		fmt.Fprintf(a.log, "\t---- makeFunctionObject %s\n", fn)
-
 		//if strings.Contains(fn.String(), "command-line-arguments") {
 		//	fmt.Println(fn.String())
 		//}
@@ -621,7 +620,7 @@ func (a *analysis) genCallSiteSensitiveCall(caller *cgnode, site *callsite, call
 	}
 }
 
-//  ------------- bz : the following several functions generata constraints for method calls --------------
+//  ------------- bz : the following several functions generate constraints for method calls --------------
 // genStaticCall generates constraints for a statically dispatched function call.
 // bz: force call site here
 func (a *analysis) genStaticCall(caller *cgnode, site *callsite, call *ssa.CallCommon, result nodeid) {
@@ -649,6 +648,7 @@ func (a *analysis) genStaticCall(caller *cgnode, site *callsite, call *ssa.CallC
 		return
 	}
 
+	//bz: simple solution
 	if a.config.CallSiteSensitive == true && strings.Contains(fn.String(), "command-line-arguments") {
 		fmt.Println("CAUGHT -- " + fn.String())
 		a.genCallSiteSensitiveCall(caller, site, call, result)
@@ -1159,10 +1159,61 @@ func (a *analysis) genInstr(cgn *cgnode, instr ssa.Instruction) {
 	}
 }
 
+//bz: get k-callsite from caller
 func (a *analysis) makeCGNode(fn *ssa.Function, obj nodeid, callersite *callsite) *cgnode {
-	cgn := &cgnode{fn: fn, obj: obj, callersite: callersite}
-	a.cgnodes = append(a.cgnodes, cgn)
-	return cgn
+	if a.config.CallSiteSensitive == true {
+		cgnodes, ok := a.fn2nodeid[fn]
+		if ok {
+			//TODO: create a callee for each cgnode caller
+			for _, nodeid := range cgnodes {
+				caller := a.cgnodes[nodeid]
+				caller_kcs := caller.callersite
+				fn_kcs := a.createKCallSite(caller_kcs, callersite)
+				cgn := &cgnode{fn: fn, obj: obj, callersite: fn_kcs}
+				a.cgnodes = append(a.cgnodes, cgn)
+				return cgn
+			}
+		}else{
+			//no caller exist
+			singlecs := a.createSingleCallSite(callersite)
+			cgn := &cgnode{fn: fn, obj: obj, callersite: singlecs}
+			a.cgnodes = append(a.cgnodes, cgn)
+			return cgn
+		}
+	}
+	return nil
+	//cgn := &cgnode{fn: fn, obj: obj, callersite: callersite}
+	//a.cgnodes = append(a.cgnodes, cgn)
+	//return cgn
+}
+
+//bz: create a kcallsite array with a single element
+func (a *analysis) createSingleCallSite (callee *callsite) []*callsite {
+	var slice = make([]*callsite, a.config.K)
+	slice[0] = callee
+	return slice
+}
+
+//bz: create a kcallsite array with a mix of caller and callee call sites
+func (a *analysis) createKCallSite(callers []*callsite, callee *callsite) []*callsite {
+	if len(callers) == 0 {
+		return a.createSingleCallSite(callee)
+	}
+    //possible k call sites
+    k := a.config.K
+	var slice = make([]*callsite, k)
+	for i, _ := range slice { //bz:
+		if i == 0 {
+			slice[i] = callee
+		}else{
+			if len(callers) >= i {
+				slice[i] = callers[i - 1]
+			}else{ //end of callers
+				break
+			}
+		}
+	}
+	return slice
 }
 
 // genRootCalls generates the synthetic root of the callgraph and the
