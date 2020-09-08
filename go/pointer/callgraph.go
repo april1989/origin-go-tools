@@ -9,57 +9,52 @@ package pointer
 import (
 	"fmt"
 	"go/token"
+	"strconv"
 
 	"golang.org/x/tools/go/ssa"
 )
 
-//bz: this is the cg node created by pointer analysis -> we force to use k callersite
+//bz: this is the cgnode created by pointer analysis -> we force to use k callersite
 type cgnode struct {
 	fn         *ssa.Function
 	obj        nodeid      // start of this contour's object block
 	sites      []*callsite // ordered list of callsites within this function
 	callersite []*callsite   // where called from, if known; nil for shared contours ----> bz: k-caller site
+	isFromApp  bool        // bz: whether this cgnode is invoked by main method from the analyzed app
 }
 
 // contour returns a description of this node's contour.
 //bz: only used for log
-func (n *cgnode) contour() string {
-	//bz: adjust to kcfa, only showing the most recent callersite info
+func (n *cgnode) contour(isKcfa bool) string {
+	if isKcfa {//bz: print out info for kcfa
+		return n.contourKfull()
+	}
+	//bz: adjust for context-insensitive. Same as 1callsite, only showing the most recent callersite info
 	if n.callersite == nil || len(n.callersite) == 0 || n.callersite[0] == nil{
 		return "shared contour"
 	}
 	if n.callersite[0].instr != nil {
-		//return fmt.Sprintf("as called from %s", n.callersite.instr.Parent())
-		return fmt.Sprintf("as called from %s", n.contourKinstr())
+		return fmt.Sprintf("as called from %s", n.callersite[0].instr.Parent())
 	}
-	//return fmt.Sprintf("as called from intrinsic (targets=n%d)", n.callersite.targets)
-	return fmt.Sprintf("as called from intrinsic (targets=n%d)", n.contourKtargets())
+	return fmt.Sprintf("as called from synthetic/intrinsic (targets=n%d)", n.callersite[0].targets)
 }
 
-//bz: adjust contour()  to kcfa
-func (n *cgnode) contourKinstr() string {
-	var s string
-	for _, cs := range n.callersite {
-		s = s + cs.instr.Parent().String() + "; "
-	}
-	return s
-}
-
-//bz: adjust contour()  to kcfa
-func (n *cgnode) contourKtargets() string {
-	var s string
-	for _, cs := range n.callersite {
-		s = s + cs.targets.String() + "; "
-	}
-	return s
-}
-
-//bz: adjust contour()  to kcfa
+//bz: adjust contour() to kcfa
 func (n *cgnode) contourKfull() string {
 	var s string
-	for _, cs := range n.callersite {
-		s = s + cs.instr.String() + "@" + cs.instr.Parent().String() + "; "
+	s = s +  "["
+	for idx, cs := range n.callersite {
+		if cs == nil {
+		    s = s + strconv.Itoa(idx) + ":shared contour; "
+		    continue
+		}
+		if cs.instr != nil {
+			s = s  + strconv.Itoa(idx) + ":" + cs.instr.String() + "@" + cs.instr.Parent().String() + "; "
+			continue
+		}
+		s = s + strconv.Itoa(idx) + ":" + "called from synthetic/intrinsic func@" + cs.targets.String() + "; "
 	}
+	s = s + "]"
 	return s
 }
 

@@ -291,7 +291,7 @@ func Analyze(config *Config) (result *Result, err error) {
 	if runtime := a.prog.ImportedPackage("runtime"); runtime != nil {
 		a.runtimeSetFinalizer = runtime.Func("SetFinalizer")
 	}
-	a.computeTrackBits() //bz: use when there is input queries before running this analysis; we do not need this
+	a.computeTrackBits() //bz: use when there is input queries before running this analysis; we do not need this for now?
 
 	a.generate() //bz: a preprocess for reflection/runtime/import libs
 	a.showCounts() //bz: print out size ...

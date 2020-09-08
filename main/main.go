@@ -70,7 +70,7 @@ func main() {
 	}
 
 	//create my log file
-	logfile, err := os.OpenFile("gologfile", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	logfile, err := os.OpenFile("gologfile", os.O_WRONLY|os.O_CREATE, 0600) //os.O_APPEND|
 	log.SetFormatter(&log.TextFormatter{
 		FullTimestamp: true,
 	})
@@ -82,7 +82,7 @@ func main() {
 		BuildCallGraph: true,
 		Log:            logfile,
 		CallSiteSensitive: true,
-		K: 1,
+		K: 2,
 	}
 
 	result, err := pointer.Analyze(ptaConfig) // conduct pointer analysis

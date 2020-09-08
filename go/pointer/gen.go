@@ -1261,7 +1261,7 @@ func (a *analysis) genFunc(cgn *cgnode) {
 	impl := a.findIntrinsic(fn)
 
 	if a.log != nil {
-		fmt.Fprintf(a.log, "\n\n==== Generating constraints for %s, %s\n", cgn, cgn.contour())
+		fmt.Fprintf(a.log, "\n\n==== Generating constraints for %s, %s\n", cgn, cgn.contour(a.config.CallSiteSensitive))
 		//if strings.Contains(cgn.String(), "command-line-arguments") {
 		//	fmt.Println(cgn.String())
 		//}
