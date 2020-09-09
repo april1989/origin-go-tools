@@ -14,9 +14,9 @@ import (
 	"fmt"
 	"go/token"
 	"go/types"
-
 	"golang.org/x/tools/go/callgraph"
 	"golang.org/x/tools/go/ssa"
+	"strconv"
 	"strings"
 )
 
@@ -181,6 +181,91 @@ func (a *analysis) makeFunctionObject(fn *ssa.Function, callersite *callsite) no
 
 	return obj
 }
+
+//bz: we make function body nodes and param/result nodes together, instead of calling makeCGNode
+func (a *analysis) makeFunctionObjects(fn *ssa.Function, callersite *callsite) []nodeid {
+	if a.log != nil {
+		fmt.Fprintf(a.log, "\t---- makeFunctionObjects %s\n", fn)
+		//if strings.Contains(fn.String(), "command-line-arguments") {
+		//	fmt.Println(fn.String())
+		//}
+	}
+
+	cgnodes, ok := a.fn2nodeid[fn]
+	if ok { //multiple callers: create a callee for each cgnode caller
+		var result = make([]nodeid, len(cgnodes))
+		var ids = make([]int, len(cgnodes))
+
+		for idx, nodeid := range cgnodes {
+			// obj is the function object (identity, params, results).
+			obj := a.nextNode()
+			//doing task of makeCGNode
+			caller := a.cgnodes[nodeid]
+
+			fmt.Println("   " + strconv.Itoa(idx) +"th: K-CALLSITE -- " + a.nodes[obj].obj.cgn.contourKfull()) //debug
+
+			caller_kcs := caller.callersite
+			fn_kcs := a.createKCallSite(caller_kcs, callersite)
+			cgn := &cgnode{fn: fn, obj: obj, callersite: fn_kcs}
+			a.cgnodes = append(a.cgnodes, cgn)
+			//back
+			sig := fn.Signature
+			a.addOneNode(sig, "func.cgnode", nil) // (scalar with Signature type)
+			if recv := sig.Recv(); recv != nil {
+				a.addNodes(recv.Type(), "func.recv")
+			}
+			a.addNodes(sig.Params(), "func.params")
+			a.addNodes(sig.Results(), "func.results")
+			a.endObject(obj, cgn, fn).flags |= otFunction
+
+			if a.log != nil {
+				fmt.Fprintf(a.log, "\t----\n")
+			}
+
+			// Queue it up for constraint processing.
+			a.genq = append(a.genq, cgn)
+
+			//update
+			ids[idx] = len(a.cgnodes) - 1
+			result[idx] = obj
+		}
+		a.fn2nodeid[fn] = ids
+		return result
+	}else{ //no caller exist
+		fmt.Println("   INITIAL -- >> callsite@" + callersite.String())
+
+		var result = make([]nodeid, 1)
+		// obj is the function object (identity, params, results).
+		obj := a.nextNode()
+		//doing task of makeCGNode
+		singlecs := a.createSingleCallSite(callersite)
+		cgn := &cgnode{fn: fn, obj: obj, callersite: singlecs}
+		a.cgnodes = append(a.cgnodes, cgn)
+		//back
+		sig := fn.Signature
+		a.addOneNode(sig, "func.cgnode", nil) // (scalar with Signature type)
+		if recv := sig.Recv(); recv != nil {
+			a.addNodes(recv.Type(), "func.recv")
+		}
+		a.addNodes(sig.Params(), "func.params")
+		a.addNodes(sig.Results(), "func.results")
+		a.endObject(obj, cgn, fn).flags |= otFunction
+
+		if a.log != nil {
+			fmt.Fprintf(a.log, "\t----\n")
+		}
+
+		// Queue it up for constraint processing.
+		a.genq = append(a.genq, cgn)
+		// update
+		var ids = make([]int, 1)
+		ids[0] = len(a.cgnodes) - 1
+		a.fn2nodeid[fn] = ids
+
+		return result
+	}
+}
+
 
 // makeTagged creates a tagged object of type typ.
 func (a *analysis) makeTagged(typ types.Type, cgn *cgnode, data interface{}) nodeid {
@@ -587,38 +672,36 @@ func (a *analysis) shouldUseContext(fn *ssa.Function) bool {
 
 //bz: !!!!! brute force solution
 //temporarily use "command-line-arguments" to find app methods ... need to update
-func (a *analysis) genCallSiteSensitiveCall(caller *cgnode, site *callsite, call *ssa.CallCommon, result nodeid) {
-	fn := call.StaticCallee()
-	var obj nodeid //bz: we always need a new contour
-	obj = a.makeFunctionObject(fn, site) // new contour
+func (a *analysis) genCallSiteSensitiveCall(caller *cgnode, site *callsite, fn *ssa.Function, call *ssa.CallCommon, result nodeid) {
+	var objs []nodeid //bz: we always need a new contour
+	objs = a.makeFunctionObjects(fn, site) // new contour
 
-	fmt.Println("       K-CALLSITE -- " + a.nodes[obj].obj.cgn.contourKfull()) //debug
+	for _, obj := range objs {
+		a.callEdge(caller, site, obj)
+		sig := call.Signature()
 
-	a.callEdge(caller, site, obj)
+		// Copy receiver, if any.
+		params := a.funcParams(obj)
+		args := call.Args
+		if sig.Recv() != nil {
+			sz := a.sizeof(sig.Recv().Type())
+			a.copy(params, a.valueNode(args[0]), sz)
+			params += nodeid(sz)
+			args = args[1:]
+		}
 
-	sig := call.Signature()
+		// Copy actual parameters into formal params block.
+		// Must loop, since the actuals aren't contiguous.
+		for i, arg := range args {
+			sz := a.sizeof(sig.Params().At(i).Type())
+			a.copy(params, a.valueNode(arg), sz)
+			params += nodeid(sz)
+		}
 
-	// Copy receiver, if any.
-	params := a.funcParams(obj)
-	args := call.Args
-	if sig.Recv() != nil {
-		sz := a.sizeof(sig.Recv().Type())
-		a.copy(params, a.valueNode(args[0]), sz)
-		params += nodeid(sz)
-		args = args[1:]
-	}
-
-	// Copy actual parameters into formal params block.
-	// Must loop, since the actuals aren't contiguous.
-	for i, arg := range args {
-		sz := a.sizeof(sig.Params().At(i).Type())
-		a.copy(params, a.valueNode(arg), sz)
-		params += nodeid(sz)
-	}
-
-	// Copy formal results block to actual result.
-	if result != 0 {
-		a.copy(result, a.funcResults(obj), a.sizeof(sig.Results()))
+		// Copy formal results block to actual result.
+		if result != 0 {
+			a.copy(result, a.funcResults(obj), a.sizeof(sig.Results()))
+		}
 	}
 }
 
@@ -653,7 +736,7 @@ func (a *analysis) genStaticCall(caller *cgnode, site *callsite, call *ssa.CallC
 	//bz: simple solution TODO: why it is command-line-argument ???
 	if a.config.CallSiteSensitive == true && strings.Contains(fn.String(), "command-line-arguments") {
 		fmt.Println("CAUGHT APP METHOD -- " + fn.String())
-		a.genCallSiteSensitiveCall(caller, site, call, result)
+		a.genCallSiteSensitiveCall(caller, site, fn, call, result)
 		return
 	}
 
@@ -1161,31 +1244,8 @@ func (a *analysis) genInstr(cgn *cgnode, instr ssa.Instruction) {
 	}
 }
 
-//bz: get k-callsite from caller
+//bz: adjust to follow the current data structure of cgnode
 func (a *analysis) makeCGNode(fn *ssa.Function, obj nodeid, callersite *callsite) *cgnode {
-	if a.config.CallSiteSensitive == true {
-		cgnodes, ok := a.fn2nodeid[fn]
-		if ok {
-			//TODO: create a callee for each cgnode caller
-			for _, nodeid := range cgnodes {
-				caller := a.cgnodes[nodeid]
-				caller_kcs := caller.callersite
-				fn_kcs := a.createKCallSite(caller_kcs, callersite)
-				cgn := &cgnode{fn: fn, obj: obj, callersite: fn_kcs}
-				a.cgnodes = append(a.cgnodes, cgn)
-				return cgn
-			}
-		}else{
-			//no caller exist
-			singlecs := a.createSingleCallSite(callersite)
-			cgn := &cgnode{fn: fn, obj: obj, callersite: singlecs}
-			a.cgnodes = append(a.cgnodes, cgn)
-			return cgn
-		}
-	}
-
-	//bz: context-insensitive default code;
-	//-> the same with 1callsite, where callersite can be null
 	singlecs := a.createSingleCallSite(callersite)
 	cgn := &cgnode{fn: fn, obj: obj, callersite: singlecs}
 	a.cgnodes = append(a.cgnodes, cgn)
