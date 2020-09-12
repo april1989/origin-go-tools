@@ -16,6 +16,7 @@ import (
 	"go/types"
 	"golang.org/x/tools/go/callgraph"
 	"golang.org/x/tools/go/ssa"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -84,7 +85,7 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 	// Due to context-sensitivity, we may encounter the same Value
 	// in many contexts. We merge them to a canonical node, since
 	// that's what all clients want.
-    // bz: will this (merge) affect our precision ??
+	// bz: will this (merge) affect our precision ??
 	// Record the (v, id) relation if the client has queried pts(v). -> bz: just in case later user issues the same query again ...
 	if _, ok := a.config.Queries[v]; ok {
 		t := v.Type()
@@ -183,89 +184,131 @@ func (a *analysis) makeFunctionObject(fn *ssa.Function, callersite *callsite) no
 }
 
 //bz: we make function body nodes and param/result nodes together, instead of calling makeCGNode
+//because for kcfa, we might have multiple cgnodes for fn
+//fn -> target; obj -> for fn cgnode; callersite -> callsite of fn
 func (a *analysis) makeFunctionObjects(fn *ssa.Function, callersite *callsite) []nodeid {
 	if a.log != nil {
-		fmt.Fprintf(a.log, "\t---- makeFunctionObjects %s\n", fn)
+		fmt.Fprintf(a.log, "\t---- makeFunctionObjects (kcfa) %s\n", fn)
 		//if strings.Contains(fn.String(), "command-line-arguments") {
 		//	fmt.Println(fn.String())
 		//}
 	}
 
-	cgnodes, ok := a.fn2nodeid[fn]
-	if ok { //multiple callers: create a callee for each cgnode caller
-		var result = make([]nodeid, len(cgnodes))
-		var ids = make([]int, len(cgnodes))
+	callerFn := callersite.instr.Parent()                // with type *ssa.Function
+	existCallerIdx, multiCaller := a.fn2nodeid[callerFn] //if exist any caller with multiple callsites ?
+	existFnIdx, multiFn := a.fn2nodeid[fn]               //if exist any previous callsites for fn?
 
-		for idx, nodeid := range cgnodes {
-			// obj is the function object (identity, params, results).
-			obj := a.nextNode()
-			//doing task of makeCGNode
-			caller := a.cgnodes[nodeid]
-
-			fmt.Println("   " + strconv.Itoa(idx) +"th: K-CALLSITE -- " + a.nodes[obj].obj.cgn.contourKfull()) //debug
-
-			caller_kcs := caller.callersite
-			fn_kcs := a.createKCallSite(caller_kcs, callersite)
-			cgn := &cgnode{fn: fn, obj: obj, callersite: fn_kcs}
-			a.cgnodes = append(a.cgnodes, cgn)
-			//back
-			sig := fn.Signature
-			a.addOneNode(sig, "func.cgnode", nil) // (scalar with Signature type)
-			if recv := sig.Recv(); recv != nil {
-				a.addNodes(recv.Type(), "func.recv")
-			}
-			a.addNodes(sig.Params(), "func.params")
-			a.addNodes(sig.Results(), "func.results")
-			a.endObject(obj, cgn, fn).flags |= otFunction
-
-			if a.log != nil {
-				fmt.Fprintf(a.log, "\t----\n")
-			}
-
-			// Queue it up for constraint processing.
-			a.genq = append(a.genq, cgn)
-
+	//TODO: if we already have the caller + callsite ?? recursive call
+	if multiCaller { //caller has multiple contexts, create a callee for each cgnode caller context
+		var result = make([]nodeid, len(existCallerIdx)) // should be <= len
+		var newFnIdx = make([]int, len(existCallerIdx))  // should be <= len
+		for i, callerIdx := range existCallerIdx {       // idx -> index of caller cgnode in a.cgnodes[]
+			obj := a.makeCGNodeAndRelated(fn, i, callerIdx, callersite)
 			//update
-			ids[idx] = len(a.cgnodes) - 1
-			result[idx] = obj
+			fnIdx := len(a.cgnodes) - 1 // last element of a.cgnodes
+			newFnIdx[i] = fnIdx
+			result[i] = obj
 		}
-		a.fn2nodeid[fn] = ids
+		//update fn2nodeid
+		a.updateFn2NodeID(fn, multiFn, newFnIdx, existFnIdx)
 		return result
-	}else{ //no caller exist
-		fmt.Println("   INITIAL -- >> callsite@" + callersite.String())
-
+	} else { //no multiple caller context exist for fn, will only create one cgnode
 		var result = make([]nodeid, 1)
-		// obj is the function object (identity, params, results).
-		obj := a.nextNode()
-		//doing task of makeCGNode
-		singlecs := a.createSingleCallSite(callersite)
-		cgn := &cgnode{fn: fn, obj: obj, callersite: singlecs}
-		a.cgnodes = append(a.cgnodes, cgn)
-		//back
-		sig := fn.Signature
-		a.addOneNode(sig, "func.cgnode", nil) // (scalar with Signature type)
-		if recv := sig.Recv(); recv != nil {
-			a.addNodes(recv.Type(), "func.recv")
-		}
-		a.addNodes(sig.Params(), "func.params")
-		a.addNodes(sig.Results(), "func.results")
-		a.endObject(obj, cgn, fn).flags |= otFunction
+		var newFnIdx = make([]int, 1)
+		obj := a.makeCGNodeAndRelated(fn, 0, -1, callersite)
 
-		if a.log != nil {
-			fmt.Fprintf(a.log, "\t----\n")
-		}
+		//update
+		fnIdx := len(a.cgnodes) - 1 // last element of a.cgnodes
+		newFnIdx[0] = fnIdx
+		result[0] = obj
 
-		// Queue it up for constraint processing.
-		a.genq = append(a.genq, cgn)
-		// update
-		var ids = make([]int, 1)
-		ids[0] = len(a.cgnodes) - 1
-		a.fn2nodeid[fn] = ids
-
+		//update fn2nodeid
+		a.updateFn2NodeID(fn, multiFn, newFnIdx, existFnIdx)
 		return result
 	}
 }
 
+//bz: continue with makeFunctionObjects (kcfa), create cgnode for one caller context as well as its param/result
+func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, i int, callerIdx int, callersite *callsite) nodeid {
+	// obj is the function object (identity, params, results).
+	obj := a.nextNode()
+	//doing task of makeCGNode
+	var cgn *cgnode
+	if callerIdx == -1 { //no multiple caller
+		single := a.createSingleCallSite(callersite)
+		cgn = &cgnode{fn: fn, obj: obj, callersite: single}
+	} else {
+		callerkcs := a.cgnodes[callerIdx].callersite
+		fnkcs := a.createKCallSite(callerkcs, callersite)
+		cgn = &cgnode{fn: fn, obj: obj, callersite: fnkcs}
+	}
+	a.cgnodes = append(a.cgnodes, cgn)
+	if a.log != nil { //debug
+		fmt.Fprintf(a.log, "   "+strconv.Itoa(i+1)+"th: K-CALLSITE -- "+cgn.contourKfull())
+	}
+	//make param and result nodes
+	a.makeParamResultNodes(fn, obj, cgn)
+
+	// Queue it up for constraint processing.
+	a.genq = append(a.genq, cgn)
+	return obj
+}
+
+//bz: continue with makeFunctionObjects (kcfa), update a.fn2nodeid for fn
+func (a *analysis) updateFn2NodeID(fn *ssa.Function, multiFn bool, newFnIdx []int, existFnIdx []int) {
+	if multiFn { //update and add to fn2nodeid
+		for _, fnIdx := range newFnIdx {
+			if fnIdx != 0 {
+				existFnIdx = append(existFnIdx, fnIdx)
+			}
+		}
+		a.fn2nodeid[fn] = existFnIdx
+	} else { //init and add to fn2nodeid
+		a.fn2nodeid[fn] = newFnIdx
+	}
+}
+
+//bz: continue with makeFunctionObjects (kcfa), we create the parameter/result nodes for fn
+func (a *analysis) makeParamResultNodes(fn *ssa.Function, obj nodeid, cgn *cgnode) {
+	sig := fn.Signature
+	a.addOneNode(sig, "func.cgnode", nil) // (scalar with Signature type)
+	if recv := sig.Recv(); recv != nil {
+		a.addNodes(recv.Type(), "func.recv")
+	}
+	a.addNodes(sig.Params(), "func.params")
+	a.addNodes(sig.Results(), "func.results")
+	a.endObject(obj, cgn, fn).flags |= otFunction
+
+	if a.log != nil {
+		fmt.Fprintf(a.log, "\t----\n")
+	}
+}
+
+//bz: create a kcallsite array with a single element
+func (a *analysis) createSingleCallSite(callersite *callsite) []*callsite {
+	var slice = make([]*callsite, 1)
+	slice[0] = callersite
+	return slice
+}
+
+//bz: create a kcallsite array with a mix of caller and callee call sites
+func (a *analysis) createKCallSite(caller2sites []*callsite, callersite *callsite) []*callsite {
+	k := a.config.K
+	if len(caller2sites) == 0 || k == 1 {
+		return a.createSingleCallSite(callersite)
+	}
+	//possible k call sites
+	size := math.Min(float64(k), float64(1 + len(caller2sites))) // take the smaller number
+	var slice = make([]*callsite, int(size))
+	for i, _ := range slice {
+		if i == 0 {
+			slice[i] = callersite
+		} else {
+			slice[i] = caller2sites[i-1] //bz: not sure about the idx
+		}
+	}
+	return slice
+}
 
 // makeTagged creates a tagged object of type typ.
 func (a *analysis) makeTagged(typ types.Type, cgn *cgnode, data interface{}) nodeid {
@@ -673,7 +716,7 @@ func (a *analysis) shouldUseContext(fn *ssa.Function) bool {
 //bz: !!!!! brute force solution
 //temporarily use "command-line-arguments" to find app methods ... need to update
 func (a *analysis) genCallSiteSensitiveCall(caller *cgnode, site *callsite, fn *ssa.Function, call *ssa.CallCommon, result nodeid) {
-	var objs []nodeid //bz: we always need a new contour
+	var objs []nodeid                      //bz: we always need a set of new contours
 	objs = a.makeFunctionObjects(fn, site) // new contour
 
 	for _, obj := range objs {
@@ -786,6 +829,8 @@ func (a *analysis) genDynamicCall(caller *cgnode, site *callsite, call *ssa.Call
 	// function discovered in pts(targets).
 
 	sig := call.Signature()
+	//fmt.Println("Dynamic -- " + sig.String()) //bz: DEBUG
+
 	var offset uint32 = 1 // P/R block starts at offset 1
 	for i, arg := range call.Args {
 		sz := a.sizeof(sig.Params().At(i).Type())
@@ -805,6 +850,11 @@ func (a *analysis) genInvoke(caller *cgnode, site *callsite, call *ssa.CallCommo
 	}
 
 	sig := call.Signature()
+
+	//fmt.Println("Invoke -- " + sig.String()) //bz: DEBUG
+	//if sig.Recv() != nil {
+	//	fmt.Println("      Receiver -- " + sig.Recv().String())
+	//}
 
 	// Allocate a contiguous targets/params/results block for this call.
 	block := a.nextNode()
@@ -943,7 +993,7 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 				a.endObject(obj, nil, v)
 
 			case *ssa.Function:
-				obj = a.makeFunctionObject(v, nil) //bz: create cgnode here with call site
+				obj = a.makeFunctionObject(v, nil) //bz: create cgnode here; most for reflection
 
 			case *ssa.Const:
 				// not addressable
@@ -1244,41 +1294,14 @@ func (a *analysis) genInstr(cgn *cgnode, instr ssa.Instruction) {
 	}
 }
 
-//bz: adjust to follow the current data structure of cgnode
+//bz: adjust for data structure changes
 func (a *analysis) makeCGNode(fn *ssa.Function, obj nodeid, callersite *callsite) *cgnode {
+	//bz: context-insensitive default code;
+	//-> the same with 1callsite, where callersite can be null
 	singlecs := a.createSingleCallSite(callersite)
 	cgn := &cgnode{fn: fn, obj: obj, callersite: singlecs}
 	a.cgnodes = append(a.cgnodes, cgn)
 	return cgn
-}
-
-//bz: create a kcallsite array with a single element
-func (a *analysis) createSingleCallSite (callee *callsite) []*callsite {
-	var slice = make([]*callsite, a.config.K)
-	slice[0] = callee
-	return slice
-}
-
-//bz: create a kcallsite array with a mix of caller and callee call sites
-func (a *analysis) createKCallSite(callers []*callsite, callee *callsite) []*callsite {
-	if len(callers) == 0 {
-		return a.createSingleCallSite(callee)
-	}
-    //possible k call sites
-    k := a.config.K
-	var slice = make([]*callsite, k)
-	for i, _ := range slice { //bz:
-		if i == 0 {
-			slice[i] = callee
-		}else{
-			if len(callers) >= i {
-				slice[i] = callers[i - 1]
-			}else{ //end of callers
-				break
-			}
-		}
-	}
-	return slice
 }
 
 // genRootCalls generates the synthetic root of the callgraph and the

@@ -77,7 +77,7 @@ func main() {
 
 	// Configure pointer analysis to build call-graph
 	ptaConfig := &pointer.Config{
-		Mains:          mains,
+		Mains:          mains, //bz: NOW assume only one main
 		//Reflection:     true,
 		BuildCallGraph: true,
 		Log:            logfile,

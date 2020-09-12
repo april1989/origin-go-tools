@@ -1300,13 +1300,13 @@ type anInstruction struct {
 //	defer t5(...t6)
 //
 // 2. "invoke" mode: when Method is non-nil (IsInvoke), a CallCommon
-// represents a dynamically dispatched call to an interface method.
+// represents a dynamically dispatched call to an interface method.       -------> bz: here is the problem, we do not have function body here
 // In this mode, Value is the interface value and Method is the
 // interface's abstract method.  Note: an abstract method may be
 // shared by multiple interfaces due to embedding; Value.Type()
 // provides the specific interface used for this call.
 //
-// Value is implicitly supplied to the concrete method implementation
+// Value is implicitly supplied to the concrete method implementation     -------> bz: here might be the solution
 // as the receiver parameter; in other words, Args[0] holds not the
 // receiver but the first true argument.
 //
