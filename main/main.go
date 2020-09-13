@@ -28,6 +28,11 @@ func findMainPackages(pkgs []*ssa.Package) ([]*ssa.Package, error) {
 	return mains, nil
 }
 
+//bz: tested
+// godel2: dine3-chan-race, no-race-mut-bad, prod-cons-race
+// ../go2/race_checker/GoBench/Kubernetes/88331/main.go
+// ../go2/race_checker/GoBench/Grpc/3090/main.go
+// ../go2/race_checker/GoBench/Istio/8967/main.go
 func main() {
 	flag.Bool("ptrAnalysis", false, "Prints pointer analysis results. ")
 	flag.Parse()

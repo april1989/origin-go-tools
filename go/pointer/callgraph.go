@@ -72,6 +72,11 @@ type callsite struct {
 	instr   ssa.CallInstruction // the call instruction; nil for synthetic/intrinsic
 }
 
+//bz: tmp solution, to compare string ...
+func (c *callsite) equal(other *callsite) bool {
+	return c.targets == other.targets && c.instr.String() == other.instr.String()
+}
+
 func (c *callsite) String() string {
 	if c.instr != nil {
 		return c.instr.Common().Description()
