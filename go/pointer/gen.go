@@ -206,7 +206,7 @@ func (a *analysis) makeFunctionObjects(fn *ssa.Function, callersite *callsite) (
 		for i, existIdx := range existFnIdx {       // idx -> index of fn cgnode in a.cgnodes[]
 			_fnCGNode := a.cgnodes[existIdx]
 			_fnCallSite := _fnCGNode.callersite[0]
-			if _fnCallSite.equal(callersite) { //TODO: currently only check idx = 0, should check all
+			if _fnCallSite.equalContext(callersite) { //TODO: currently only check idx = 0, should check all
 				//duplicate combination, return this
 				if a.log != nil { //debug
 					fmt.Fprintf(a.log, "    EXIST**: "+strconv.Itoa(i+1)+"th: K-CALLSITE -- "+_fnCGNode.contourKfull() + "\n")
@@ -264,6 +264,7 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, i int, callerIdx int, 
 		fnkcs := a.createKCallSite(callerkcs, callersite)
 		cgn = &cgnode{fn: fn, obj: obj, callersite: fnkcs}
 	}
+	cgn.isFromApp = true //if it reaches here, must be kcfa
 	if a.log != nil { //debug
 		fmt.Fprintf(a.log, "    "+strconv.Itoa(i+1)+"th: K-CALLSITE -- "+cgn.contourKfull() + "\n")
 	}
@@ -738,7 +739,6 @@ func (a *analysis) shouldUseContext(fn *ssa.Function) bool {
 }
 
 //bz: !!!!! brute force solution
-//temporarily use "command-line-arguments" to find app methods ... need to update
 func (a *analysis) genCallSiteSensitiveCall(caller *cgnode, site *callsite, fn *ssa.Function, call *ssa.CallCommon, result nodeid) {
 	var objs []nodeid  //bz: we always need a set of new contours
 	var isNew bool     //bz: whether this is a newly created cgnode -> true
@@ -776,6 +776,31 @@ func (a *analysis) genCallSiteSensitiveCall(caller *cgnode, site *callsite, fn *
 	}
 }
 
+// bz: whehter this is a main method
+// TODO: do we also include init?
+//       too much library methods .... cannot do this for all library methods ...
+func (a *analysis) isMainMethod(method *ssa.Function) bool {
+	for _, mainPkg := range a.config.Mains {
+		main := mainPkg.Func("main")
+		if main == method {
+			return true
+		}
+	}
+	return false
+}
+
+//bz: continue with isMainMethod
+func  (a *analysis) withinScope(method *ssa.Function) bool {
+	if a.config.LimitScope {
+		if strings.Contains(method.String(), "command-line-arguments") {
+			return true
+		}
+		return false
+	}
+	return true
+}
+
+
 //  ------------- bz : the following several functions generate constraints for different method calls --------------
 // genStaticCall generates constraints for a statically dispatched function call.
 // bz: force call site here
@@ -804,15 +829,15 @@ func (a *analysis) genStaticCall(caller *cgnode, site *callsite, call *ssa.CallC
 		return
 	}
 
-	//bz: simple solution TODO: why is command-line-argument ??? needs to update for analyzing multiple files
-	if a.config.CallSiteSensitive == true && strings.Contains(fn.String(), "command-line-arguments") {
+	//bz: simple solution; start to be kcfa from main.main
+	if a.config.CallSiteSensitive == true && (caller.isFromApp || a.isMainMethod(caller.fn)) && a.withinScope(fn) {
 		fmt.Println("CAUGHT APP METHOD -- " + fn.String())
 		a.genCallSiteSensitiveCall(caller, site, fn, call, result)
 		return
 	}
 
 	// Ascertain the context (contour/cgnode) for a particular call.
-	var obj nodeid //bz: we always need a new contour
+	var obj nodeid
 	if a.shouldUseContext(fn) {
 		obj = a.makeFunctionObject(fn, site) // new contour
 	} else {
@@ -847,7 +872,7 @@ func (a *analysis) genStaticCall(caller *cgnode, site *callsite, call *ssa.CallC
 }
 
 // genDynamicCall generates constraints for a dynamic function call.
-// bz: working on this 
+// bz: working on this
 func (a *analysis) genDynamicCall(caller *cgnode, site *callsite, call *ssa.CallCommon, result nodeid) {
 	// pts(targets) will be the set of possible call targets.
 	site.targets = a.valueNode(call.Value)
@@ -872,7 +897,6 @@ func (a *analysis) genDynamicCall(caller *cgnode, site *callsite, call *ssa.Call
 
 // genInvoke generates constraints for a dynamic method invocation.
 // bz: working on this
-// TODO: if necessary, add kcfa
 func (a *analysis) genInvoke(caller *cgnode, site *callsite, call *ssa.CallCommon, result nodeid) {
 	if call.Value.Type() == a.reflectType {
 		a.genInvokeReflectType(caller, site, call, result)
@@ -885,6 +909,14 @@ func (a *analysis) genInvoke(caller *cgnode, site *callsite, call *ssa.CallCommo
 	//if sig.Recv() != nil {
 	//	fmt.Println("      Receiver -- " + sig.Recv().String())
 	//}
+
+	////bz: simple solution; start to be kcfa from main.main
+	//if a.config.CallSiteSensitive == true && (caller.isFromApp || a.isMainMethod(caller.fn)) {
+	//	fmt.Println("CAUGHT APP-Invoke METHOD -- " + sig.String())
+	//	a.genCallSiteSensitiveCall(caller, site, sig, call, result)
+	//	return
+	//}
+
 
 	// Allocate a contiguous targets/params/results block for this call.
 	block := a.nextNode()

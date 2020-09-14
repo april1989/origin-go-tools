@@ -88,6 +88,7 @@ func main() {
 		Log:            logfile,
 		CallSiteSensitive: true,
 		K: 2,
+		LimitScope: true,
 	}
 
 	//*** compute pta here
