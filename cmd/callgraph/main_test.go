@@ -62,24 +62,25 @@ func TestCallgraph(t *testing.T) {
 			`pkg.main --> pkg.main2`,
 			`pkg.main2 --> (pkg.D).f`,
 		}},
-		// tests: both the package's main and the test's main are called.
-		// The callgraph includes all the guts of the "testing" package.
-		{"rta", true, []string{
-			`pkg.test.main --> testing.MainStart`,
-			`testing.runExample --> pkg.Example`,
-			`pkg.Example --> (pkg.C).f`,
-			`pkg.main --> (pkg.C).f`,
-		}},
-		{"pta", true, []string{
-			`<root> --> pkg.test.main`,
-			`<root> --> pkg.main`,
-			`pkg.test.main --> testing.MainStart`,
-			`testing.runExample --> pkg.Example`,
-			`pkg.Example --> (pkg.C).f`,
-			`pkg.main --> (pkg.C).f`,
-		}},
+		// bz: comment; not needed test cases included
+		//// tests: both the package's main and the test's main are called.
+		//// The callgraph includes all the guts of the "testing" package.
+		//{"rta", true, []string{
+		//	`pkg.test.main --> testing.MainStart`,
+		//	`testing.runExample --> pkg.Example`,
+		//	`pkg.Example --> (pkg.C).f`,
+		//	`pkg.main --> (pkg.C).f`,
+		//}},
+		//{"pta", true, []string{
+		//	`<root> --> pkg.test.main`,
+		//	`<root> --> pkg.main`,
+		//	`pkg.test.main --> testing.MainStart`,
+		//	`testing.runExample --> pkg.Example`,
+		//	`pkg.Example --> (pkg.C).f`,
+		//	`pkg.main --> (pkg.C).f`,
+		//}},
 	} {
-		const format = "{{.Caller}} --> {{.Callee}}"
+		const format = "graphviz" // bz: change from "{{.Caller}} --> {{.Callee}}" to "graphviz", i wanna see it ...
 		stdout = new(bytes.Buffer)
 		if err := doCallgraph("testdata/src", gopath, test.algo, format, test.tests, []string{"pkg"}); err != nil {
 			t.Error(err)

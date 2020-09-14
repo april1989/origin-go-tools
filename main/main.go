@@ -3,13 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
+	log "github.com/sirupsen/logrus"
+	"golang.org/x/tools/go/packages"
 	"golang.org/x/tools/go/pointer"
 	"golang.org/x/tools/go/ssa"
 	"golang.org/x/tools/go/ssa/ssautil"
-	"golang.org/x/tools/go/packages"
 	"os"
 	"strconv"
-	log "github.com/sirupsen/logrus"
 )
 
 
@@ -90,6 +90,7 @@ func main() {
 		K: 2,
 	}
 
+	//*** compute pta here
 	result, err := pointer.Analyze(ptaConfig) // conduct pointer analysis
 	if err != nil {
 		log.Fatal(err)

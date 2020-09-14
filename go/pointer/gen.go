@@ -86,7 +86,7 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 	// in many contexts. We merge them to a canonical node, since
 	// that's what all clients want.
 	// bz: will this (merge) affect our precision ??
-	// Record the (v, id) relation if the client has queried pts(v). -> bz: just in case later user issues the same query again ...
+	// Record the (v, id) relation if the client has queried pts(v). -> bz: goal: just in case later user issues the same query again ...
 	if _, ok := a.config.Queries[v]; ok {
 		t := v.Type()
 		ptr, ok := a.result.Queries[v]
@@ -847,8 +847,7 @@ func (a *analysis) genStaticCall(caller *cgnode, site *callsite, call *ssa.CallC
 }
 
 // genDynamicCall generates constraints for a dynamic function call.
-// bz: updating this to kcfa probably will not improve too much precision, but slowdown the analysis a lot
-// TODO: if necessary, add kcfa
+// bz: working on this 
 func (a *analysis) genDynamicCall(caller *cgnode, site *callsite, call *ssa.CallCommon, result nodeid) {
 	// pts(targets) will be the set of possible call targets.
 	site.targets = a.valueNode(call.Value)
@@ -872,9 +871,7 @@ func (a *analysis) genDynamicCall(caller *cgnode, site *callsite, call *ssa.Call
 }
 
 // genInvoke generates constraints for a dynamic method invocation.
-// bz: updating this to kcfa probably will not improve too much precision, but slowdown the analysis a lot
-// since here go cannot locate a specific target for this call, only INTERFACE no function body !!!
-// go check log for detail
+// bz: working on this
 // TODO: if necessary, add kcfa
 func (a *analysis) genInvoke(caller *cgnode, site *callsite, call *ssa.CallCommon, result nodeid) {
 	if call.Value.Type() == a.reflectType {
@@ -892,7 +889,7 @@ func (a *analysis) genInvoke(caller *cgnode, site *callsite, call *ssa.CallCommo
 	// Allocate a contiguous targets/params/results block for this call.
 	block := a.nextNode()
 	// pts(targets) will be the set of possible call targets
-	site.targets = a.addOneNode(sig, "invoke.targets", nil)
+	site.targets = a.addOneNode(sig, "invoke.targets", nil)  //bz: site.targets -> receiver of this invoke
 	p := a.addNodes(sig.Params(), "invoke.params")
 	r := a.addNodes(sig.Results(), "invoke.results")
 
@@ -926,7 +923,7 @@ func (a *analysis) genInvoke(caller *cgnode, site *callsite, call *ssa.CallCommo
 //    rt.F()
 // as this:
 //    rt.(*reflect.rtype).F()
-//
+//bz: for now use 1-callsite (original defaut), TODO: if necessary, update to kcfa
 func (a *analysis) genInvokeReflectType(caller *cgnode, site *callsite, call *ssa.CallCommon, result nodeid) {
 	// Unpack receiver into rtype
 	rtype := a.addOneNode(a.reflectRtypePtr, "rtype.recv", nil)
@@ -1025,8 +1022,8 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 				a.addNodes(mustDeref(v.Type()), "global")
 				a.endObject(obj, nil, v)
 
-			case *ssa.Function:
-				obj = a.makeFunctionObject(v, nil) //bz: create cgnode here; most for reflection
+			case *ssa.Function: //bz: create cgnode/constraints here for reflection; this has NO caller/callsite information
+				obj = a.makeFunctionObject(v, nil)
 
 			case *ssa.Const:
 				// not addressable
@@ -1186,7 +1183,7 @@ func (a *analysis) genInstr(cgn *cgnode, instr ssa.Instruction) {
 	case *ssa.Convert:
 		a.genConv(instr, cgn)
 
-	case *ssa.Extract:
+	case *ssa.Extract: // bz: access the ith results of a multiple return values; should already be separated
 		a.copy(a.valueNode(instr),
 			a.valueOffsetNode(instr.Tuple, instr.Index),
 			a.sizeof(instr.Type()))
@@ -1452,7 +1449,7 @@ func (a *analysis) genFunc(cgn *cgnode) {
 			}
 			for _, rand := range rands {
 				if atf, ok := (*rand).(*ssa.Function); ok {
-					a.atFuncs[atf] = true
+					a.atFuncs[atf] = true  // bz: what is this ??
 				}
 			}
 		}
