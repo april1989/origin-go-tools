@@ -212,23 +212,23 @@ func (a *analysis) equalContext(existCSs []*callsite, cur *callsite, curCallerCS
 
 //bz: we make function body nodes and param/result nodes together, instead of calling makeCGNode
 //because for kcfa, we might have multiple cgnodes for fn
-//fn -> target; obj -> for fn cgnode; callersite -> callsite of fn
+//fn -> target; obj -> for fn cgnode; callersite -> callsite of fn, and is nil for makeclosure
 //TODO: Precision Problem: since go ssa instruction only record call instruction but no program counter,
 //      two calls (no param and return value) to the same target within one method cannot be distinguished ...
 //      e.g., go2/race_checker/GoBench/Kubernetes/88331/main.go: func NewPriorityQueue() *PriorityQueue {...}
-func (a *analysis) makeFunctionObjects(caller *cgnode, fn *ssa.Function, callersite *callsite) ([]nodeid, bool) {
+func (a *analysis) makeFunctionObjectWithContext(caller *cgnode, fn *ssa.Function, callersite *callsite) (nodeid, bool) {
 	if a.log != nil {
-		fmt.Fprintf(a.log, "\t---- makeFunctionObjects (kcfa) %s\n", fn)
+		fmt.Fprintf(a.log, "\t---- makeFunctionObjectWithContext (kcfa) %s\n", fn)
 	}
-	fmt.Printf("\t---- makeFunctionObjects (kcfa) for %s\n", fn)
+	fmt.Printf("\t---- makeFunctionObjectWithContext (kcfa) for %s\n", fn)
 
 	if fn.String() == "command-line-arguments.ParallelizeUntil$1" {
 		fmt.Printf("")
 	}
 
-	//prepare
-	existFnIdx, multiFn := a.fn2nodeid[fn]               //if exist any previous callsites for fn?
-	if multiFn { //check if we already have the caller + callsite ?? recursive/duplicate call
+	//if exist this callsite + cgnode for fn?
+	existFnIdx, multiFn := a.fn2nodeid[fn]
+	if multiFn {   //check if we already have the caller + callsite ?? recursive/duplicate call
 		for i, existIdx := range existFnIdx { // idx -> index of fn cgnode in a.cgnodes[]
 			_fnCGNode := a.cgnodes[existIdx]
 			if a.equalContext(_fnCGNode.callersite, callersite, caller.callersite) { //check all callsites
@@ -238,29 +238,25 @@ func (a *analysis) makeFunctionObjects(caller *cgnode, fn *ssa.Function, callers
 				}
 				fmt.Printf("    EXIST**: " + strconv.Itoa(i+1) + "th: K-CALLSITE -- " + _fnCGNode.contourKfull() + "\n")
 
-				var result = make([]nodeid, 1)
-				result[0] = _fnCGNode.obj
-				return result, false
+				return _fnCGNode.obj, false
 			}
 		}
 	}
     //create a callee for THIS caller context if available, not every caller context
-	var result = make([]nodeid, 1)
 	var newFnIdx = make([]int, 1)
-	obj := a.makeCGNodeAndRelated(fn, 0, caller, callersite)
+	obj := a.makeCGNodeAndRelated(fn, caller, callersite)
 
 	//update
 	fnIdx := len(a.cgnodes) - 1 // last element of a.cgnodes
 	newFnIdx[0] = fnIdx
-	result[0] = obj
 
 	//update fn2nodeid
 	a.updateFn2NodeID(fn, multiFn, newFnIdx, existFnIdx)
-	return result, true
+	return obj, true
 }
 
-//bz: continue with makeFunctionObjects (kcfa), create cgnode for one caller context as well as its param/result
-func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, i int, caller *cgnode, callersite *callsite) nodeid {
+//bz: continue with makeFunctionObjectWithContext (kcfa), create cgnode for one caller context as well as its param/result
+func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, callersite *callsite) nodeid {
 	// obj is the function object (identity, params, results).
 	obj := a.nextNode()
 	//doing task of makeCGNode
@@ -275,9 +271,9 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, i int, caller *cgnode,
 	}
 	fn.IsFromApp = true //if it reaches here, must be kcfa, mark it
 	if a.log != nil {    //debug
-		fmt.Fprintf(a.log, "    "+strconv.Itoa(i+1)+"th: K-CALLSITE -- "+cgn.contourKfull()+"\n")
+		fmt.Fprintf(a.log, "     K-CALLSITE -- "+cgn.contourKfull()+"\n")
 	}
-	fmt.Printf("    " + strconv.Itoa(i+1) + "th: K-CALLSITE -- " + cgn.contourKfull() + "\n")
+	fmt.Printf("     K-CALLSITE -- " + cgn.contourKfull() + "\n")
 
 	a.cgnodes = append(a.cgnodes, cgn)
 	//make param and result nodes
@@ -288,7 +284,7 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, i int, caller *cgnode,
 	return obj
 }
 
-//bz: continue with makeFunctionObjects (kcfa), update a.fn2nodeid for fn
+//bz: continue with makeFunctionObjectWithContext (kcfa), update a.fn2nodeid for fn
 func (a *analysis) updateFn2NodeID(fn *ssa.Function, multiFn bool, newFnIdx []int, existFnIdx []int) {
 	if multiFn { //update and add to fn2nodeid
 		for _, fnIdx := range newFnIdx {
@@ -302,7 +298,7 @@ func (a *analysis) updateFn2NodeID(fn *ssa.Function, multiFn bool, newFnIdx []in
 	}
 }
 
-//bz: continue with makeFunctionObjects (kcfa), we create the parameter/result nodes for fn
+//bz: continue with makeFunctionObjectWithContext (kcfa), we create the parameter/result nodes for fn
 func (a *analysis) makeParamResultNodes(fn *ssa.Function, obj nodeid, cgn *cgnode) {
 	sig := fn.Signature
 	a.addOneNode(sig, "func.cgnode", nil) // (scalar with Signature type)
@@ -747,44 +743,6 @@ func (a *analysis) shouldUseContext(fn *ssa.Function) bool {
 	return true
 }
 
-//bz: !!!!! brute force solution
-func (a *analysis) genContextSensitiveCallforStatic(caller *cgnode, site *callsite, fn *ssa.Function, call *ssa.CallCommon, result nodeid) {
-	var objs []nodeid                             //bz: we always need a set of new contours
-	var isNew bool                                //bz: whether this is a newly created cgnode -> true
-	objs, isNew = a.makeFunctionObjects(caller, fn, site) // new contour
-	if !isNew {
-		return //all constraints should be added already
-	}
-
-	for _, obj := range objs {
-		a.callEdge(caller, site, obj)
-		sig := call.Signature()
-
-		// Copy receiver, if any.
-		params := a.funcParams(obj)
-		args := call.Args
-		if sig.Recv() != nil {
-			sz := a.sizeof(sig.Recv().Type())
-			a.copy(params, a.valueNode(args[0]), sz)
-			params += nodeid(sz)
-			args = args[1:]
-		}
-
-		// Copy actual parameters into formal params block.
-		// Must loop, since the actuals aren't contiguous.
-		for i, arg := range args {
-			sz := a.sizeof(sig.Params().At(i).Type())
-			a.copy(params, a.valueNode(arg), sz)
-			params += nodeid(sz)
-		}
-
-		// Copy formal results block to actual result.
-		if result != 0 {
-			a.copy(result, a.funcResults(obj), a.sizeof(sig.Results()))
-		}
-	}
-}
-
 // bz: whehter this is a main method
 // TODO: do we also include init?
 //       too much library methods .... cannot do this for all library methods ...
@@ -841,16 +799,17 @@ func (a *analysis) genStaticCall(caller *cgnode, site *callsite, call *ssa.CallC
 		fmt.Printf(fn.String())
 	}
 
-	//bz: simple solution; start to be kcfa from main.main
-	if a.config.CallSiteSensitive == true && a.withinScope(fn.String()) { //&& (caller.fn.IsFromApp || a.isMainMethod(caller.fn))
-		fmt.Println("CAUGHT APP METHOD -- " + fn.String())
-		a.genContextSensitiveCallforStatic(caller, site, fn, call, result)
-		return
-	}
-
 	// Ascertain the context (contour/cgnode) for a particular call.
 	var obj nodeid
-	if a.shouldUseContext(fn) {
+	var isNew bool                                       //bz: whether this is a newly created cgnode -> true
+	if a.config.CallSiteSensitive == true && a.withinScope(fn.String()) { //&& (caller.fn.IsFromApp || a.isMainMethod(caller.fn))
+		//bz: simple brute force solution; start to be kcfa from main.main
+		fmt.Println("CAUGHT APP METHOD -- " + fn.String())             //debug
+		obj, isNew = a.makeFunctionObjectWithContext(caller, fn, site) //bz: we need a new contour
+		if !isNew {
+			return //all constraints should be added already
+		} //all constraints exist
+	} else if a.shouldUseContext(fn) {
 		obj = a.makeFunctionObject(fn, site) // new contour
 	} else {
 		obj = a.objectNode(nil, fn) // shared contour
@@ -1064,16 +1023,17 @@ func (a *analysis) genCall(caller *cgnode, instr ssa.CallInstruction) {
 }
 
 //bz: tell if fn is from makeclosure
-func (a *analysis) isFromMakeClosure(fn *ssa.Function) bool {
+func (a *analysis) isFromMakeClosure(fn *ssa.Function) *ssa.MakeClosure {
 	referrers := fn.Referrers()
-	if referrers == nil { return  false}
-
-
-	for _, referrer := range referrers {
-		if referrer.(type) == *ssa.MakeClosure {
-
-		}
+	if referrers == nil {
+		return nil
 	}
+
+	switch t := (*referrers)[0].(type) {
+	case *ssa.MakeClosure: //should have another better way to do type comparison
+		return t
+	}
+	return nil
 }
 
 
@@ -1105,10 +1065,13 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 				a.addNodes(mustDeref(v.Type()), "global")
 				a.endObject(obj, nil, v)
 
-			case *ssa.Function: //bz: create cgnode/constraints here; this has NO callsite information; update for make closure
-
-
-			    obj = a.makeFunctionObject(v, nil)
+			case *ssa.Function: //bz: create cgnode/constraints here; this has NO ssa.CallInstruction as callsite
+			    closure := a.isFromMakeClosure(v)
+			    if closure != nil {//bz: update for make closure
+			    	obj, _ = a.makeFunctionObjectWithContext(cgn, v, nil)
+				}else{
+					obj = a.makeFunctionObject(v, nil)
+				}
 
 			case *ssa.Const:
 				// not addressable
