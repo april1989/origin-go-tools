@@ -330,6 +330,7 @@ func (c *invokeConstraint) solve(a *analysis, delta *nodeset) {
 		}
 		sig := fn.Signature
 
+		//bz: fnObj is nodeid,
 		fnObj := a.globalobj[fn] // dynamic calls use shared contour
 		if fnObj == 0 {
 			// a.objectNode(fn) was not called during gen phase.

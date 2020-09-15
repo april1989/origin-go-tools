@@ -72,7 +72,7 @@ type Config struct {
 	//bz: kcfa
 	CallSiteSensitive bool
 	K int //must be capital ...
-	LimitScope bool  //only kcfa to app methods
+	LimitScope bool  //only apply kcfa to app methods
 }
 
 type track uint32

@@ -320,6 +320,8 @@ type Function struct {
 	namedResults []*Alloc                // tuple of named results
 	targets      *targets                // linked stack of branch targets
 	lblocks      map[*ast.Object]*lblock // labelled blocks
+
+	IsFromApp bool // bz: whether this fn is invoked by main method from the analyzed app
 }
 
 // BasicBlock represents an SSA basic block.

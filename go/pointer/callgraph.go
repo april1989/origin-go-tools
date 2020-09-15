@@ -20,7 +20,6 @@ type cgnode struct {
 	obj        nodeid      // start of this contour's object block
 	sites      []*callsite // ordered list of callsites within this function
 	callersite []*callsite   // where called from, if known; nil for shared contours ----> bz: k-caller site
-	isFromApp  bool        // bz: whether this cgnode is invoked by main method from the analyzed app; update when created
 }
 
 // contour returns a description of this node's contour.
@@ -70,12 +69,6 @@ func (n *cgnode) String() string {
 type callsite struct {
 	targets nodeid              // pts(·) contains objects for dynamically called functions
 	instr   ssa.CallInstruction // the call instruction; nil for synthetic/intrinsic
-}
-
-//bz: tmp solution, to compare string ...
-func (c *callsite) equalContext(other *callsite) bool {
-	//return c.targets == other.targets && c.instr.String() == other.instr.String() //bz: this might be too strict ...
-	return c.instr.String() == other.instr.String() && c.instr.Parent().String() == other.instr.Parent().String()
 }
 
 func (c *callsite) String() string {

@@ -158,6 +158,10 @@ func (a *analysis) makeFunctionObject(fn *ssa.Function, callersite *callsite) no
 		fmt.Fprintf(a.log, "\t---- makeFunctionObject %s\n", fn)
 	}
 
+	if fn.String() == "command-line-arguments.ParallelizeUntil$1" {
+		fmt.Printf("")
+	}
+
 	// obj is the function object (identity, params, results).
 	obj := a.nextNode()
 	cgn := a.makeCGNode(fn, obj, callersite)
@@ -180,28 +184,54 @@ func (a *analysis) makeFunctionObject(fn *ssa.Function, callersite *callsite) no
 	return obj
 }
 
+
+//bz: tmp solution, to compare string ...
+func (a *analysis) equalContext(existCSs []*callsite, cur *callsite, curCallerCSs []*callsite) bool {
+	//return c.targets == other.targets && c.instr.String() == other.instr.String() //bz: this might be too strict ...
+	//return c.instr.String() == other.instr.String() && c.instr.Parent().String() == other.instr.Parent().String()
+	for i, existCS := range existCSs {
+		if i == 0 {
+			if existCS.instr.String() == cur.instr.String() && existCS.instr.Parent().String() == cur.instr.Parent().String() {
+			}else{
+				return false
+			}
+		}else{
+			if i - 1 < len(curCallerCSs) {
+				curCallerCS := curCallerCSs[i - 1]
+				if existCS.instr.String() == curCallerCS.instr.String() && existCS.instr.Parent().String() == curCallerCS.instr.Parent().String() {
+				}else{
+					return false
+				}
+			}else{
+				return false
+			}
+		}
+ 	}
+	return true
+}
+
 //bz: we make function body nodes and param/result nodes together, instead of calling makeCGNode
 //because for kcfa, we might have multiple cgnodes for fn
 //fn -> target; obj -> for fn cgnode; callersite -> callsite of fn
 //TODO: Precision Problem: since go ssa instruction only record call instruction but no program counter,
 //      two calls (no param and return value) to the same target within one method cannot be distinguished ...
 //      e.g., go2/race_checker/GoBench/Kubernetes/88331/main.go: func NewPriorityQueue() *PriorityQueue {...}
-func (a *analysis) makeFunctionObjects(fn *ssa.Function, callersite *callsite) ([]nodeid, bool) {
+func (a *analysis) makeFunctionObjects(caller *cgnode, fn *ssa.Function, callersite *callsite) ([]nodeid, bool) {
 	if a.log != nil {
 		fmt.Fprintf(a.log, "\t---- makeFunctionObjects (kcfa) %s\n", fn)
 	}
 	fmt.Printf("\t---- makeFunctionObjects (kcfa) for %s\n", fn)
 
-	//prepare
-	callerFn := callersite.instr.Parent()                //with type *ssa.Function
-	existCallerIdx, multiCaller := a.fn2nodeid[callerFn] //if exist any caller with multiple callsites ?
-	existFnIdx, multiFn := a.fn2nodeid[fn]               //if exist any previous callsites for fn?
+	if fn.String() == "command-line-arguments.ParallelizeUntil$1" {
+		fmt.Printf("")
+	}
 
+	//prepare
+	existFnIdx, multiFn := a.fn2nodeid[fn]               //if exist any previous callsites for fn?
 	if multiFn { //check if we already have the caller + callsite ?? recursive/duplicate call
 		for i, existIdx := range existFnIdx { // idx -> index of fn cgnode in a.cgnodes[]
 			_fnCGNode := a.cgnodes[existIdx]
-			_fnCallSite := _fnCGNode.callersite[0]
-			if _fnCallSite.equalContext(callersite) { //TODO: currently only check idx = 0, should check all
+			if a.equalContext(_fnCGNode.callersite, callersite, caller.callersite) { //check all callsites
 				//duplicate combination, return this
 				if a.log != nil { //debug
 					fmt.Fprintf(a.log, "    EXIST**: "+strconv.Itoa(i+1)+"th: K-CALLSITE -- "+_fnCGNode.contourKfull()+"\n")
@@ -214,52 +244,36 @@ func (a *analysis) makeFunctionObjects(fn *ssa.Function, callersite *callsite) (
 			}
 		}
 	}
+    //create a callee for THIS caller context if available, not every caller context
+	var result = make([]nodeid, 1)
+	var newFnIdx = make([]int, 1)
+	obj := a.makeCGNodeAndRelated(fn, 0, caller, callersite)
 
-	if multiCaller { //caller has multiple contexts, create a callee for each cgnode caller context
-		var result = make([]nodeid, len(existCallerIdx)) // should be <= len
-		var newFnIdx = make([]int, len(existCallerIdx))  // should be <= len
-		for i, callerIdx := range existCallerIdx {       // idx -> index of caller cgnode in a.cgnodes[]
-			obj := a.makeCGNodeAndRelated(fn, i, callerIdx, callersite)
-			//update
-			fnIdx := len(a.cgnodes) - 1 // last element of a.cgnodes
-			newFnIdx[i] = fnIdx
-			result[i] = obj
-		}
-		//update fn2nodeid
-		a.updateFn2NodeID(fn, multiFn, newFnIdx, existFnIdx)
-		return result, true
+	//update
+	fnIdx := len(a.cgnodes) - 1 // last element of a.cgnodes
+	newFnIdx[0] = fnIdx
+	result[0] = obj
 
-	} else { //no multiple caller context exist for fn, will only create one cgnode
-		var result = make([]nodeid, 1)
-		var newFnIdx = make([]int, 1)
-		obj := a.makeCGNodeAndRelated(fn, 0, -1, callersite)
-
-		//update
-		fnIdx := len(a.cgnodes) - 1 // last element of a.cgnodes
-		newFnIdx[0] = fnIdx
-		result[0] = obj
-
-		//update fn2nodeid
-		a.updateFn2NodeID(fn, multiFn, newFnIdx, existFnIdx)
-		return result, true
-	}
+	//update fn2nodeid
+	a.updateFn2NodeID(fn, multiFn, newFnIdx, existFnIdx)
+	return result, true
 }
 
 //bz: continue with makeFunctionObjects (kcfa), create cgnode for one caller context as well as its param/result
-func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, i int, callerIdx int, callersite *callsite) nodeid {
+func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, i int, caller *cgnode, callersite *callsite) nodeid {
 	// obj is the function object (identity, params, results).
 	obj := a.nextNode()
 	//doing task of makeCGNode
 	var cgn *cgnode
-	if callerIdx == -1 { //no multiple caller
+	if caller.callersite[0] == nil { //no caller context
 		single := a.createSingleCallSite(callersite)
 		cgn = &cgnode{fn: fn, obj: obj, callersite: single}
 	} else {
-		callerkcs := a.cgnodes[callerIdx].callersite
+		callerkcs := caller.callersite
 		fnkcs := a.createKCallSite(callerkcs, callersite)
 		cgn = &cgnode{fn: fn, obj: obj, callersite: fnkcs}
 	}
-	cgn.isFromApp = true //if it reaches here, must be kcfa
+	fn.IsFromApp = true //if it reaches here, must be kcfa, mark it
 	if a.log != nil {    //debug
 		fmt.Fprintf(a.log, "    "+strconv.Itoa(i+1)+"th: K-CALLSITE -- "+cgn.contourKfull()+"\n")
 	}
@@ -737,7 +751,7 @@ func (a *analysis) shouldUseContext(fn *ssa.Function) bool {
 func (a *analysis) genContextSensitiveCallforStatic(caller *cgnode, site *callsite, fn *ssa.Function, call *ssa.CallCommon, result nodeid) {
 	var objs []nodeid                             //bz: we always need a set of new contours
 	var isNew bool                                //bz: whether this is a newly created cgnode -> true
-	objs, isNew = a.makeFunctionObjects(fn, site) // new contour
+	objs, isNew = a.makeFunctionObjects(caller, fn, site) // new contour
 	if !isNew {
 		return //all constraints should be added already
 	}
@@ -823,8 +837,12 @@ func (a *analysis) genStaticCall(caller *cgnode, site *callsite, call *ssa.CallC
 		return
 	}
 
+	if fn.String() == "command-line-arguments.ParallelizeUntil" {
+		fmt.Printf(fn.String())
+	}
+
 	//bz: simple solution; start to be kcfa from main.main
-	if a.config.CallSiteSensitive == true && (caller.isFromApp || a.isMainMethod(caller.fn)) && a.withinScope(fn.String()) {
+	if a.config.CallSiteSensitive == true && a.withinScope(fn.String()) { //&& (caller.fn.IsFromApp || a.isMainMethod(caller.fn))
 		fmt.Println("CAUGHT APP METHOD -- " + fn.String())
 		a.genContextSensitiveCallforStatic(caller, site, fn, call, result)
 		return
@@ -893,22 +911,22 @@ func (a *analysis) genDynamicCall(caller *cgnode, site *callsite, call *ssa.Call
 func (a *analysis) genContextSensitiveCallforRecv(caller *cgnode, callersite *callsite, sig *types.Signature, call *ssa.CallCommon, result nodeid) {
 	//prepare: all target cgnode info is in sig, we use sig instead of fn here
 	//TODO: from the original code, there should be no duplicate invoke call traversal, ASSUME no recursive call now
-	callerFn := caller.fn                                //with type *ssa.Function
-	existCallerIdx, multiCaller := a.fn2nodeid[callerFn] //if exist any caller with multiple callsites ?
+	//callerFn := caller.fn                                //with type *ssa.Function
+	//existCallerIdx, multiCaller := a.fn2nodeid[callerFn] //if exist any caller with multiple callsites ?
 
-	if multiCaller {
-		for i, callerIdx := range existCallerIdx { // idx -> index of caller cgnode in a.cgnodes[]
-			callerkcs := a.cgnodes[callerIdx].callersite
-			fnkcs := a.createKCallSite(callerkcs, callersite)
-			if a.log != nil {    //debug
-				fmt.Fprintf(a.log, "    "+strconv.Itoa(i+1)+"th: K-CALLSITE -- " + "\n")
-			}
-			fmt.Printf("    " + strconv.Itoa(i+1) + "th: K-CALLSITE -- " + "\n")
-
-		}
-	} else {
-		single := a.createSingleCallSite(callersite)
-	}
+	//if multiCaller {
+	//	for i, callerIdx := range existCallerIdx { // idx -> index of caller cgnode in a.cgnodes[]
+	//		callerkcs := a.cgnodes[callerIdx].callersite
+	//		fnkcs := a.createKCallSite(callerkcs, callersite)
+	//		if a.log != nil {    //debug
+	//			fmt.Fprintf(a.log, "    "+strconv.Itoa(i+1)+"th: K-CALLSITE -- " + "\n")
+	//		}
+	//		fmt.Printf("    " + strconv.Itoa(i+1) + "th: K-CALLSITE -- " + "\n")
+	//
+	//	}
+	//} else {
+	//	single := a.createSingleCallSite(callersite)
+	//}
 }
 
 func (a *analysis) makeRecvParamResultNodes(site *callsite, sig *types.Signature, call *ssa.CallCommon, result nodeid) {
@@ -930,12 +948,12 @@ func (a *analysis) genInvoke(caller *cgnode, site *callsite, call *ssa.CallCommo
 	//	fmt.Println("      Receiver -- " + sig.Recv().String())
 	//}
 
-	//bz: simple solution; start to be kcfa from main.main
-	if a.config.CallSiteSensitive == true && (caller.isFromApp || a.isMainMethod(caller.fn)) && a.withinScope(sig.String()) {
-		fmt.Println("CAUGHT APP INVOKE METHOD -- " + sig.String())
-		a.genContextSensitiveCallforRecv(caller, site, sig, call, result)
-		return
-	}
+	////bz: simple solution; start to be kcfa from main.main
+	//if a.config.CallSiteSensitive == true && (caller.isFromApp || a.isMainMethod(caller.fn)) && a.withinScope(sig.String()) {
+	//	fmt.Println("CAUGHT APP INVOKE METHOD -- " + sig.String())
+	//	a.genContextSensitiveCallforRecv(caller, site, sig, call, result)
+	//	return
+	//}
 
 	// Allocate a contiguous targets/params/results block for this call.
 	block := a.nextNode() //bz: <----- this node is empty, just to mark this is the start of P/R block
@@ -1045,6 +1063,20 @@ func (a *analysis) genCall(caller *cgnode, instr ssa.CallInstruction) {
 	}
 }
 
+//bz: tell if fn is from makeclosure
+func (a *analysis) isFromMakeClosure(fn *ssa.Function) bool {
+	referrers := fn.Referrers()
+	if referrers == nil { return  false}
+
+
+	for _, referrer := range referrers {
+		if referrer.(type) == *ssa.MakeClosure {
+
+		}
+	}
+}
+
+
 // objectNode returns the object to which v points, if known.
 // In other words, if the points-to set of v is a singleton, it
 // returns the sole label, zero otherwise.
@@ -1073,8 +1105,10 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 				a.addNodes(mustDeref(v.Type()), "global")
 				a.endObject(obj, nil, v)
 
-			case *ssa.Function: //bz: create cgnode/constraints here most for reflection; this has NO caller/callsite information
-				obj = a.makeFunctionObject(v, nil)
+			case *ssa.Function: //bz: create cgnode/constraints here; this has NO callsite information; update for make closure
+
+
+			    obj = a.makeFunctionObject(v, nil)
 
 			case *ssa.Const:
 				// not addressable
@@ -1305,7 +1339,7 @@ func (a *analysis) genInstr(cgn *cgnode, instr ssa.Instruction) {
 		}
 
 	case *ssa.MakeClosure:
-		fn := instr.Fn.(*ssa.Function)
+		fn := instr.Fn.(*ssa.Function) //bz: fn should not be nil, because we are closuring on a static go routine, we will adjust in valueNode
 		a.copy(a.valueNode(instr), a.valueNode(fn), 1)
 		// Free variables are treated like global variables.
 		for i, b := range instr.Bindings {
