@@ -156,9 +156,6 @@ func (a *analysis) endObject(obj nodeid, cgn *cgnode, data interface{}) *object 
 func (a *analysis) makeFunctionObject(fn *ssa.Function, callersite *callsite) nodeid {
 	if a.log != nil {
 		fmt.Fprintf(a.log, "\t---- makeFunctionObject %s\n", fn)
-		//if strings.Contains(fn.String(), "command-line-arguments") {
-		//	fmt.Println(fn.String())
-		//}
 	}
 
 	// obj is the function object (identity, params, results).
@@ -192,26 +189,24 @@ func (a *analysis) makeFunctionObject(fn *ssa.Function, callersite *callsite) no
 func (a *analysis) makeFunctionObjects(fn *ssa.Function, callersite *callsite) ([]nodeid, bool) {
 	if a.log != nil {
 		fmt.Fprintf(a.log, "\t---- makeFunctionObjects (kcfa) %s\n", fn)
-		//if strings.Contains(fn.String(), "command-line-arguments") {
-		//	fmt.Println(fn.String())
-		//}
 	}
 	fmt.Printf("\t---- makeFunctionObjects (kcfa) for %s\n", fn)
 
+	//prepare
 	callerFn := callersite.instr.Parent()                //with type *ssa.Function
 	existCallerIdx, multiCaller := a.fn2nodeid[callerFn] //if exist any caller with multiple callsites ?
 	existFnIdx, multiFn := a.fn2nodeid[fn]               //if exist any previous callsites for fn?
 
 	if multiFn { //check if we already have the caller + callsite ?? recursive/duplicate call
-		for i, existIdx := range existFnIdx {       // idx -> index of fn cgnode in a.cgnodes[]
+		for i, existIdx := range existFnIdx { // idx -> index of fn cgnode in a.cgnodes[]
 			_fnCGNode := a.cgnodes[existIdx]
 			_fnCallSite := _fnCGNode.callersite[0]
 			if _fnCallSite.equalContext(callersite) { //TODO: currently only check idx = 0, should check all
 				//duplicate combination, return this
 				if a.log != nil { //debug
-					fmt.Fprintf(a.log, "    EXIST**: "+strconv.Itoa(i+1)+"th: K-CALLSITE -- "+_fnCGNode.contourKfull() + "\n")
+					fmt.Fprintf(a.log, "    EXIST**: "+strconv.Itoa(i+1)+"th: K-CALLSITE -- "+_fnCGNode.contourKfull()+"\n")
 				}
-				fmt.Printf("    EXIST**: "+strconv.Itoa(i+1)+"th: K-CALLSITE -- "+_fnCGNode.contourKfull() + "\n")
+				fmt.Printf("    EXIST**: " + strconv.Itoa(i+1) + "th: K-CALLSITE -- " + _fnCGNode.contourKfull() + "\n")
 
 				var result = make([]nodeid, 1)
 				result[0] = _fnCGNode.obj
@@ -265,10 +260,10 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, i int, callerIdx int, 
 		cgn = &cgnode{fn: fn, obj: obj, callersite: fnkcs}
 	}
 	cgn.isFromApp = true //if it reaches here, must be kcfa
-	if a.log != nil { //debug
-		fmt.Fprintf(a.log, "    "+strconv.Itoa(i+1)+"th: K-CALLSITE -- "+cgn.contourKfull() + "\n")
+	if a.log != nil {    //debug
+		fmt.Fprintf(a.log, "    "+strconv.Itoa(i+1)+"th: K-CALLSITE -- "+cgn.contourKfull()+"\n")
 	}
-	fmt.Printf("    "+strconv.Itoa(i+1)+"th: K-CALLSITE -- "+cgn.contourKfull() + "\n")
+	fmt.Printf("    " + strconv.Itoa(i+1) + "th: K-CALLSITE -- " + cgn.contourKfull() + "\n")
 
 	a.cgnodes = append(a.cgnodes, cgn)
 	//make param and result nodes
@@ -323,7 +318,7 @@ func (a *analysis) createKCallSite(caller2sites []*callsite, callersite *callsit
 		return a.createSingleCallSite(callersite)
 	}
 	//possible k call sites
-	size := math.Min(float64(k), float64(1 + len(caller2sites))) // take the smaller number
+	size := math.Min(float64(k), float64(1+len(caller2sites))) // take the smaller number
 	var slice = make([]*callsite, int(size))
 	for i, _ := range slice {
 		if i == 0 {
@@ -739,9 +734,9 @@ func (a *analysis) shouldUseContext(fn *ssa.Function) bool {
 }
 
 //bz: !!!!! brute force solution
-func (a *analysis) genCallSiteSensitiveCall(caller *cgnode, site *callsite, fn *ssa.Function, call *ssa.CallCommon, result nodeid) {
-	var objs []nodeid  //bz: we always need a set of new contours
-	var isNew bool     //bz: whether this is a newly created cgnode -> true
+func (a *analysis) genContextSensitiveCallforStatic(caller *cgnode, site *callsite, fn *ssa.Function, call *ssa.CallCommon, result nodeid) {
+	var objs []nodeid                             //bz: we always need a set of new contours
+	var isNew bool                                //bz: whether this is a newly created cgnode -> true
 	objs, isNew = a.makeFunctionObjects(fn, site) // new contour
 	if !isNew {
 		return //all constraints should be added already
@@ -789,17 +784,16 @@ func (a *analysis) isMainMethod(method *ssa.Function) bool {
 	return false
 }
 
-//bz: continue with isMainMethod
-func  (a *analysis) withinScope(method *ssa.Function) bool {
+//bz: continue with isMainMethod, currently compare string, will update
+func (a *analysis) withinScope(method string) bool {
 	if a.config.LimitScope {
-		if strings.Contains(method.String(), "command-line-arguments") {
+		if strings.Contains(method, "command-line-arguments") {
 			return true
 		}
 		return false
 	}
 	return true
 }
-
 
 //  ------------- bz : the following several functions generate constraints for different method calls --------------
 // genStaticCall generates constraints for a statically dispatched function call.
@@ -830,9 +824,9 @@ func (a *analysis) genStaticCall(caller *cgnode, site *callsite, call *ssa.CallC
 	}
 
 	//bz: simple solution; start to be kcfa from main.main
-	if a.config.CallSiteSensitive == true && (caller.isFromApp || a.isMainMethod(caller.fn)) && a.withinScope(fn) {
+	if a.config.CallSiteSensitive == true && (caller.isFromApp || a.isMainMethod(caller.fn)) && a.withinScope(fn.String()) {
 		fmt.Println("CAUGHT APP METHOD -- " + fn.String())
-		a.genCallSiteSensitiveCall(caller, site, fn, call, result)
+		a.genContextSensitiveCallforStatic(caller, site, fn, call, result)
 		return
 	}
 
@@ -895,8 +889,34 @@ func (a *analysis) genDynamicCall(caller *cgnode, site *callsite, call *ssa.Call
 	}
 }
 
+//bz: kcfa for invoke/dynamoic calls
+func (a *analysis) genContextSensitiveCallforRecv(caller *cgnode, callersite *callsite, sig *types.Signature, call *ssa.CallCommon, result nodeid) {
+	//prepare: all target cgnode info is in sig, we use sig instead of fn here
+	//TODO: from the original code, there should be no duplicate invoke call traversal, ASSUME no recursive call now
+	callerFn := caller.fn                                //with type *ssa.Function
+	existCallerIdx, multiCaller := a.fn2nodeid[callerFn] //if exist any caller with multiple callsites ?
+
+	if multiCaller {
+		for i, callerIdx := range existCallerIdx { // idx -> index of caller cgnode in a.cgnodes[]
+			callerkcs := a.cgnodes[callerIdx].callersite
+			fnkcs := a.createKCallSite(callerkcs, callersite)
+			if a.log != nil {    //debug
+				fmt.Fprintf(a.log, "    "+strconv.Itoa(i+1)+"th: K-CALLSITE -- " + "\n")
+			}
+			fmt.Printf("    " + strconv.Itoa(i+1) + "th: K-CALLSITE -- " + "\n")
+
+		}
+	} else {
+		single := a.createSingleCallSite(callersite)
+	}
+}
+
+func (a *analysis) makeRecvParamResultNodes(site *callsite, sig *types.Signature, call *ssa.CallCommon, result nodeid) {
+
+}
+
 // genInvoke generates constraints for a dynamic method invocation.
-// bz: working on this
+// bz: working on this, needs to work with pointer/solver.go@func (c *invokeConstraint) solve(a *analysis, delta *nodeset) ...
 func (a *analysis) genInvoke(caller *cgnode, site *callsite, call *ssa.CallCommon, result nodeid) {
 	if call.Value.Type() == a.reflectType {
 		a.genInvokeReflectType(caller, site, call, result)
@@ -910,18 +930,17 @@ func (a *analysis) genInvoke(caller *cgnode, site *callsite, call *ssa.CallCommo
 	//	fmt.Println("      Receiver -- " + sig.Recv().String())
 	//}
 
-	////bz: simple solution; start to be kcfa from main.main
-	//if a.config.CallSiteSensitive == true && (caller.isFromApp || a.isMainMethod(caller.fn)) {
-	//	fmt.Println("CAUGHT APP-Invoke METHOD -- " + sig.String())
-	//	a.genCallSiteSensitiveCall(caller, site, sig, call, result)
-	//	return
-	//}
-
+	//bz: simple solution; start to be kcfa from main.main
+	if a.config.CallSiteSensitive == true && (caller.isFromApp || a.isMainMethod(caller.fn)) && a.withinScope(sig.String()) {
+		fmt.Println("CAUGHT APP INVOKE METHOD -- " + sig.String())
+		a.genContextSensitiveCallforRecv(caller, site, sig, call, result)
+		return
+	}
 
 	// Allocate a contiguous targets/params/results block for this call.
-	block := a.nextNode()
+	block := a.nextNode() //bz: <----- this node is empty, just to mark this is the start of P/R block
 	// pts(targets) will be the set of possible call targets
-	site.targets = a.addOneNode(sig, "invoke.targets", nil)  //bz: site.targets -> receiver of this invoke
+	site.targets = a.addOneNode(sig, "invoke.targets", nil) //bz: site.targets -> receiver of this invoke
 	p := a.addNodes(sig.Params(), "invoke.params")
 	r := a.addNodes(sig.Results(), "invoke.results")
 
@@ -1054,7 +1073,7 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 				a.addNodes(mustDeref(v.Type()), "global")
 				a.endObject(obj, nil, v)
 
-			case *ssa.Function: //bz: create cgnode/constraints here for reflection; this has NO caller/callsite information
+			case *ssa.Function: //bz: create cgnode/constraints here most for reflection; this has NO caller/callsite information
 				obj = a.makeFunctionObject(v, nil)
 
 			case *ssa.Const:
@@ -1067,7 +1086,7 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 			if a.log != nil {
 				fmt.Fprintf(a.log, "\tglobalobj[%s] = n%d\n", v, obj)
 			}
-			a.globalobj[v] = obj
+			a.globalobj[v] = obj //bz: obj is nodeid used in a.nodes[] if v is invoke
 		}
 		return obj
 	}
@@ -1407,9 +1426,6 @@ func (a *analysis) genFunc(cgn *cgnode) {
 
 	if a.log != nil {
 		fmt.Fprintf(a.log, "\n\n==== Generating constraints for %s, %s\n", cgn, cgn.contour(a.config.CallSiteSensitive))
-		//if strings.Contains(cgn.String(), "command-line-arguments") {
-		//	fmt.Println(cgn.String())
-		//}
 
 		// Hack: don't display body if intrinsic.
 		if impl != nil {
@@ -1481,7 +1497,7 @@ func (a *analysis) genFunc(cgn *cgnode) {
 			}
 			for _, rand := range rands {
 				if atf, ok := (*rand).(*ssa.Function); ok {
-					a.atFuncs[atf] = true  // bz: what is this ??
+					a.atFuncs[atf] = true // bz: what is this ??
 				}
 			}
 		}

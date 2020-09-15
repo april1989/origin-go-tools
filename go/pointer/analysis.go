@@ -141,7 +141,8 @@ type analysis struct {
 	runtimeSetFinalizer *ssa.Function   // runtime.SetFinalizer
 
 	//bz: record
-	fn2nodeid   map[*ssa.Function][]int  //bz: a map of fn with a set of its cgnodes represented by nodeid
+	fn2nodeid   map[*ssa.Function][]int  //bz: (static) a map of fn with a set of its cgnodes represented by the indexes of cgnodes[]
+	                                     // fn can also be replaced by sig: *types.Signature
 }
 
 // enclosingObj returns the first node of the addressable memory

@@ -311,7 +311,7 @@ func (c *untagConstraint) solve(a *analysis, delta *nodeset) {
 		}
 	}
 }
-
+//bz: this solves for invoke calls, needs to be updated for kcfa
 func (c *invokeConstraint) solve(a *analysis, delta *nodeset) {
 	for _, x := range delta.AppendTo(a.deltaSpace) {
 		ifaceObj := nodeid(x)
