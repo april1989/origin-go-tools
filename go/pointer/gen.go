@@ -158,8 +158,11 @@ func (a *analysis) makeFunctionObject(fn *ssa.Function, callersite *callsite) no
 		fmt.Fprintf(a.log, "\t---- makeFunctionObject %s\n", fn)
 	}
 
-	if fn.String() == "command-line-arguments.ParallelizeUntil$1" {
-		fmt.Printf("")
+	if strings.Contains(fn.String(), "command-line-arguments.") {
+		fmt.Println("  DEBUG: " + fn.String())
+		if len(fn.Params) > 0 {
+			fmt.Println( fn.Params[0].Type().String()) //---> receiver struct type
+		}
 	}
 
 	// obj is the function object (identity, params, results).
@@ -185,26 +188,16 @@ func (a *analysis) makeFunctionObject(fn *ssa.Function, callersite *callsite) no
 }
 
 
-//bz: tmp solution, to compare string ...
+
+
+//bz: if two []*callsite are the same
 func (a *analysis) equalContext(existCSs []*callsite, cur *callsite, curCallerCSs []*callsite) bool {
-	//return c.targets == other.targets && c.instr.String() == other.instr.String() //bz: this might be too strict ...
-	//return c.instr.String() == other.instr.String() && c.instr.Parent().String() == other.instr.Parent().String()
 	for i, existCS := range existCSs {
-		if i == 0 {
-			if existCS.instr.String() == cur.instr.String() && existCS.instr.Parent().String() == cur.instr.Parent().String() {
-			}else{
-				return false
-			}
-		}else{
-			if i - 1 < len(curCallerCSs) {
-				curCallerCS := curCallerCSs[i - 1]
-				if existCS.instr.String() == curCallerCS.instr.String() && existCS.instr.Parent().String() == curCallerCS.instr.Parent().String() {
-				}else{
-					return false
-				}
-			}else{
-				return false
-			}
+		switch i {
+		case 0: //[0] is the most recent
+			if !existCS.equal(cur) { return false }
+		default:
+			if !existCS.equal(curCallerCSs[i - 1]) { return false }
 		}
  	}
 	return true
@@ -222,27 +215,17 @@ func (a *analysis) makeFunctionObjectWithContext(caller *cgnode, fn *ssa.Functio
 	}
 	fmt.Printf("\t---- makeFunctionObjectWithContext (kcfa) for %s\n", fn)
 
-	if fn.String() == "command-line-arguments.ParallelizeUntil$1" {
-		fmt.Printf("")
+	if strings.Contains(fn.String(), "command-line-arguments.") {
+		fmt.Println("  DEBUG: " + fn.String())
 	}
 
-	//if exist this callsite + cgnode for fn?
-	existFnIdx, multiFn := a.fn2nodeid[fn]
-	if multiFn {   //check if we already have the caller + callsite ?? recursive/duplicate call
-		for i, existIdx := range existFnIdx { // idx -> index of fn cgnode in a.cgnodes[]
-			_fnCGNode := a.cgnodes[existIdx]
-			if a.equalContext(_fnCGNode.callersite, callersite, caller.callersite) { //check all callsites
-				//duplicate combination, return this
-				if a.log != nil { //debug
-					fmt.Fprintf(a.log, "    EXIST**: "+strconv.Itoa(i+1)+"th: K-CALLSITE -- "+_fnCGNode.contourKfull()+"\n")
-				}
-				fmt.Printf("    EXIST**: " + strconv.Itoa(i+1) + "th: K-CALLSITE -- " + _fnCGNode.contourKfull() + "\n")
-
-				return _fnCGNode.obj, false
-			}
-		}
+	//if we can find an existing cgnode/obj
+	existFnIdx, multiFn, existNodeID, isNew := a.existContextForComb(fn, callersite, caller)
+	if !isNew {
+		return existNodeID, isNew
 	}
-    //create a callee for THIS caller context if available, not every caller context
+
+	//create a callee for THIS caller context if available, not every caller context
 	var newFnIdx = make([]int, 1)
 	obj := a.makeCGNodeAndRelated(fn, caller, callersite)
 
@@ -252,7 +235,28 @@ func (a *analysis) makeFunctionObjectWithContext(caller *cgnode, fn *ssa.Functio
 
 	//update fn2nodeid
 	a.updateFn2NodeID(fn, multiFn, newFnIdx, existFnIdx)
+
 	return obj, true
+}
+
+//bz: if exist this callsite + cgnode for fn?
+func (a *analysis) existContextForComb(fn *ssa.Function, callersite *callsite, caller *cgnode) ([]int, bool, nodeid, bool){
+	existFnIdx, multiFn := a.fn2nodeid[fn]
+	if multiFn {   //check if we already have the caller + callsite ?? recursive/duplicate call
+		for i, existIdx := range existFnIdx { // idx -> index of fn cgnode in a.cgnodes[]
+			_fnCGNode := a.cgnodes[existIdx]
+			if a.equalContext(_fnCGNode.callersite, callersite, caller.callersite) { //check all callsites
+				//duplicate combination, return this
+				if a.log != nil { //debug
+					fmt.Fprintf(a.log, "    EXIST**: "+strconv.Itoa(i+1)+"th: K-CALLSITE -- "+_fnCGNode.contourkFull()+"\n")
+				}
+				fmt.Printf("    EXIST**: " + strconv.Itoa(i+1) + "th: K-CALLSITE -- " + _fnCGNode.contourkFull() + "\n")
+
+				return existFnIdx, multiFn, _fnCGNode.obj, false
+			}
+		}
+	}
+	return existFnIdx, multiFn, 0, true
 }
 
 //bz: continue with makeFunctionObjectWithContext (kcfa), create cgnode for one caller context as well as its param/result
@@ -261,7 +265,11 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 	obj := a.nextNode()
 	//doing task of makeCGNode
 	var cgn *cgnode
-	if caller.callersite[0] == nil { //no caller context
+	if callersite == nil {//make closure
+		special := &callsite{targets: obj} //create one with only target, make closure is not ssa.CallInstruction
+		single := a.createSingleCallSite(special)
+		cgn = &cgnode{fn: fn, obj: obj, callersite: single}
+	} else if caller.callersite[0] == nil { //no caller context
 		single := a.createSingleCallSite(callersite)
 		cgn = &cgnode{fn: fn, obj: obj, callersite: single}
 	} else {
@@ -271,9 +279,9 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 	}
 	fn.IsFromApp = true //if it reaches here, must be kcfa, mark it
 	if a.log != nil {    //debug
-		fmt.Fprintf(a.log, "     K-CALLSITE -- "+cgn.contourKfull()+"\n")
+		fmt.Fprintf(a.log, "     K-CALLSITE -- "+cgn.contourkFull()+"\n")
 	}
-	fmt.Printf("     K-CALLSITE -- " + cgn.contourKfull() + "\n")
+	fmt.Printf("     K-CALLSITE -- " + cgn.contourkFull() + "\n")
 
 	a.cgnodes = append(a.cgnodes, cgn)
 	//make param and result nodes
@@ -380,6 +388,25 @@ func (a *analysis) rtypeTaggedValue(obj nodeid) types.Type {
 	}
 	return a.nodes[t].typ
 }
+
+//bz: special handling for closure, should not be within localval[]
+func (a *analysis) valueNodeSpecial(cgn *cgnode, closure *ssa.MakeClosure, v ssa.Value) nodeid {
+	// Value nodes for globals are created on demand.
+	id, ok := a.globalval[v]
+	if !ok {
+		var comment string
+		if a.log != nil {
+			comment = v.String()
+		}
+		id = a.addNodes(v.Type(), comment)
+		if obj := a.objectNodeSpecial(cgn, closure, v); obj != 0 {
+			a.addressOf(v.Type(), id, obj)
+		}
+		a.setValueNode(v, id, nil)
+	}
+	return id
+}
+
 
 // valueNode returns the id of the value node for v, creating it (and
 // the association) as needed.  It may return zero for uninteresting
@@ -756,6 +783,12 @@ func (a *analysis) isMainMethod(method *ssa.Function) bool {
 	return false
 }
 
+//bz: whether we do kcfa on this fn
+func (a *analysis) considerKContext(fn string) bool {
+	return a.config.CallSiteSensitive == true && a.withinScope(fn)  //&& (caller.fn.IsFromApp || a.isMainMethod(caller.fn))
+}
+
+
 //bz: continue with isMainMethod, currently compare string, will update
 func (a *analysis) withinScope(method string) bool {
 	if a.config.LimitScope {
@@ -795,24 +828,37 @@ func (a *analysis) genStaticCall(caller *cgnode, site *callsite, call *ssa.CallC
 		return
 	}
 
-	if fn.String() == "command-line-arguments.ParallelizeUntil" {
-		fmt.Printf(fn.String())
+	if strings.Contains(fn.String(), "command-line-arguments.") {
+		fmt.Println("  DEBUG: " + fn.String())
 	}
 
 	// Ascertain the context (contour/cgnode) for a particular call.
 	var obj nodeid
-	var isNew bool                                       //bz: whether this is a newly created cgnode -> true
-	if a.config.CallSiteSensitive == true && a.withinScope(fn.String()) { //&& (caller.fn.IsFromApp || a.isMainMethod(caller.fn))
+	var isNew bool   //bz: whether this is a newly created cgnode -> true
+
+	if a.considerKContext(fn.String()) {
 		//bz: simple brute force solution; start to be kcfa from main.main
 		fmt.Println("CAUGHT APP METHOD -- " + fn.String())             //debug
-		obj, isNew = a.makeFunctionObjectWithContext(caller, fn, site) //bz: we need a new contour
+
+		switch goCall := site.instr.(type) {
+		case *ssa.Go: //we created cgnode/obj for ssa.GO before, skip here
+			fmt.Println("                  BUT ssa.GO -- " + goCall.String() + "   SKIP.")             //debug
+			obj = a.globalobj[fn]
+			isNew = true //add its constraints
+		default:
+			obj, isNew = a.makeFunctionObjectWithContext(caller, fn, site) //bz: we need a new contour
+		}
+
 		if !isNew {
 			return //all constraints should be added already
-		} //all constraints exist
-	} else if a.shouldUseContext(fn) {
-		obj = a.makeFunctionObject(fn, site) // new contour
+		}
 	} else {
-		obj = a.objectNode(nil, fn) // shared contour
+		//default: context-insensitive
+		if a.shouldUseContext(fn) {
+			obj = a.makeFunctionObject(fn, site) // new contour
+		} else {
+			obj = a.objectNode(nil, fn) // shared contour
+		}
 	}
 	a.callEdge(caller, site, obj)
 
@@ -908,7 +954,7 @@ func (a *analysis) genInvoke(caller *cgnode, site *callsite, call *ssa.CallCommo
 	//}
 
 	////bz: simple solution; start to be kcfa from main.main
-	//if a.config.CallSiteSensitive == true && (caller.isFromApp || a.isMainMethod(caller.fn)) && a.withinScope(sig.String()) {
+	//if a.considerKContext(sig.String()) {
 	//	fmt.Println("CAUGHT APP INVOKE METHOD -- " + sig.String())
 	//	a.genContextSensitiveCallforRecv(caller, site, sig, call, result)
 	//	return
@@ -1036,6 +1082,31 @@ func (a *analysis) isFromMakeClosure(fn *ssa.Function) *ssa.MakeClosure {
 	return nil
 }
 
+//bz: special handling for closure
+func (a *analysis) objectNodeSpecial(cgn *cgnode, closure *ssa.MakeClosure, v ssa.Value) nodeid {
+	switch v.(type) {
+	case *ssa.Function:
+		// Global object.
+		obj, ok := a.globalobj[v]
+		if !ok {
+			switch v := v.(type) {
+			case *ssa.Function: //bz: create cgnode/constraints here; this has NO ssa.CallInstruction as callsite
+				closure := a.isFromMakeClosure(v)
+				if closure != nil && a.withinScope(v.String()) { //bz: update for make closure
+					obj, _ = a.makeFunctionObjectWithContext(cgn, v, nil)
+				} else {
+					fmt.Printf("Should not hit objectNodeSpecial() by " + v.String())
+				}
+			}
+			if a.log != nil {
+				fmt.Fprintf(a.log, "\tglobalobj[%s] = n%d\n", v, obj)
+			}
+			a.globalobj[v] = obj //bz: obj is nodeid used in a.nodes[] if v is invoke
+		}
+		return obj
+	}
+	return 0 //should not hit here
+}
 
 // objectNode returns the object to which v points, if known.
 // In other words, if the points-to set of v is a singleton, it
@@ -1067,7 +1138,7 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 
 			case *ssa.Function: //bz: create cgnode/constraints here; this has NO ssa.CallInstruction as callsite
 			    closure := a.isFromMakeClosure(v)
-			    if closure != nil {//bz: update for make closure
+			    if closure != nil && a.withinScope(v.String()) {//bz: we have already create obj for make closure in valueNodeSpecial, return that obj
 			    	obj, _ = a.makeFunctionObjectWithContext(cgn, v, nil)
 				}else{
 					obj = a.makeFunctionObject(v, nil)
@@ -1302,8 +1373,13 @@ func (a *analysis) genInstr(cgn *cgnode, instr ssa.Instruction) {
 		}
 
 	case *ssa.MakeClosure:
-		fn := instr.Fn.(*ssa.Function) //bz: fn should not be nil, because we are closuring on a static go routine, we will adjust in valueNode
-		a.copy(a.valueNode(instr), a.valueNode(fn), 1)
+		fn := instr.Fn.(*ssa.Function) //bz: fn should not be nil, because we are closuring on a static go routine, we will adjust in objectNode()
+		if a.considerKContext(fn.String()) {
+			fmt.Println("CAUGHT APP (MakeClosure) METHOD -- " + fn.String())             //debug
+			a.copy(a.valueNode(instr), a.valueNodeSpecial(cgn, instr, fn), 1)
+		}else{
+			a.copy(a.valueNode(instr), a.valueNode(fn), 1)
+		}
 		// Free variables are treated like global variables.
 		for i, b := range instr.Bindings {
 			a.copy(a.valueNode(fn.FreeVars[i]), a.valueNode(b), a.sizeof(b.Type()))
@@ -1557,7 +1633,7 @@ func (a *analysis) generate() {
 	}
 
 	// Create nodes and constraints for all methods of all types
-	// that are dynamically accessible via reflection or interfaces.
+	// that are dynamically accessible via reflection or interfaces.  ---> bz: called by interfaces can be problem ... share contour
 	for _, T := range a.prog.RuntimeTypes() {
 		a.genMethodsOf(T)
 	}

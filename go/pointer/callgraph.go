@@ -26,7 +26,7 @@ type cgnode struct {
 //bz: only used for log
 func (n *cgnode) contour(isKcfa bool) string {
 	if isKcfa {//bz: print out info for kcfa
-		return n.contourKfull()
+		return n.contourkFull()
 	}
 	//bz: adjust for context-insensitive. Same as 1callsite, only showing the most recent callersite info
 	if n.callersite == nil || len(n.callersite) == 0 || n.callersite[0] == nil{
@@ -35,11 +35,11 @@ func (n *cgnode) contour(isKcfa bool) string {
 	if n.callersite[0].instr != nil {
 		return fmt.Sprintf("as called from %s", n.callersite[0].instr.Parent())
 	}
-	return fmt.Sprintf("as called from synthetic/intrinsic (targets=n%d)", n.callersite[0].targets)
+	return fmt.Sprintf("as called to synthetic/intrinsic (targets=n%d)", n.callersite[0].targets)
 }
 
 //bz: adjust contour() to kcfa
-func (n *cgnode) contourKfull() string {
+func (n *cgnode) contourkFull() string {
 	var s string
 	s = s +  "["
 	for idx, cs := range n.callersite {
@@ -51,7 +51,7 @@ func (n *cgnode) contourKfull() string {
 			s = s  + strconv.Itoa(idx) + ":" + cs.instr.String() + "@" + cs.instr.Parent().String() + "; "
 			continue
 		}
-		s = s + strconv.Itoa(idx) + ":" + "called from synthetic/intrinsic func@" + cs.targets.String() + "; "
+		s = s + strconv.Itoa(idx) + ":" + "called to synthetic/intrinsic func@" + cs.targets.String() + "; "
 	}
 	s = s + "]"
 	return s
@@ -70,6 +70,22 @@ type callsite struct {
 	targets nodeid              // pts(·) contains objects for dynamically called functions
 	instr   ssa.CallInstruction // the call instruction; nil for synthetic/intrinsic
 }
+
+//bz: to see if two callsites are the same
+//tmp solution, to compare string ... otherwise too strict ...
+//e.g., return c.targets == other.targets && c.instr.String() == other.instr.String() ----->  this might be too strict ...
+func (c *callsite) equal(o *callsite) bool {
+	cInstr := c.instr
+	oInstr := o.instr
+	if cInstr == nil && oInstr == nil {
+		return c.targets == o.targets
+	}else if cInstr == nil || oInstr == nil {
+		return false //one is k callsite, one is from closure
+	}else{ // most cases, comparing between callsite and callsite
+		return cInstr.String() == oInstr.String() && cInstr.Parent().String() == oInstr.Parent().String()
+	}
+}
+
 
 func (c *callsite) String() string {
 	if c.instr != nil {
