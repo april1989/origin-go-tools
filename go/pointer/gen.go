@@ -399,7 +399,7 @@ func (a *analysis) valueNodeClosure(cgn *cgnode, closure *ssa.MakeClosure, v ssa
 			comment = v.String()
 		}
 		id = a.addNodes(v.Type(), comment)
-		if obj := a.objectNodeClosure(cgn, closure, v); obj != 0 {
+		if obj := a.objectNodeSpecial(cgn, closure, nil, v); obj != 0 {
 			a.addressOf(v.Type(), id, obj)
 		}
 		a.setValueNode(v, id, nil)
@@ -912,31 +912,33 @@ func (a *analysis) genDynamicCall(caller *cgnode, site *callsite, call *ssa.Call
 	}
 }
 
-//bz: kcfa for invoke/dynamoic calls
-func (a *analysis) genContextSensitiveCallforRecv(caller *cgnode, callersite *callsite, sig *types.Signature, call *ssa.CallCommon, result nodeid) {
-	//prepare: all target cgnode info is in sig, we use sig instead of fn here
-	//TODO: from the original code, there should be no duplicate invoke call traversal, ASSUME no recursive call now
-	//callerFn := caller.fn                                //with type *ssa.Function
-	//existCallerIdx, multiCaller := a.fn2nodeid[callerFn] //if exist any caller with multiple callsites ?
+//bz: doing something like genMethodsOf() and valueNode() for invoke calls; must be global
+func (a *analysis) valueNodeInvoke(caller *cgnode, site *callsite, call *ssa.CallCommon) {
+	T := call.Value.Type() //receiver type
+	mset := a.prog.MethodSets.MethodSet(T) //same with genMethodsOf
+	for i, n := 0, mset.Len(); i < n; i++ {
+		m := a.prog.MethodValue(mset.At(i))
 
-	//if multiCaller {
-	//	for i, callerIdx := range existCallerIdx { // idx -> index of caller cgnode in a.cgnodes[]
-	//		callerkcs := a.cgnodes[callerIdx].callersite
-	//		fnkcs := a.createKCallSite(callerkcs, callersite)
-	//		if a.log != nil {    //debug
-	//			fmt.Fprintf(a.log, "    "+strconv.Itoa(i+1)+"th: K-CALLSITE -- " + "\n")
-	//		}
-	//		fmt.Printf("    " + strconv.Itoa(i+1) + "th: K-CALLSITE -- " + "\n")
-	//
-	//	}
-	//} else {
-	//	single := a.createSingleCallSite(callersite)
-	//}
+		//similar with valueNode,  Value nodes for globals are created on demand.
+		id, ok := a.globalval[m] // v -> fn
+		if !ok {
+			var comment string
+			if a.log != nil {
+				comment = m.String()
+			}
+			id = a.addNodes(m.Type(), comment)
+			if obj := a.objectNode(nil, m); obj != 0 {
+				a.addressOf(m.Type(), id, obj)
+			}
+			a.setValueNode(m, id, nil)
+		}
+
+		a.atFuncs[m] = true // Methods of concrete types are address-taken functions.
+	}
+
 }
 
-func (a *analysis) makeRecvParamResultNodes(site *callsite, sig *types.Signature, call *ssa.CallCommon, result nodeid) {
 
-}
 
 // genInvoke generates constraints for a dynamic method invocation.
 // bz: working on this, needs to work with pointer/solver.go@func (c *invokeConstraint) solve(a *analysis, delta *nodeset) ...
@@ -953,10 +955,10 @@ func (a *analysis) genInvoke(caller *cgnode, site *callsite, call *ssa.CallCommo
 	//	fmt.Println("      Receiver -- " + sig.Recv().String())
 	//}
 
-	//bz: simple solution; start to be kcfa from main.main; INSTEAD OF genMethodOf(), we create it here
+	//bz: simple solution; start to be kcfa from main.main; INSTEAD OF genMethodsOf(), we create it here
 	if a.considerKContext(sig.String()) {
 		fmt.Println("CAUGHT APP INVOKE METHOD -- " + sig.String())
-		a.valueNodeClosure(caller, site, sig.Underlying())
+		a.valueNodeInvoke(caller, site, call)
 		return
 	}
 
@@ -1068,6 +1070,37 @@ func (a *analysis) genCall(caller *cgnode, instr ssa.CallInstruction) {
 	}
 }
 
+
+//bz: special handling for objectNode()
+func (a *analysis) objectNodeSpecial(cgn *cgnode, closure *ssa.MakeClosure, site *callsite, v ssa.Value) nodeid {
+	switch v.(type) {
+	case *ssa.Function:
+		// Global object.
+		obj, ok := a.globalobj[v]
+		if !ok {
+			switch v := v.(type) {
+			case *ssa.Function: //bz: create cgnode/constraints here;
+			    if a.withinScope(v.String()) {
+					if closure != nil { //make closure: this has NO ssa.CallInstruction as callsite
+						obj, _ = a.makeFunctionObjectWithContext(cgn, v, nil)
+					}
+					if site != nil { //invoke: call site considered here
+						obj, _ = a.makeFunctionObjectWithContext(cgn, v, site)
+					}
+				}else{ //normal case
+					obj = a.makeFunctionObject(v, nil)
+				}
+			}
+			if a.log != nil {
+				fmt.Fprintf(a.log, "\tglobalobj[%s] = n%d\n", v, obj)
+			}
+			a.globalobj[v] = obj //bz: obj is nodeid used in a.nodes[] if v is invoke
+		}
+		return obj
+	}
+	return 0 //should not hit here
+}
+
 //bz: tell if fn is from makeclosure
 func (a *analysis) isFromMakeClosure(fn *ssa.Function) *ssa.MakeClosure {
 	referrers := fn.Referrers()
@@ -1080,32 +1113,6 @@ func (a *analysis) isFromMakeClosure(fn *ssa.Function) *ssa.MakeClosure {
 		return t
 	}
 	return nil
-}
-
-//bz: special handling for closure
-func (a *analysis) objectNodeClosure(cgn *cgnode, closure *ssa.MakeClosure, v ssa.Value) nodeid {
-	switch v.(type) {
-	case *ssa.Function:
-		// Global object.
-		obj, ok := a.globalobj[v]
-		if !ok {
-			switch v := v.(type) {
-			case *ssa.Function: //bz: create cgnode/constraints here; this has NO ssa.CallInstruction as callsite
-				closure := a.isFromMakeClosure(v)
-				if closure != nil && a.withinScope(v.String()) { //bz: update for make closure
-					obj, _ = a.makeFunctionObjectWithContext(cgn, v, nil)
-				} else {
-					fmt.Printf("Should not hit objectNodeClosure() by " + v.String())
-				}
-			}
-			if a.log != nil {
-				fmt.Fprintf(a.log, "\tglobalobj[%s] = n%d\n", v, obj)
-			}
-			a.globalobj[v] = obj //bz: obj is nodeid used in a.nodes[] if v is invoke
-		}
-		return obj
-	}
-	return 0 //should not hit here
 }
 
 // objectNode returns the object to which v points, if known.
@@ -1138,8 +1145,8 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 
 			case *ssa.Function: //bz: create cgnode/constraints here; this has NO ssa.CallInstruction as callsite
 			    closure := a.isFromMakeClosure(v)
-			    if closure != nil && a.withinScope(v.String()) {//bz: we have already create obj for make closure in valueNodeClosure, return that obj
-			    	obj, _ = a.makeFunctionObjectWithContext(cgn, v, nil)
+			    if closure != nil && a.withinScope(v.String()) {
+			    	obj = a.globalobj[v]  //bz: already made obj for make closure in valueNodeClosure, return that obj
 				}else{
 					obj = a.makeFunctionObject(v, nil)
 				}
