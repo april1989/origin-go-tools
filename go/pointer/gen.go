@@ -159,7 +159,7 @@ func (a *analysis) makeFunctionObject(fn *ssa.Function, callersite *callsite) no
 	}
 
 	if strings.Contains(fn.String(), "command-line-arguments.") {
-		fmt.Println("  DEBUG: " + fn.String())
+		fmt.Println("  DEBUG(makeFunctionObject): " + fn.String())
 		if len(fn.Params) > 0 {
 			fmt.Println( fn.Params[0].Type().String()) //---> receiver struct type
 		}
@@ -216,7 +216,7 @@ func (a *analysis) makeFunctionObjectWithContext(caller *cgnode, fn *ssa.Functio
 	fmt.Printf("\t---- makeFunctionObjectWithContext (kcfa) for %s\n", fn)
 
 	if strings.Contains(fn.String(), "command-line-arguments.") {
-		fmt.Println("  DEBUG: " + fn.String())
+		fmt.Println("  DEBUG (makeFunctionObjectWithContext): " + fn.String())
 	}
 
 	//if we can find an existing cgnode/obj
@@ -390,7 +390,7 @@ func (a *analysis) rtypeTaggedValue(obj nodeid) types.Type {
 }
 
 //bz: special handling for closure, should not be within localval[]
-func (a *analysis) valueNodeSpecial(cgn *cgnode, closure *ssa.MakeClosure, v ssa.Value) nodeid {
+func (a *analysis) valueNodeClosure(cgn *cgnode, closure *ssa.MakeClosure, v ssa.Value) nodeid {
 	// Value nodes for globals are created on demand.
 	id, ok := a.globalval[v]
 	if !ok {
@@ -399,7 +399,7 @@ func (a *analysis) valueNodeSpecial(cgn *cgnode, closure *ssa.MakeClosure, v ssa
 			comment = v.String()
 		}
 		id = a.addNodes(v.Type(), comment)
-		if obj := a.objectNodeSpecial(cgn, closure, v); obj != 0 {
+		if obj := a.objectNodeClosure(cgn, closure, v); obj != 0 {
 			a.addressOf(v.Type(), id, obj)
 		}
 		a.setValueNode(v, id, nil)
@@ -829,7 +829,7 @@ func (a *analysis) genStaticCall(caller *cgnode, site *callsite, call *ssa.CallC
 	}
 
 	if strings.Contains(fn.String(), "command-line-arguments.") {
-		fmt.Println("  DEBUG: " + fn.String())
+		fmt.Println("  DEBUG (genStaticCall): " + fn.String())
 	}
 
 	// Ascertain the context (contour/cgnode) for a particular call.
@@ -953,12 +953,12 @@ func (a *analysis) genInvoke(caller *cgnode, site *callsite, call *ssa.CallCommo
 	//	fmt.Println("      Receiver -- " + sig.Recv().String())
 	//}
 
-	////bz: simple solution; start to be kcfa from main.main
-	//if a.considerKContext(sig.String()) {
-	//	fmt.Println("CAUGHT APP INVOKE METHOD -- " + sig.String())
-	//	a.genContextSensitiveCallforRecv(caller, site, sig, call, result)
-	//	return
-	//}
+	//bz: simple solution; start to be kcfa from main.main; INSTEAD OF genMethodOf(), we create it here
+	if a.considerKContext(sig.String()) {
+		fmt.Println("CAUGHT APP INVOKE METHOD -- " + sig.String())
+		a.valueNodeClosure(caller, site, sig.Underlying())
+		return
+	}
 
 	// Allocate a contiguous targets/params/results block for this call.
 	block := a.nextNode() //bz: <----- this node is empty, just to mark this is the start of P/R block
@@ -1083,7 +1083,7 @@ func (a *analysis) isFromMakeClosure(fn *ssa.Function) *ssa.MakeClosure {
 }
 
 //bz: special handling for closure
-func (a *analysis) objectNodeSpecial(cgn *cgnode, closure *ssa.MakeClosure, v ssa.Value) nodeid {
+func (a *analysis) objectNodeClosure(cgn *cgnode, closure *ssa.MakeClosure, v ssa.Value) nodeid {
 	switch v.(type) {
 	case *ssa.Function:
 		// Global object.
@@ -1095,7 +1095,7 @@ func (a *analysis) objectNodeSpecial(cgn *cgnode, closure *ssa.MakeClosure, v ss
 				if closure != nil && a.withinScope(v.String()) { //bz: update for make closure
 					obj, _ = a.makeFunctionObjectWithContext(cgn, v, nil)
 				} else {
-					fmt.Printf("Should not hit objectNodeSpecial() by " + v.String())
+					fmt.Printf("Should not hit objectNodeClosure() by " + v.String())
 				}
 			}
 			if a.log != nil {
@@ -1138,7 +1138,7 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 
 			case *ssa.Function: //bz: create cgnode/constraints here; this has NO ssa.CallInstruction as callsite
 			    closure := a.isFromMakeClosure(v)
-			    if closure != nil && a.withinScope(v.String()) {//bz: we have already create obj for make closure in valueNodeSpecial, return that obj
+			    if closure != nil && a.withinScope(v.String()) {//bz: we have already create obj for make closure in valueNodeClosure, return that obj
 			    	obj, _ = a.makeFunctionObjectWithContext(cgn, v, nil)
 				}else{
 					obj = a.makeFunctionObject(v, nil)
@@ -1376,7 +1376,7 @@ func (a *analysis) genInstr(cgn *cgnode, instr ssa.Instruction) {
 		fn := instr.Fn.(*ssa.Function) //bz: fn should not be nil, because we are closuring on a static go routine, we will adjust in objectNode()
 		if a.considerKContext(fn.String()) {
 			fmt.Println("CAUGHT APP (MakeClosure) METHOD -- " + fn.String())             //debug
-			a.copy(a.valueNode(instr), a.valueNodeSpecial(cgn, instr, fn), 1)
+			a.copy(a.valueNode(instr), a.valueNodeClosure(cgn, instr, fn), 1)
 		}else{
 			a.copy(a.valueNode(instr), a.valueNode(fn), 1)
 		}
@@ -1596,6 +1596,11 @@ func (a *analysis) genMethodsOf(T types.Type) {
 	mset := a.prog.MethodSets.MethodSet(T)
 	for i, n := 0, mset.Len(); i < n; i++ {
 		m := a.prog.MethodValue(mset.At(i))
+
+		if a.considerKContext(m.String()) {
+			return //bz: we want to make function later for kcfa, here is for share contour
+		}
+
 		a.valueNode(m)
 
 		if !itf {
@@ -1640,14 +1645,14 @@ func (a *analysis) generate() {
 
 	// Generate constraints for functions as they become reachable
 	// from the roots.  (No constraints are generated for functions
-	// that are dead in this analysis scope.)
+	// that are dead in this analysis scope.)  ---> bz: want to generate cgn called by interfaces here, so it can have kcfa not shared contour
 	for len(a.genq) > 0 {
 		cgn := a.genq[0]
 		a.genq = a.genq[1:]
 		a.genFunc(cgn)
 	}
 
-	// The runtime magically allocates os.Args; so should we.
+	// The runtime magically allocates os.Args; so should we.  ----> bz: can we skip this ?
 	if os := a.prog.ImportedPackage("os"); os != nil {
 		// In effect:  os.Args = new([1]string)[:]
 		T := types.NewSlice(types.Typ[types.String])

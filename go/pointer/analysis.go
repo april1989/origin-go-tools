@@ -119,7 +119,7 @@ type analysis struct {
 	genq        []*cgnode                   // queue of functions to generate constraints for
 	intrinsics  map[*ssa.Function]intrinsic // non-nil values are summaries for intrinsic fns
 	globalval   map[ssa.Value]nodeid        // node for each global ssa.Value
-	globalobj   map[ssa.Value]nodeid        // maps v to sole member of pts(v), if singleton
+	globalobj   map[ssa.Value]nodeid        // maps v to sole member of pts(v), if singleton      ---> bz: for makeclosure, fn is not enough
 	localval    map[ssa.Value]nodeid        // node for each local ssa.Value
 	localobj    map[ssa.Value]nodeid        // maps v to sole member of pts(v), if singleton
 	atFuncs     map[*ssa.Function]bool      // address-taken functions (for presolver)
