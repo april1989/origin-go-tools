@@ -105,7 +105,7 @@ func (c *callsite) pos() token.Pos {
 
 
 //bz: to record the 1callsite from caller to nodeid for makeclosure, work together with a.closures[]
-//TODO: full callchain ?? for invoke?
+//TODO: full callchain ??
 type Ctx2nodeid struct {
 	ctx2nodeid map[*callsite]nodeid
 }

@@ -664,13 +664,18 @@ type ChangeInterface struct {
 // Pos() returns the ast.CallExpr.Lparen, if the instruction arose
 // from an explicit conversion in the source.
 //
-// Example printed form:
+// Example printed form: (iface <- struct)
 // 	t1 = make interface{} <- int (42:int)
 // 	t2 = make Stringer <- t0
 //
 type MakeInterface struct {
 	register
 	X Value
+}
+
+//bz: want this ..
+func (iface *MakeInterface) RegisterType() types.Type {
+	return iface.register.typ
 }
 
 // The MakeClosure instruction yields a closure value whose code is

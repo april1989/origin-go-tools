@@ -143,8 +143,9 @@ type analysis struct {
 	//bz: record
 	fn2cgnodeIdx    map[*ssa.Function][]int //bz: (static) a map of fn with a set of its cgnodes represented by the indexes of cgnodes[]
 	                                        // fn can also be replaced by sig: *types.Signature
-    closures        map[*ssa.Function]*Ctx2nodeid //bz: solution for makeclosure, probably also solution for invoke
-    iface2struct    map[*types.Type][]*types.Type //bz: this is a bit redundant (solve.go will do this online), since there is no record
+	                                        // NOW also used for invoke calls
+    closures        map[*ssa.Function]*Ctx2nodeid //bz: solution for makeclosure
+	iface2struct    map[types.Type][]types.Type //bz: this is a bit redundant (solve.go will do this online), since there is no record
                                                   //about the mapping from interface to its impl types, cannot determine invoke methods
 }
 
@@ -252,7 +253,8 @@ func Analyze(config *Config) (result *Result, err error) {
 		},
 		deltaSpace:   make([]int, 0, 100),
 		fn2cgnodeIdx: make(map[*ssa.Function][]int),
-		closures: make(map[*ssa.Function]*Ctx2nodeid),
+		closures:     make(map[*ssa.Function]*Ctx2nodeid),
+		iface2struct: make(map[types.Type][]types.Type),
 	}
 
 	if false {

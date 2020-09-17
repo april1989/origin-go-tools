@@ -329,7 +329,7 @@ func (c *invokeConstraint) solve(a *analysis, delta *nodeset) {
 			panic(fmt.Sprintf("n%d: no ssa.Function for %s", c.iface, c.method))
 		}
 		sig := fn.Signature
-
+        fmt.Println(" --> " + fn.String())
 		fnObj := a.globalobj[fn] // dynamic calls use shared contour  ---> bz: fnObj is nodeid
 		if fnObj == 0 {
 			// a.objectNode(fn) was not called during gen phase.
