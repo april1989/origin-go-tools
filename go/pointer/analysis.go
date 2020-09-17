@@ -141,8 +141,9 @@ type analysis struct {
 	runtimeSetFinalizer *ssa.Function   // runtime.SetFinalizer
 
 	//bz: record
-	fn2nodeid   map[*ssa.Function][]int  //bz: (static) a map of fn with a set of its cgnodes represented by the indexes of cgnodes[]
-	                                     // fn can also be replaced by sig: *types.Signature
+	fn2cgnodeIdx    map[*ssa.Function][]int //bz: (static) a map of fn with a set of its cgnodes represented by the indexes of cgnodes[]
+	                                        // fn can also be replaced by sig: *types.Signature
+    closures      map[*ssa.Function]*Ctx2nodeid //bz: solution for makeclosure, probably also solution for invoke
 }
 
 // enclosingObj returns the first node of the addressable memory
@@ -247,8 +248,9 @@ func Analyze(config *Config) (result *Result, err error) {
 			Queries:         make(map[ssa.Value]Pointer),
 			IndirectQueries: make(map[ssa.Value]Pointer),
 		},
-		deltaSpace: make([]int, 0, 100),
-		fn2nodeid:   make(map[*ssa.Function][]int),
+		deltaSpace:   make([]int, 0, 100),
+		fn2cgnodeIdx: make(map[*ssa.Function][]int),
+		closures: make(map[*ssa.Function]*Ctx2nodeid),
 	}
 
 	if false {

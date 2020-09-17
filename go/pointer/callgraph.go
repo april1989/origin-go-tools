@@ -75,6 +75,7 @@ type callsite struct {
 //tmp solution, to compare string ... otherwise too strict ...
 //e.g., return c.targets == other.targets && c.instr.String() == other.instr.String() ----->  this might be too strict ...
 func (c *callsite) equal(o *callsite) bool {
+	if o == nil { return false }
 	cInstr := c.instr
 	oInstr := o.instr
 	if cInstr == nil && oInstr == nil {
@@ -101,3 +102,11 @@ func (c *callsite) pos() token.Pos {
 	}
 	return token.NoPos
 }
+
+
+//bz: to record the 1callsite from caller to nodeid for makeclosure, work together with a.closures[]
+//TODO: full callchain ?? for invoke?
+type Ctx2nodeid struct {
+	ctx2nodeid map[*callsite]nodeid
+}
+
