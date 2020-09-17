@@ -1174,11 +1174,13 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 				a.addNodes(mustDeref(v.Type()), "global")
 				a.endObject(obj, nil, v)
 
-			case *ssa.Function: //bz: create cgnode/constraints here; this has NO ssa.CallInstruction as callsite
+			case *ssa.Function:
+				//bz: this has NO ssa.CallInstruction as callsite;
+				//v should not be make closure, we handle it in a different method
 				isClosure := a.isFromMakeClosure(v)
 			    if isClosure && a.withinScope(v.String()) {
-			    	obj = a.globalobj[v]  //bz: already made obj for make closure in valueNodeClosure, return that obj
-				}else{
+			    	panic("WRONG INVOKE FOR MAKE CLOSURE: " + v.String())
+				}else{ //normal case
 					obj = a.makeFunctionObject(v, nil)
 				}
 
@@ -1231,7 +1233,8 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 			}
 			a.endObject(obj, cgn, v)
 
-		case *ssa.MakeInterface:
+		case *ssa.MakeInterface: //bz: work with a.iface2struct[]
+		    fmt.Println(v.String())
 			tConc := v.X.Type()
 			obj = a.makeTagged(tConc, cgn, v)
 

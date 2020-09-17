@@ -143,7 +143,9 @@ type analysis struct {
 	//bz: record
 	fn2cgnodeIdx    map[*ssa.Function][]int //bz: (static) a map of fn with a set of its cgnodes represented by the indexes of cgnodes[]
 	                                        // fn can also be replaced by sig: *types.Signature
-    closures      map[*ssa.Function]*Ctx2nodeid //bz: solution for makeclosure, probably also solution for invoke
+    closures        map[*ssa.Function]*Ctx2nodeid //bz: solution for makeclosure, probably also solution for invoke
+    iface2struct    map[*types.Type][]*types.Type //bz: this is a bit redundant (solve.go will do this online), since there is no record
+                                                  //about the mapping from interface to its impl types, cannot determine invoke methods
 }
 
 // enclosingObj returns the first node of the addressable memory
