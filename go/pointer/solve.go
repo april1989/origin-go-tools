@@ -332,13 +332,12 @@ func (c *invokeConstraint) solve(a *analysis, delta *nodeset) {
 		sig := fn.Signature
 		fnObj := a.globalobj[fn] // dynamic calls use shared contour  ---> bz: fnObj is nodeid
 		if a.considerKContext(fn.String()) {
-			base := a.nodes[v]
-			fmt.Println(base.typ.String())
-
 			//bz: special handling of invoke targets, go check a.fn2cgnodeidx[]
 			idxes, ok := a.fn2cgnodeIdx[fn]
-			if ok { // multiple contexts, solve one by one ...
+			if ok { // multiple contexts, TODO: we need context match here...
 				for _, idx := range idxes {
+					fmt.Println(" eachSolve --> " + fn.String() + "@" + a.cgnodes[idx].contourkFull())
+					
 					_fnObj := a.cgnodes[idx].obj
 					c.eachSolve(a, _fnObj, sig, v)
 				}
