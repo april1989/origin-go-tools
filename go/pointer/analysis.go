@@ -88,7 +88,7 @@ type node struct {
 	// (addressable memory location).
 	// The following obj.size nodes implicitly belong to the object;
 	// they locate their object by scanning back.
-	obj *object //bz: see type object in this package
+	obj *object
 
 	// The type of the field denoted by this node.  Non-aggregate,
 	// unless this is an tagged.T node (i.e. the thing
@@ -141,9 +141,9 @@ type analysis struct {
 	runtimeSetFinalizer *ssa.Function   // runtime.SetFinalizer
 
 	//bz: record
-	fn2cgnodeIdx    map[*ssa.Function][]int //bz: (static) a map of fn with a set of its cgnodes represented by the indexes of cgnodes[]
-	                                        // fn can also be replaced by sig: *types.Signature
-	                                        // NOW also used for invoke calls
+	fn2cgnodeIdx    map[*ssa.Function][]int //bz: a map of fn with a set of its cgnodes represented by the indexes of cgnodes[]
+	                                        // NOW also used for static and invoke calls
+	                                        // TODO: may be should use nodeid not int (idx) ?
     closures        map[*ssa.Function]*Ctx2nodeid //bz: solution for makeclosure
 	iface2struct    map[types.Type][]types.Type //bz: this is a bit redundant (solve.go will do this online), since there is no record
                                                   //about the mapping from interface to its impl types, cannot determine invoke methods

@@ -966,11 +966,11 @@ func (a *analysis) genInvoke(caller *cgnode, site *callsite, call *ssa.CallCommo
 
 	//bz: simple solution; start to be kcfa from main.main; INSTEAD OF genMethodsOf(), we create it here
 	if a.considerKContext(sig.Recv().Type().String()) { //requires receiver type
-		fmt.Println("CAUGHT APP INVOKE METHOD -- " + sig.Recv().Type().String())
+		fmt.Println("CAUGHT APP INVOKE METHOD -- " + sig.String()) //Recv().Type().String()
 		a.valueNodeInvoke(caller, site, sig)
-		return
 	}
 
+	// back to normal work flow
 	// Allocate a contiguous targets/params/results block for this call.
 	block := a.nextNode() //bz: <----- this node is empty, just to mark this is the start of P/R block
 	// pts(targets) will be the set of possible call targets
@@ -1285,6 +1285,7 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 }
 
 func (a *analysis) updateIface2struct(impl types.Type, iface types.Type) {
+	if isInterface(impl) { return } //TODO: imple should not be interface ... panic?
 	impls, ok := a.iface2struct[iface]
 	if ok { //exist ?
 		for _, exist := range impls {

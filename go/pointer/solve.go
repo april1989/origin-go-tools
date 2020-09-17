@@ -311,6 +311,7 @@ func (c *untagConstraint) solve(a *analysis, delta *nodeset) {
 		}
 	}
 }
+
 //bz: this solves for invoke calls, needs to be updated for kcfa
 func (c *invokeConstraint) solve(a *analysis, delta *nodeset) {
 	for _, x := range delta.AppendTo(a.deltaSpace) {
@@ -329,37 +330,57 @@ func (c *invokeConstraint) solve(a *analysis, delta *nodeset) {
 			panic(fmt.Sprintf("n%d: no ssa.Function for %s", c.iface, c.method))
 		}
 		sig := fn.Signature
-        fmt.Println(" --> " + fn.String())
 		fnObj := a.globalobj[fn] // dynamic calls use shared contour  ---> bz: fnObj is nodeid
+		if a.considerKContext(fn.String()) {
+			base := a.nodes[v]
+			fmt.Println(base.typ.String())
+
+			//bz: special handling of invoke targets, go check a.fn2cgnodeidx[]
+			idxes, ok := a.fn2cgnodeIdx[fn]
+			if ok { // multiple contexts, solve one by one ...
+				for _, idx := range idxes {
+					_fnObj := a.cgnodes[idx].obj
+					c.eachSolve(a, _fnObj, sig, v)
+				}
+				return
+			}
+			// else should not happen, go panic
+		}
+
 		if fnObj == 0 {
 			// a.objectNode(fn) was not called during gen phase.
 			panic(fmt.Sprintf("a.globalobj[%s]==nil", fn))
 		}
 
-		// Make callsite's fn variable point to identity of
-		// concrete method.  (There's no need to add it to
-		// worklist since it never has attached constraints.)
-		a.addLabel(c.params, fnObj)
-
-		// Extract value and connect to method's receiver.
-		// Copy payload to method's receiver param (arg0).
-		arg0 := a.funcParams(fnObj)
-		recvSize := a.sizeof(sig.Recv().Type())
-		a.onlineCopyN(arg0, v, recvSize)
-
-		src := c.params + 1 // skip past identity
-		dst := arg0 + nodeid(recvSize)
-
-		// Copy caller's argument block to method formal parameters.
-		paramsSize := a.sizeof(sig.Params())
-		a.onlineCopyN(dst, src, paramsSize)
-		src += nodeid(paramsSize)
-		dst += nodeid(paramsSize)
-
-		// Copy method results to caller's result block.
-		resultsSize := a.sizeof(sig.Results())
-		a.onlineCopyN(src, dst, resultsSize)
+		// bz: back to normal workflow -> context-insensitive
+		c.eachSolve(a, fnObj, sig, v)
 	}
+}
+
+func (c *invokeConstraint) eachSolve(a *analysis, fnObj nodeid, sig *types.Signature, v nodeid) {
+	// Make callsite's fn variable point to identity of
+	// concrete method.  (There's no need to add it to
+	// worklist since it never has attached constraints.)
+	a.addLabel(c.params, fnObj)
+
+	// Extract value and connect to method's receiver.
+	// Copy payload to method's receiver param (arg0).
+	arg0 := a.funcParams(fnObj)
+	recvSize := a.sizeof(sig.Recv().Type())
+	a.onlineCopyN(arg0, v, recvSize)
+
+	src := c.params + 1 // skip past identity
+	dst := arg0 + nodeid(recvSize)
+
+	// Copy caller's argument block to method formal parameters.
+	paramsSize := a.sizeof(sig.Params())
+	a.onlineCopyN(dst, src, paramsSize)
+	src += nodeid(paramsSize)
+	dst += nodeid(paramsSize)
+
+	// Copy method results to caller's result block.
+	resultsSize := a.sizeof(sig.Results())
+	a.onlineCopyN(src, dst, resultsSize)
 }
 
 func (c *addrConstraint) solve(a *analysis, delta *nodeset) {
