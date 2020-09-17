@@ -69,6 +69,16 @@ func (a *analysis) addOneNode(typ types.Type, comment string, subelement *fieldI
 	return id
 }
 
+func (a *analysis) addOneNodeSpecial(typ types.Type, comment string, subelement *fieldInfo, sites []*callsite) nodeid {
+	id := a.nextNode()
+	a.nodes = append(a.nodes, &node{typ: typ, subelement: subelement, solve: new(solverState), callsite: sites})
+	if a.log != nil {
+		fmt.Fprintf(a.log, "\tcreate n%d %s for %s%s\n",
+			id, typ, comment, subelement.path())
+	}
+	return id
+}
+
 // setValueNode associates node id with the value v.
 // cgn identifies the context iff v is a local variable.
 //
@@ -315,7 +325,7 @@ func (a *analysis) updateFn2NodeID(fn *ssa.Function, multiFn bool, newFnIdx []in
 //doing things similar to makeFunctionObject() but after makeCGNode()
 func (a *analysis) makeParamResultNodes(fn *ssa.Function, obj nodeid, cgn *cgnode) {
 	sig := fn.Signature
-	a.addOneNode(sig, "func.cgnode", nil) // (scalar with Signature type)
+	a.addOneNodeSpecial(sig, "func.cgnode", nil, cgn.callersite) // (scalar with Signature type)
 	if recv := sig.Recv(); recv != nil {
 		a.addNodes(recv.Type(), "func.recv")
 	}
@@ -350,6 +360,15 @@ func (a *analysis) createKCallSite(caller2sites []*callsite, callersite *callsit
 		} else {
 			slice[i] = caller2sites[i-1] //bz: not sure about the idx
 		}
+	}
+	return slice
+}
+
+//bz: just copy
+func (a *analysis) copyKCallSite(this []*callsite) []*callsite {
+	var slice = make([]*callsite, int(len(this)))
+	for i, _ := range slice {
+		slice[i] = this[i]
 	}
 	return slice
 }

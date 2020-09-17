@@ -233,6 +233,7 @@ func (a *analysis) onlineCopyN(dst, src nodeid, sizeof uint32) uint32 {
 	}
 	return sizeof
 }
+
 //bz: different solves for complex instructions
 func (c *loadConstraint) solve(a *analysis, delta *nodeset) {
 	var changed bool
@@ -339,7 +340,7 @@ func (c *invokeConstraint) solve(a *analysis, delta *nodeset) {
 					fmt.Println(" eachSolve --> " + fn.String() + "@" + a.cgnodes[idx].contourkFull())
 					
 					_fnObj := a.cgnodes[idx].obj
-					c.eachSolve(a, _fnObj, sig, v)
+					c.eachSolve(a, _fnObj, sig, v, true)
 				}
 				return
 			}
@@ -352,11 +353,11 @@ func (c *invokeConstraint) solve(a *analysis, delta *nodeset) {
 		}
 
 		// bz: back to normal workflow -> context-insensitive
-		c.eachSolve(a, fnObj, sig, v)
+		c.eachSolve(a, fnObj, sig, v, false)
 	}
 }
 
-func (c *invokeConstraint) eachSolve(a *analysis, fnObj nodeid, sig *types.Signature, v nodeid) {
+func (c *invokeConstraint) eachSolve(a *analysis, fnObj nodeid, sig *types.Signature, v nodeid, doMatch bool) {
 	// Make callsite's fn variable point to identity of
 	// concrete method.  (There's no need to add it to
 	// worklist since it never has attached constraints.)
@@ -366,6 +367,16 @@ func (c *invokeConstraint) eachSolve(a *analysis, fnObj nodeid, sig *types.Signa
 	// Copy payload to method's receiver param (arg0).
 	arg0 := a.funcParams(fnObj)
 	recvSize := a.sizeof(sig.Recv().Type())
+
+	if doMatch { //bz: match invoke here --> only match the 1st callsite of src and last of des
+		arg0CSs := a.nodes[arg0].callsite //des [c*,c1]  [c*,c2]
+		vCSs := a.nodes[v].callsite       //src [c1,c]  [c2,c]
+		if vCSs[0] != arg0CSs[len(arg0CSs)-1] {
+			return //mismatch
+		}
+	}
+
+	//continue with normal workflow
 	a.onlineCopyN(arg0, v, recvSize)
 
 	src := c.params + 1 // skip past identity
