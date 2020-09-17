@@ -91,7 +91,7 @@ func main() {
 		Log:            logfile,
 		CallSiteSensitive: true,
 		K: 2,
-		LimitScope: true,
+		LimitScope: true, //bz: only consider app methods now
 	}
 
 	//*** compute pta here

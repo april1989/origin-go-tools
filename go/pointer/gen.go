@@ -392,7 +392,7 @@ func (a *analysis) rtypeTaggedValue(obj nodeid) types.Type {
 func (a *analysis) valueNodeClosure(cgn *cgnode, closure *ssa.MakeClosure, v ssa.Value) nodeid {
 	// Value nodes for globals are created on demand.
 	fn, _ := v.(*ssa.Function)
-	id, ok := a.existClosure(fn, cgn.callersite[0])
+	id, ok, _ := a.existClosure(fn, cgn.callersite[0])
 	if !ok {
 		var comment string
 		if a.log != nil {
@@ -842,7 +842,7 @@ func (a *analysis) genStaticCall(caller *cgnode, site *callsite, call *ssa.CallC
         _, ok := site.instr.(*ssa.Go)
 		if ok { //we created cgnode/obj for ssa.GO before, skip here
 			fmt.Println("                  BUT ssa.GO -- " + site.instr.String() + "   SKIP.") //debug
-			obj, ok = a.existClosure(fn, caller.callersite[0])
+			obj, ok, _ = a.existClosure(fn, caller.callersite[0])
 			isNew = true //add its constraints
 		}else {
 			obj, isNew = a.makeFunctionObjectWithContext(caller, fn, site) //bz: we need a new contour
