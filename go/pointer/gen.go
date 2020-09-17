@@ -1070,45 +1070,38 @@ func (a *analysis) genCall(caller *cgnode, instr ssa.CallInstruction) {
 	}
 }
 
-func (a *analysis) existClosure(fn *ssa.Function, callersite *callsite) (nodeid, bool) {
+//bz: if exist nodeid for fn with callersite as callsite
+func (a *analysis) existClosure(fn *ssa.Function, callersite *callsite) (nodeid, bool, map[*callsite]nodeid) {
 	_map, ok := a.closures[fn]
 	if ok { //check if exist
 		c2id := _map.ctx2nodeid
 		for site, id := range c2id { //currently only match 1 callsite
 			if callersite == site {
-				return id, true
+				return id, true, c2id
 			}
 		}
-		return 0, false
+		return 0, false, c2id
 	}
-	return 0, false
+	return 0, false, nil
 }
 
 //bz:
 func (a *analysis) objectNodeClosure(caller *cgnode, closure *ssa.MakeClosure, fn *ssa.Function) nodeid {
-	_map, ok := a.closures[fn]
-	if ok { //check if exist
-		c2id := _map.ctx2nodeid
-		callersite := caller.callersite[0]
-		for site, id := range c2id { //currently only match 1 callsite
-			if callersite == site {
-				return id
-			}
-		}
-		//not exist create one
-		obj, _ := a.makeFunctionObjectWithContext(caller, fn, nil)
-		//update
-		c2id[callersite] = obj
-		a.closures[fn] = &Ctx2nodeid{c2id}
-		return obj
-	}else{ //this is the first closure for fn
-		obj, _ := a.makeFunctionObjectWithContext(caller, fn, nil)
-		//create entry
-		c2id := make(map[*callsite]nodeid)
-		c2id[caller.callersite[0]] = obj
-		a.closures[fn] = &Ctx2nodeid{c2id}
-		return obj
+	callersite := caller.callersite[0]
+	id, ok, c2id := a.existClosure(fn, callersite)
+	if ok {
+		return id
 	}
+
+	//not exist create one
+	obj, _ := a.makeFunctionObjectWithContext(caller, fn, nil)
+	if c2id == nil { //create if absent
+		c2id = make(map[*callsite]nodeid)
+	}
+	//update
+	c2id[callersite] = obj
+	a.closures[fn] = &Ctx2nodeid{c2id}
+    return obj
 }
 
 //bz:
@@ -1118,28 +1111,25 @@ func (a *analysis) objectNodeInvoke(caller *cgnode, site *callsite, fn *ssa.Func
 
 //bz: special handling for objectNode()
 func (a *analysis) objectNodeSpecial(cgn *cgnode, closure *ssa.MakeClosure, site *callsite, v ssa.Value) nodeid {
-	fn, okFunc := v.(*ssa.Function)
-	if okFunc { // must be Global object.
-		if a.withinScope(fn.String()) { //create cgnode/constraints here;
-			if closure != nil { //make closure: this has NO ssa.CallInstruction as callsite
-				return a.objectNodeClosure(cgn, closure, fn)
-			}
-			if site != nil { //invoke: call site considered here
-				return a.objectNodeInvoke(cgn, site, fn)
-			}
+	fn, _ := v.(*ssa.Function)      // must be Global object.
+	if a.withinScope(fn.String()) { //create cgnode/constraints here;
+		if closure != nil { //make closure: this has NO ssa.CallInstruction as callsite
+			return a.objectNodeClosure(cgn, closure, fn)
 		}
-		// normal case
-		obj, ok := a.globalobj[fn]
-		if !ok {
-			obj = a.makeFunctionObject(fn, nil)
-			if a.log != nil {
-				fmt.Fprintf(a.log, "\tglobalobj[%s] = n%d\n", fn, obj)
-			}
-			a.globalobj[fn] = obj //bz: obj is nodeid used in a.nodes[] if v is invoke
+		if site != nil { //invoke: call site considered here
+			return a.objectNodeInvoke(cgn, site, fn)
 		}
-		return obj
 	}
-	return 0 //should not hit here
+	// normal case or not interesting case
+	obj, ok := a.globalobj[fn]
+	if !ok {
+		obj = a.makeFunctionObject(fn, nil)
+		if a.log != nil {
+			fmt.Fprintf(a.log, "\tglobalobj[%s] = n%d\n", fn, obj)
+		}
+		a.globalobj[fn] = obj //bz: obj is nodeid used in a.nodes[] if v is invoke
+	}
+	return obj
 }
 
 //bz: tell if fn is from makeclosure
