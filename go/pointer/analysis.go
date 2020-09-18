@@ -148,8 +148,6 @@ type analysis struct {
 	                                        // NOW also used for static and invoke calls
 	                                        // TODO: may be should use nodeid not int (idx) ?
     closures        map[*ssa.Function]*Ctx2nodeid //bz: solution for makeclosure
-	iface2struct    map[types.Type][]types.Type //bz: since there is no record about the mapping from interface to its impl types,
-	// during offline phase, cannot determine invoke methods, TODO: THIS IS NOT A SOLUTION, introduce extra calls
 }
 
 // enclosingObj returns the first node of the addressable memory
@@ -257,7 +255,6 @@ func Analyze(config *Config) (result *Result, err error) {
 		deltaSpace:   make([]int, 0, 100),
 		fn2cgnodeIdx: make(map[*ssa.Function][]int),
 		closures:     make(map[*ssa.Function]*Ctx2nodeid),
-		iface2struct: make(map[types.Type][]types.Type),
 	}
 
 	if false {

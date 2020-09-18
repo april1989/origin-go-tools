@@ -978,54 +978,53 @@ func (a *analysis) genDynamicCall(caller *cgnode, site *callsite, call *ssa.Call
 	}
 }
 
-//bz: special handling for invoke, doing something like genMethodsOf() and valueNode() for invoke calls;
-//must be global
-//TODO: PRECISION PROBLEM: extra calls due to overapproximate impls from a.iface2struct[T]
-//      default method solve this after confirming the pts(base), which considers data flow, we do not have here ...
-func (a *analysis) valueNodeInvoke(caller *cgnode, site *callsite, sig *types.Signature) {
-	T := sig.Recv().Type() //receiver interface
-	impls, ok := a.iface2struct[T]
-	if !ok {
-		return
-	}                            //no impls for this iface
-	for _, impl := range impls { //create cgn for each impl
-		mset := a.prog.MethodSets.MethodSet(impl) //same with genMethodsOf()
-		for i, n := 0, mset.Len(); i < n; i++ {
-			m := a.prog.MethodValue(mset.At(i)) //m -> fn
+//bz: online iteratively doing genFunc <-> genInstr
+func (a *analysis) genOnline(caller *cgnode, site *callsite, fn *ssa.Function) nodeid {
+	//start point
+	fnObj := a.valueNodeInvoke(caller, site, fn)
 
-			//similar with valueNode(),  created on demand. Instead of a.globalval[], we use a.fn2cgnodeid[]
-			_, _, _, isNew := a.existContextForComb(m, site, caller)
-			if isNew {
-				var comment string
-				if a.log != nil {
-					comment = m.String()
-				}
-				var id = a.addNodes(m.Type(), comment)
-				if obj := a.objectNodeSpecial(caller, nil, site, m); obj != 0 {
-					a.addressOf(m.Type(), id, obj)
-				}
-				a.setValueNode(m, id, nil)  //bz: value will be replaced ...
-			}
-
-			a.atFuncs[m] = true // Methods of concrete types are address-taken functions.
-		}
+	//generate constraints for each one
+	for len(a.genq) > 0 {
+		cgn := a.genq[0]
+		a.genq = a.genq[1:]
+		a.genFunc(cgn)
 	}
+	//TODO: we skip optimization now, just in case it will mess up. maybe add it later??
+    return fnObj
+}
+
+
+//bz: special handling for invoke, doing something like genMethodsOf() and valueNode() for invoke calls; called online
+//must be global
+func (a *analysis) valueNodeInvoke(caller *cgnode, site *callsite, fn *ssa.Function) nodeid {
+	//similar with valueNode(),  created on demand. Instead of a.globalval[], we use a.fn2cgnodeid[]
+	_, _, obj, isNew := a.existContextForComb(fn, site, caller)
+	if isNew {
+		var comment string
+		if a.log != nil {
+			comment = fn.String()
+		}
+		var id = a.addNodes(fn.Type(), comment)
+		if obj = a.objectNodeSpecial(caller, nil, site, fn); obj != 0 {
+			a.addressOf(fn.Type(), id, obj)
+		}
+		//a.setValueNode(m, id, nil) //bz: do we need this??
+		a.atFuncs[fn] = true // Methods of concrete types are address-taken functions.
+		return obj
+	}
+
+	return obj
 }
 
 // genInvoke generates constraints for a dynamic method invocation.
-// bz: NOTE: not every x.m() is treated by genInvoke() here, some is treated by genStaticCall(), why ...
+// bz: NOTE: not every x.m() is treated by genInvoke() here, some is treated by genStaticCall(),
+// move the genFunc() for invoke calls online
 func (a *analysis) genInvoke(caller *cgnode, site *callsite, call *ssa.CallCommon, result nodeid) {
 	if call.Value.Type() == a.reflectType {
 		a.genInvokeReflectType(caller, site, call, result)
 		return
 	}
 	sig := call.Signature()
-
-	//bz: simple solution; start to be kcfa from main.main; INSTEAD OF genMethodsOf(), we create it here
-	if a.considerKContext(sig.Recv().Type().String()) { //requires receiver type
-		fmt.Println("CAUGHT APP INVOKE METHOD -- " + sig.Recv().Type().String())
-		a.valueNodeInvoke(caller, site, sig)
-	}
 
 	// back to normal work flow
 	// Allocate a contiguous targets/params/results block for this call.
@@ -1049,8 +1048,15 @@ func (a *analysis) genInvoke(caller *cgnode, site *callsite, call *ssa.CallCommo
 	// We add a dynamic invoke constraint that will connect the
 	// caller's and the callee's P/R blocks for each discovered
 	// call target.
-	a.addConstraint(&invokeConstraint{call.Method, a.valueNode(call.Value), block}) //bz: call.Value is local and base, e.g., t1
+	if a.considerKContext(sig.Recv().Type().String()) { //requires receiver type
+		//bz: simple solution; start to be kcfa from main.main; INSTEAD OF genMethodsOf(), we create it online
+		fmt.Println("CAUGHT APP INVOKE METHOD -- " + sig.Recv().Type().String() + "   WILL CREATE ONLINE LATER.")
+		a.addConstraint(&invokeConstraint{call.Method, a.valueNode(call.Value), block, site, caller}) //bz: we need sites later online
+	}else{
+		a.addConstraint(&invokeConstraint{call.Method, a.valueNode(call.Value), block, nil, nil}) //bz: call.Value is local and base, e.g., t1
+	}
 }
+
 
 // genInvokeReflectType is a specialization of genInvoke where the
 // receiver type is a reflect.Type, under the assumption that there
@@ -1304,13 +1310,6 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 			tConc := v.X.Type()
 			obj = a.makeTagged(tConc, cgn, v)
 
-			if a.considerKContext(cgn.fn.String()) { //update a.iface2struct[]
-				if a.log != nil {
-					fmt.Fprintln(a.log, "RECORD MakeInterface -- "+v.String()+"  "+v.X.Type().String()+"  "+v.RegisterType().String())
-				}
-				a.updateIface2struct(tConc, v.RegisterType())
-			}
-
 			// Copy the value into it, if nontrivial.
 			if x := a.valueNode(v.X); x != 0 {
 				a.copy(obj+1, x, a.sizeof(tConc))
@@ -1343,26 +1342,6 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 	return obj
 }
 
-//bz:
-func (a *analysis) updateIface2struct(impl types.Type, iface types.Type) {
-	if isInterface(impl) {
-		return
-	} //TODO: imple should not be interface ... panic?
-	impls, ok := a.iface2struct[iface]
-	if ok { //exist ?
-		for _, exist := range impls {
-			if exist == impl {
-				return
-			} //yes, exist
-		}
-		//not exist
-		impls = append(impls, impl)
-	} else {
-		impls = make([]types.Type, 1)
-		impls[0] = impl
-	}
-	a.iface2struct[iface] = impls
-}
 
 // genLoad generates constraints for result = *(ptr + val).
 func (a *analysis) genLoad(cgn *cgnode, result nodeid, ptr ssa.Value, offset, sizeof uint32) {

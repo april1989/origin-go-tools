@@ -140,6 +140,9 @@ type invokeConstraint struct {
 	method *types.Func // the abstract method
 	iface  nodeid      // (ptr) the interface
 	params nodeid      // the start of the identity/params/results block
+	// bz: to genFunc() online
+	site   *callsite
+	caller *cgnode
 }
 
 func (c *invokeConstraint) ptr() nodeid { return c.iface }
