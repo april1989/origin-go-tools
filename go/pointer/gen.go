@@ -73,10 +73,6 @@ func (a *analysis) addNodesSpecial(typ types.Type, comment string, sites []*call
 //
 func (a *analysis) addOneNode(typ types.Type, comment string, subelement *fieldInfo) nodeid {
 	id := a.nextNode()
-	if strings.Contains(typ.String(), "*command-line-arguments.framework") {
-		fmt.Print()
-	}
-
 	a.nodes = append(a.nodes, &node{typ: typ, subelement: subelement, solve: new(solverState)})
 	if a.log != nil {
 		fmt.Fprintf(a.log, "\tcreate n%d %s for %s%s\n",
@@ -985,6 +981,8 @@ func (a *analysis) genDynamicCall(caller *cgnode, site *callsite, call *ssa.Call
 
 //bz: special handling for invoke, doing something like genMethodsOf() and valueNode() for invoke calls;
 //must be global
+//TODO: PRECISION PROBLEM: extra calls due to overapproximate impls from a.iface2struct[T]
+//      default method solve this after confirming the pts(base), which considers data flow, we do not have here ...
 func (a *analysis) valueNodeInvoke(caller *cgnode, site *callsite, sig *types.Signature) {
 	T := sig.Recv().Type() //receiver interface
 	impls, ok := a.iface2struct[T]
@@ -1124,6 +1122,8 @@ func (a *analysis) genCall(caller *cgnode, instr ssa.CallInstruction) {
 	if call.StaticCallee() != nil {
 		a.genStaticCall(caller, site, call, result)
 	} else if call.IsInvoke() {
+		fmt.Println(instr.String())
+		fmt.Println(call.Value.Name())
 		a.genInvoke(caller, site, call, result)
 	} else {
 		a.genDynamicCall(caller, site, call, result)
@@ -1244,7 +1244,7 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 				//bz: this has NO ssa.CallInstruction as callsite;
 				//v should not be make closure, we handle it in a different method
 				isClosure := a.isFromMakeClosure(v)
-			    if isClosure && a.withinScope(v.String()) {
+			    if isClosure && a.considerKContext(v.String()) {
 			    	panic("WRONG INVOKE FOR MAKE CLOSURE: " + v.String())
 				}else{ //normal case
 					obj = a.makeFunctionObject(v, nil)

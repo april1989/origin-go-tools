@@ -312,8 +312,8 @@ func Analyze(config *Config) (result *Result, err error) {
 
 	N := len(a.nodes) // excludes solver-created nodes
 
-	if optHVN { //bz: turned off in default
-		if debugHVNCrossCheck {
+	if optHVN { //bz: default true
+		if debugHVNCrossCheck { //default : false
 			// Cross-check: run the solver once without
 			// optimization, once with, and compare the
 			// solutions.
