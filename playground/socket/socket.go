@@ -259,7 +259,7 @@ func limiter(in <-chan *Message, p killer) <-chan *Message {
 // coalesced; when a message of a different kind is received, any buffered
 // messages are flushed. When the given channel is closed, buffer flushes the
 // remaining buffered messages and closes the returned channel.
-// The timeAfter func should be time.After. It exists for testing.
+// The timeAfter func should be time.After. It exists for golibexec_testing.
 func buffer(in <-chan *Message, timeAfter func(time.Duration) <-chan time.Time) <-chan *Message {
 	out := make(chan *Message)
 	go func() {

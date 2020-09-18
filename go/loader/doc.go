@@ -115,7 +115,7 @@ package loader
 // dependencies are imported in the usual way; the loader reports an
 // error if it detects an import cycle.
 //
-// Then, each package P for which testing is desired is augmented by
+// Then, each package P for which golibexec_testing is desired is augmented by
 // the list P' of its in-package test files, by calling
 // (*types.Checker).Files.  This arrangement ensures that P' may
 // reference definitions within P, but P may not reference definitions

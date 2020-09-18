@@ -7,7 +7,7 @@ Package expect provides support for interpreting structured comments in Go
 source code as test expectations.
 
 This is primarily intended for writing tests of things that process Go source
-files, although it does not directly depend on the testing package.
+files, although it does not directly depend on the golibexec_testing package.
 
 Collect notes with the Extract or Parse functions, and use the
 MatchBefore function to find matches within the lines the comments were on.

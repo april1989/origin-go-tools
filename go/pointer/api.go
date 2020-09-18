@@ -70,9 +70,13 @@ type Config struct {
 	Log io.Writer
 
 	//bz: kcfa
-	CallSiteSensitive bool
-	K int //must be capital ...
-	LimitScope bool  //only apply kcfa to app methods
+	CallSiteSensitive  bool
+	K                  int //how many level?
+	//bz: origin-sensitive -> go routine as origin-entry
+	Origin             bool
+	K_Origin           int //how many level? or as many as necessary?
+	//bz: shared config by context-sensitive
+	LimitScope         bool  //only apply kcfa to app methods
 }
 
 type track uint32

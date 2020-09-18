@@ -6,7 +6,7 @@ package ssa
 
 // CreateTestMainPackage synthesizes a main package that runs all the
 // tests of the supplied packages.
-// It is closely coupled to $GOROOT/src/cmd/go/test.go and $GOROOT/src/testing.
+// It is closely coupled to $GOROOT/src/cmd/go/test.go and $GOROOT/src/golibexec_testing.
 //
 // TODO(adonovan): throws this all away now that x/tools/go/packages
 // provides access to the actual synthetic test main files.
@@ -32,24 +32,24 @@ import (
 func FindTests(pkg *Package) (tests, benchmarks, examples []*Function, main *Function) {
 	prog := pkg.Prog
 
-	// The first two of these may be nil: if the program doesn't import "testing",
+	// The first two of these may be nil: if the program doesn't import "golibexec_testing",
 	// it can't contain any tests, but it may yet contain Examples.
-	var testSig *types.Signature                              // func(*testing.T)
-	var benchmarkSig *types.Signature                         // func(*testing.B)
+	var testSig *types.Signature                              // func(*golibexec_testing.T)
+	var benchmarkSig *types.Signature                         // func(*golibexec_testing.B)
 	var exampleSig = types.NewSignature(nil, nil, nil, false) // func()
 
-	// Obtain the types from the parameters of testing.MainStart.
-	if testingPkg := prog.ImportedPackage("testing"); testingPkg != nil {
+	// Obtain the types from the parameters of golibexec_testing.MainStart.
+	if testingPkg := prog.ImportedPackage("golibexec_testing"); testingPkg != nil {
 		mainStart := testingPkg.Func("MainStart")
 		params := mainStart.Signature.Params()
 		testSig = funcField(params.At(1).Type())
 		benchmarkSig = funcField(params.At(2).Type())
 
 		// Does the package define this function?
-		//   func TestMain(*testing.M)
+		//   func TestMain(*golibexec_testing.M)
 		if f := pkg.Func("TestMain"); f != nil {
 			sig := f.Type().(*types.Signature)
-			starM := mainStart.Signature.Results().At(0).Type() // *testing.M
+			starM := mainStart.Signature.Results().At(0).Type() // *golibexec_testing.M
 			if sig.Results().Len() == 0 &&
 				sig.Params().Len() == 1 &&
 				types.Identical(sig.Params().At(0).Type(), starM) {
@@ -84,7 +84,7 @@ func isTestSig(f *Function, prefix string, sig *types.Signature) bool {
 	return isTest(f.Name(), prefix) && types.Identical(f.Signature, sig)
 }
 
-// Given the type of one of the three slice parameters of testing.Main,
+// Given the type of one of the three slice parameters of golibexec_testing.Main,
 // returns the function type.
 func funcField(slice types.Type) *types.Signature {
 	return slice.(*types.Slice).Elem().Underlying().(*types.Struct).Field(1).Type().(*types.Signature)
@@ -139,11 +139,11 @@ func (prog *Program) CreateTestMainPackage(pkg *Package) *Package {
 	// Synthesize source for testmain package.
 	path := pkg.Pkg.Path() + "$testmain"
 	tmpl := testmainTmpl
-	if testingPkg := prog.ImportedPackage("testing"); testingPkg != nil {
-		// In Go 1.8, testing.MainStart's first argument is an interface, not a func.
+	if testingPkg := prog.ImportedPackage("golibexec_testing"); testingPkg != nil {
+		// In Go 1.8, golibexec_testing.MainStart's first argument is an interface, not a func.
 		data.Go18 = types.IsInterface(testingPkg.Func("MainStart").Signature.Params().At(0).Type())
 	} else {
-		// The program does not import "testing", but FindTests
+		// The program does not import "golibexec_testing", but FindTests
 		// returned non-nil, which must mean there were Examples
 		// but no Test, Benchmark, or TestMain functions.
 
@@ -214,7 +214,7 @@ package main
 
 import "io"
 import "os"
-import "testing"
+import "golibexec_testing"
 import p {{printf "%q" .Pkg.Pkg.Path}}
 
 {{if .Go18}}
@@ -236,22 +236,22 @@ func match(_, _ string) (bool, error) { return true, nil }
 {{end}}
 
 func main() {
-	tests := []testing.InternalTest{
+	tests := []golibexec_testing.InternalTest{
 {{range .Tests}}
 		{ {{printf "%q" .Name}}, p.{{.Name}} },
 {{end}}
 	}
-	benchmarks := []testing.InternalBenchmark{
+	benchmarks := []golibexec_testing.InternalBenchmark{
 {{range .Benchmarks}}
 		{ {{printf "%q" .Name}}, p.{{.Name}} },
 {{end}}
 	}
-	examples := []testing.InternalExample{
+	examples := []golibexec_testing.InternalExample{
 {{range .Examples}}
 		{Name: {{printf "%q" .Name}}, F: p.{{.Name}}},
 {{end}}
 	}
-	m := testing.MainStart(match, tests, benchmarks, examples)
+	m := golibexec_testing.MainStart(match, tests, benchmarks, examples)
 {{with .Main}}
 	p.{{.Name}}(m)
 {{else}}

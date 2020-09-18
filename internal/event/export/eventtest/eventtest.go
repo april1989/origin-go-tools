@@ -55,7 +55,7 @@ func (w *testExporter) processEvent(ctx context.Context, ev core.Event, tm label
 	// build our log message in buffer
 	result := w.logger(ctx, ev, tm)
 	v := ctx.Value(testingKey)
-	// get the testing.TB
+	// get the golibexec_testing.TB
 	if w.buffer.Len() > 0 && v != nil {
 		v.(testing.TB).Log(w.buffer)
 	}

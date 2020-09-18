@@ -13,14 +13,14 @@ import (
 	"golang.org/x/tools/go/ast/inspector"
 )
 
-const Doc = `report calls to (*testing.T).Fatal from goroutines started by a test.
+const Doc = `report calls to (*golibexec_testing.T).Fatal from goroutines started by a test.
 
 Functions that abruptly terminate a test, such as the Fatal, Fatalf, FailNow, and
-Skip{,f,Now} methods of *testing.T, must be called from the test goroutine itself.
+Skip{,f,Now} methods of *golibexec_testing.T, must be called from the test goroutine itself.
 This checker detects calls to these functions that occur within a goroutine
 started by the test. For example:
 
-func TestFoo(t *testing.T) {
+func TestFoo(t *golibexec_testing.T) {
     go func() {
         t.Fatal("oops") // error: (*T).Fatal called from non-test goroutine
     }()
@@ -46,7 +46,7 @@ var forbidden = map[string]bool{
 func run(pass *analysis.Pass) (interface{}, error) {
 	inspect := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
 
-	if !analysisutil.Imports(pass.Pkg, "testing") {
+	if !analysisutil.Imports(pass.Pkg, "golibexec_testing") {
 		return nil, nil
 	}
 
@@ -87,7 +87,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 }
 
 func hasBenchmarkOrTestParams(fnDecl *ast.FuncDecl) bool {
-	// Check that the function's arguments include "*testing.T" or "*testing.B".
+	// Check that the function's arguments include "*golibexec_testing.T" or "*golibexec_testing.B".
 	params := fnDecl.Type.Params.List
 
 	for _, param := range params {
@@ -110,7 +110,7 @@ func typeIsTestingDotTOrB(expr ast.Expr) (string, bool) {
 	}
 
 	varPkg := selExpr.X.(*ast.Ident)
-	if varPkg.Name != "testing" {
+	if varPkg.Name != "golibexec_testing" {
 		return "", false
 	}
 
@@ -120,7 +120,7 @@ func typeIsTestingDotTOrB(expr ast.Expr) (string, bool) {
 }
 
 // checkGoStmt traverses the goroutine and checks for the
-// use of the forbidden *testing.(B, T) methods.
+// use of the forbidden *golibexec_testing.(B, T) methods.
 func checkGoStmt(pass *analysis.Pass, goStmt *ast.GoStmt) {
 	// Otherwise examine the goroutine to check for the forbidden methods.
 	ast.Inspect(goStmt, func(n ast.Node) bool {

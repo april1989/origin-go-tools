@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 /*
-Package packagestest creates temporary projects on disk for testing go tools on.
+Package packagestest creates temporary projects on disk for golibexec_testing go tools on.
 
 By changing the exporter used, you can create projects for multiple build
 systems from the same description, and run the same tests on them in many
@@ -15,8 +15,8 @@ As an example of packagestest use, consider the following test that runs
 the 'go list' command on the specified modules:
 
 	// TestGoList exercises the 'go list' command in module mode and in GOPATH mode.
-	func TestGoList(t *testing.T) { packagestest.TestAll(t, testGoList) }
-	func testGoList(t *testing.T, x packagestest.Exporter) {
+	func TestGoList(t *golibexec_testing.T) { packagestest.TestAll(t, testGoList) }
+	func testGoList(t *golibexec_testing.T, x packagestest.Exporter) {
 		e := packagestest.Export(t, x, []packagestest.Module{
 			{
 				Name: "gopher.example/repoa",
@@ -145,7 +145,7 @@ type Exporter interface {
 // This is used by TestAll to run tests with all the exporters.
 var All []Exporter
 
-// TestAll invokes the testing function once for each exporter registered in
+// TestAll invokes the golibexec_testing function once for each exporter registered in
 // the All global.
 // Each exporter will be run as a sub-test named after the exporter being used.
 func TestAll(t *testing.T, f func(*testing.T, Exporter)) {
@@ -158,7 +158,7 @@ func TestAll(t *testing.T, f func(*testing.T, Exporter)) {
 	}
 }
 
-// BenchmarkAll invokes the testing function once for each exporter registered in
+// BenchmarkAll invokes the golibexec_testing function once for each exporter registered in
 // the All global.
 // Each exporter will be run as a sub-test named after the exporter being used.
 func BenchmarkAll(b *testing.B, f func(*testing.B, Exporter)) {
@@ -260,7 +260,7 @@ func Script(contents string) Writer {
 
 // Link returns a Writer that creates a hard link from the specified source to
 // the required file.
-// This is used to link testdata files into the generated testing tree.
+// This is used to link testdata files into the generated golibexec_testing tree.
 func Link(source string) Writer {
 	return func(filename string) error {
 		return os.Link(source, filename)
@@ -269,7 +269,7 @@ func Link(source string) Writer {
 
 // Symlink returns a Writer that creates a symlink from the specified source to the
 // required file.
-// This is used to link testdata files into the generated testing tree.
+// This is used to link testdata files into the generated golibexec_testing tree.
 func Symlink(source string) Writer {
 	if !strings.HasPrefix(source, ".") {
 		if abspath, err := filepath.Abs(source); err == nil {
@@ -285,7 +285,7 @@ func Symlink(source string) Writer {
 
 // Copy returns a Writer that copies a file from the specified source to the
 // required file.
-// This is used to copy testdata files into the generated testing tree.
+// This is used to copy testdata files into the generated golibexec_testing tree.
 func Copy(source string) Writer {
 	return func(filename string) error {
 		stat, err := os.Stat(source)

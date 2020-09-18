@@ -148,8 +148,8 @@ type analysis struct {
 	                                        // NOW also used for static and invoke calls
 	                                        // TODO: may be should use nodeid not int (idx) ?
     closures        map[*ssa.Function]*Ctx2nodeid //bz: solution for makeclosure
-	iface2struct    map[types.Type][]types.Type //bz: this is a bit redundant (solve.go will do this online), since there is no record
-                                                  //about the mapping from interface to its impl types, cannot determine invoke methods
+	iface2struct    map[types.Type][]types.Type //bz: since there is no record about the mapping from interface to its impl types,
+	// during offline phase, cannot determine invoke methods, TODO: THIS IS NOT A SOLUTION, introduce extra calls
 }
 
 // enclosingObj returns the first node of the addressable memory

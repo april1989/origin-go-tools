@@ -30,7 +30,7 @@ func init() {
 	}
 }
 
-// TestMain creates a getgo command for testing purposes and
+// TestMain creates a getgo command for golibexec_testing purposes and
 // deletes it after the tests have been run.
 func TestMain(m *testing.M) {
 	if os.Getenv("GOGET_INTEGRATION") == "" {

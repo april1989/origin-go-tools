@@ -258,7 +258,7 @@ func (r *Runner) Run(t *testing.T, files string, test TestFunc, opts ...RunOptio
 				t.Fatal(err)
 			}
 			// Deferring the closure of ws until the end of the entire test suite
-			// has, in testing, given the LSP server time to properly shutdown and
+			// has, in golibexec_testing, given the LSP server time to properly shutdown and
 			// release any file locks held in workspace, which is a problem on
 			// Windows. This may still be flaky however, and in the future we need a
 			// better solution to ensure that all Go processes started by gopls have

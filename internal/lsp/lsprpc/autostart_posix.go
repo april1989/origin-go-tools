@@ -41,7 +41,7 @@ func startRemotePosix(goplsPath string, args ...string) error {
 // autoNetworkAddress resolves an id on the 'auto' pseduo-network to a
 // real network and address. On unix, this uses unix domain sockets.
 func autoNetworkAddressPosix(goplsPath, id string) (network string, address string) {
-	// Especially when doing local development or testing, it's important that
+	// Especially when doing local development or golibexec_testing, it's important that
 	// the remote gopls instance we connect to is running the same binary as our
 	// forwarder. So we encode a short hash of the binary path into the daemon
 	// socket name. If possible, we also include the buildid in this hash, to

@@ -22,7 +22,7 @@ The tests checker walks Test, Benchmark and Example functions checking
 malformed names, wrong signatures and examples documenting non-existent
 identifiers.
 
-Please see the documentation for package testing in golang.org/pkg/testing
+Please see the documentation for package golibexec_testing in golang.org/pkg/golibexec_testing
 for the conventions that are enforced for Tests, Benchmarks, and Examples.`
 
 var Analyzer = &analysis.Analyzer{
@@ -76,7 +76,7 @@ func isTestParam(typ ast.Expr, wantType string) bool {
 		// Not a pointer.
 		return false
 	}
-	// No easy way of making sure it's a *testing.T or *testing.B:
+	// No easy way of making sure it's a *golibexec_testing.T or *golibexec_testing.B:
 	// ensure the name of the type matches.
 	if name, ok := ptr.X.(*ast.Ident); ok {
 		return name.Name == wantType
@@ -177,7 +177,7 @@ func checkTest(pass *analysis.Pass, fn *ast.FuncDecl, prefix string) {
 		return
 	}
 
-	// The param must look like a *testing.T or *testing.B.
+	// The param must look like a *golibexec_testing.T or *golibexec_testing.B.
 	if !isTestParam(fn.Type.Params.List[0].Type, prefix[:1]) {
 		return
 	}

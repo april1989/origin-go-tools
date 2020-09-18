@@ -46,7 +46,7 @@ func TestBuild(t *testing.T) {
 	// Test direct edges.
 	// We throw in crypto/hmac to prove that external test files
 	// (such as this one) are inspected.
-	for _, p := range []string{"go/build", "testing", "crypto/hmac"} {
+	for _, p := range []string{"go/build", "golibexec_testing", "crypto/hmac"} {
 		if !forward[this][p] {
 			t.Errorf("forward[importgraph][%s] not found", p)
 		}

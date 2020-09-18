@@ -263,10 +263,10 @@ const Name = "Blah"
 package blah_test
 
 import (
-	"testing"
+	"golibexec_testing"
 )
 
-func TestBlah(t *testing.T) {}
+func TestBlah(t *golibexec_testing.T) {}
 
 -- example.com/blah/v2/@v/list --
 v2.0.0
@@ -282,12 +282,12 @@ const Name = "Blah"
 package blah_test
 
 import (
-	"testing"
+	"golibexec_testing"
 
 	"example.com/blah"
 )
 
-func TestBlah(t *testing.T) {}
+func TestBlah(t *golibexec_testing.T) {}
 `
 	const pkg = `
 -- go.mod --

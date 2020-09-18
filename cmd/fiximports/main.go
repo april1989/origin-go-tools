@@ -100,7 +100,7 @@ var (
 		"a comma-separated list of noncanonical=canonical pairs of package paths.  If both items in a pair end with '...', they are treated as path prefixes.")
 )
 
-// seams for testing
+// seams for golibexec_testing
 var (
 	stderr    io.Writer = os.Stderr
 	writeFile           = ioutil.WriteFile

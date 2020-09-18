@@ -18,7 +18,7 @@ import (
 
 var (
 
-	// files to use to build zip used by zipfs in testing; maps path : contents
+	// files to use to build zip used by zipfs in golibexec_testing; maps path : contents
 	files = map[string]string{"foo": "foo", "bar/baz": "baz", "a/b/c": "c"}
 
 	// expected info for each entry in a file system described by files
@@ -54,7 +54,7 @@ type statFunc struct {
 
 func TestMain(t *testing.M) {
 	if err := setup(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error setting up zipfs testing state: %v.\n", err)
+		fmt.Fprintf(os.Stderr, "Error setting up zipfs golibexec_testing state: %v.\n", err)
 		os.Exit(1)
 	}
 	os.Exit(t.Run())

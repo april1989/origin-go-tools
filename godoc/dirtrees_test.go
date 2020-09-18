@@ -22,7 +22,7 @@ func TestNewDirTree(t *testing.T) {
 	fs.Bind("/", rootfs, "/", vfs.BindReplace)
 
 	c := NewCorpus(fs)
-	// 3 levels deep is enough for testing
+	// 3 levels deep is enough for golibexec_testing
 	dir := c.newDirectory("/", 3)
 
 	processDir(t, dir)

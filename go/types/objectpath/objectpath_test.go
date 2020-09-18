@@ -75,7 +75,7 @@ type T struct{x, y int}
 	// easy way to identify the object short of applying
 	// a series of destructuring operations to pkg---which
 	// is essentially what objectpath.Object does.
-	// (We do a little of that when testing bad paths, below.)
+	// (We do a little of that when golibexec_testing bad paths, below.)
 	//
 	// The downside is that the test depends on the path encoding.
 	// The upside is that the test exercises the encoding.

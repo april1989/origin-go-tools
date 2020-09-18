@@ -176,7 +176,7 @@ func doCallgraph(dir, gopath, algo, format string, tests bool, args []string) er
 		Dir:   dir,
 	}
 	if gopath != "" {
-		cfg.Env = append(os.Environ(), "GOPATH="+gopath) // to enable testing
+		cfg.Env = append(os.Environ(), "GOPATH="+gopath) // to enable golibexec_testing
 	}
 	initial, err := packages.Load(cfg, args...)
 	if err != nil {

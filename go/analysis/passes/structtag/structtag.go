@@ -90,7 +90,7 @@ func checkCanonicalFieldTag(pass *analysis.Pass, field *types.Var, tag string, s
 	switch pass.Pkg.Path() {
 	case "encoding/json", "encoding/xml":
 		// These packages know how to use their own APIs.
-		// Sometimes they are testing what happens to incorrect programs.
+		// Sometimes they are golibexec_testing what happens to incorrect programs.
 		return
 	}
 

@@ -1,4 +1,4 @@
-// Package analysistest provides utilities for testing analyzers.
+// Package analysistest provides utilities for golibexec_testing analyzers.
 package analysistest
 
 import (
@@ -62,7 +62,7 @@ var TestData = func() string {
 	return testdata
 }
 
-// Testing is an abstraction of a *testing.T.
+// Testing is an abstraction of a *golibexec_testing.T.
 type Testing interface {
 	Errorf(format string, args ...interface{})
 }
@@ -361,7 +361,7 @@ func check(t Testing, gopath string, pass *analysis.Pass, diagnostics []analysis
 				// or "/*...// want... */
 				// as if it starts at 'want'.
 				// This allows us to add comments on comments,
-				// as required when testing the buildtag analyzer.
+				// as required when golibexec_testing the buildtag analyzer.
 				if i := strings.Index(text, "// want"); i >= 0 {
 					text = text[i+len("// "):]
 				}

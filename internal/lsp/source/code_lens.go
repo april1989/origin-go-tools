@@ -141,7 +141,7 @@ func matchTestFunc(fn *ast.FuncDecl, pkg Package, nameRe *regexp.Regexp, paramID
 		return false
 	}
 	namedObj := named.Obj()
-	if namedObj.Pkg().Path() != "testing" {
+	if namedObj.Pkg().Path() != "golibexec_testing" {
 		return false
 	}
 	return namedObj.Id() == paramID

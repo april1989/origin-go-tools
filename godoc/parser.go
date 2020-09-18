@@ -22,7 +22,7 @@ var linePrefix = []byte("//line ")
 // This function replaces source lines starting with "//line " with a blank line.
 // It does this irrespective of whether the line is truly a line comment or not;
 // e.g., the line may be inside a string, or a /*-style comment; however that is
-// rather unlikely (proper testing would require a full Go scan which we want to
+// rather unlikely (proper golibexec_testing would require a full Go scan which we want to
 // avoid for performance).
 func replaceLinePrefixCommentsWithBlankLine(src []byte) {
 	for {

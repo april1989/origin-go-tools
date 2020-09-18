@@ -32,7 +32,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	switch pass.Pkg.Path() {
 	case "errors", "errors_test":
 		// These packages know how to use their own APIs.
-		// Sometimes they are testing what happens to incorrect programs.
+		// Sometimes they are golibexec_testing what happens to incorrect programs.
 		return nil, nil
 	}
 

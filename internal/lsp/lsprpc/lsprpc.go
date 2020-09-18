@@ -42,7 +42,7 @@ type StreamServer struct {
 	// logConnections controls whether or not to log new connections.
 	logConnections bool
 
-	// serverForTest may be set to a test fake for testing.
+	// serverForTest may be set to a test fake for golibexec_testing.
 	serverForTest protocol.Server
 }
 

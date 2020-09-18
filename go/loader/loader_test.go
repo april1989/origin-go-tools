@@ -290,7 +290,7 @@ func TestLoad_FromImports_Success(t *testing.T) {
 		"strings": true,
 		"time":    true,
 		"runtime": true,
-		"testing": true,
+		"golibexec_testing": true,
 		"unicode": true,
 	}
 	for _, path := range all(prog) {

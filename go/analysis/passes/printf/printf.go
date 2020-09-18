@@ -375,24 +375,24 @@ var isPrint = stringSet{
 	"(*log.Logger).Printf":  true,
 	"(*log.Logger).Println": true,
 
-	"(*testing.common).Error":  true,
-	"(*testing.common).Errorf": true,
-	"(*testing.common).Fatal":  true,
-	"(*testing.common).Fatalf": true,
-	"(*testing.common).Log":    true,
-	"(*testing.common).Logf":   true,
-	"(*testing.common).Skip":   true,
-	"(*testing.common).Skipf":  true,
-	// *testing.T and B are detected by induction, but testing.TB is
+	"(*golibexec_testing.common).Error":  true,
+	"(*golibexec_testing.common).Errorf": true,
+	"(*golibexec_testing.common).Fatal":  true,
+	"(*golibexec_testing.common).Fatalf": true,
+	"(*golibexec_testing.common).Log":    true,
+	"(*golibexec_testing.common).Logf":   true,
+	"(*golibexec_testing.common).Skip":   true,
+	"(*golibexec_testing.common).Skipf":  true,
+	// *golibexec_testing.T and B are detected by induction, but golibexec_testing.TB is
 	// an interface and the inference can't follow dynamic calls.
-	"(testing.TB).Error":  true,
-	"(testing.TB).Errorf": true,
-	"(testing.TB).Fatal":  true,
-	"(testing.TB).Fatalf": true,
-	"(testing.TB).Log":    true,
-	"(testing.TB).Logf":   true,
-	"(testing.TB).Skip":   true,
-	"(testing.TB).Skipf":  true,
+	"(golibexec_testing.TB).Error":  true,
+	"(golibexec_testing.TB).Errorf": true,
+	"(golibexec_testing.TB).Fatal":  true,
+	"(golibexec_testing.TB).Fatalf": true,
+	"(golibexec_testing.TB).Log":    true,
+	"(golibexec_testing.TB).Logf":   true,
+	"(golibexec_testing.TB).Skip":   true,
+	"(golibexec_testing.TB).Skipf":  true,
 }
 
 // formatString returns the format string argument and its index within

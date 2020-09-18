@@ -272,7 +272,7 @@ it to standard packages. We would like to remove this limitation in future.
 
 Testing an Analyzer
 
-The analysistest subpackage provides utilities for testing an Analyzer.
+The analysistest subpackage provides utilities for golibexec_testing an Analyzer.
 In a few lines of code, it is possible to run an analyzer on a package
 of testdata files and check that it reported all the expected
 diagnostics and facts (and no more). Expectations are expressed using

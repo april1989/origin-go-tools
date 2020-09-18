@@ -28,7 +28,7 @@ var unkeyedLiteral = map[string]bool{
 
 	// These three structs are used in generated test main files,
 	// but the generator can be trusted.
-	"testing.InternalBenchmark": true,
-	"testing.InternalExample":   true,
-	"testing.InternalTest":      true,
+	"golibexec_testing.InternalBenchmark": true,
+	"golibexec_testing.InternalExample":   true,
+	"golibexec_testing.InternalTest":      true,
 }

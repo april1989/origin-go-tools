@@ -123,7 +123,7 @@ func TestProgressTracker_Reporting(t *testing.T) {
 			if gotBegun != test.wantBegun {
 				t.Errorf("got %d work begun, want %d", gotBegun, test.wantBegun)
 			}
-			// Ignore errors: this is just testing the reporting behavior.
+			// Ignore errors: this is just golibexec_testing the reporting behavior.
 			work.report("report", 50)
 			client.mu.Lock()
 			gotReported := client.reported

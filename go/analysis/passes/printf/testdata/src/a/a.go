@@ -14,7 +14,7 @@ import (
 	"testing"
 	"unsafe" // just for test case printing unsafe.Pointer
 
-	// For testing printf-like functions from external package.
+	// For golibexec_testing printf-like functions from external package.
 	// "github.com/foobar/externalprintf"
 	"b"
 )
@@ -31,7 +31,7 @@ func (errorTest1) Error(...interface{}) string {
 	return "hi"
 }
 
-type errorTest2 int // Analogous to testing's *T type.
+type errorTest2 int // Analogous to golibexec_testing's *T type.
 func (errorTest2) Error(...interface{}) {
 }
 
@@ -216,7 +216,7 @@ func PrintfTests() {
 	var e error
 	fmt.Println(e.Error()) // ok
 	// Something that looks like an error interface but isn't, such as the (*T).Error method
-	// in the testing package.
+	// in the golibexec_testing package.
 	var et1 *testing.T
 	et1.Error()         // ok
 	et1.Error("hi")     // ok
@@ -391,7 +391,7 @@ func errorf(level, format string, args ...interface{}) { // want errorf:"errorfW
 
 // multi is used by the test.
 func multi() []interface{} {
-	panic("don't call - testing only")
+	panic("don't call - golibexec_testing only")
 }
 
 type stringer int
@@ -414,12 +414,12 @@ func (p *ptrStringer) Warnf2(x int, format string, args ...interface{}) string {
 	return p.Warnf(x, format, args...)
 }
 
-// During testing -printf.funcs flag matches Warn.
+// During golibexec_testing -printf.funcs flag matches Warn.
 func (*ptrStringer) Warn(x int, args ...interface{}) string {
 	return "warn"
 }
 
-// During testing -printf.funcs flag matches Warnf.
+// During golibexec_testing -printf.funcs flag matches Warnf.
 func (*ptrStringer) Warnf(x int, format string, args ...interface{}) string {
 	return "warnf"
 }

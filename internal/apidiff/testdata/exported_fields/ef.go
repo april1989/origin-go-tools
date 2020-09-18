@@ -1,6 +1,6 @@
 package exported_fields
 
-// Used for testing exportedFields.
+// Used for golibexec_testing exportedFields.
 // Its exported fields are:
 //   A1 [1]int
 //   D bool

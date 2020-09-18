@@ -33,14 +33,14 @@ package main
 import (
 	"bytes"
 	"io"
-	"testing"
+	"golibexec_testing"
 )
 
 func main() {
-        var t testing.T
+        var t golibexec_testing.T
 	t.Parallel()    // static call to external declared method
         t.Fail()        // static call to promoted external declared method
-        testing.Short() // static call to external package-level function
+        golibexec_testing.Short() // static call to external package-level function
 
         var w io.Writer = new(bytes.Buffer)
         w.Write(nil)    // interface invoke of external declared method
@@ -67,7 +67,7 @@ func main() {
 	// The main package, its direct and indirect dependencies are loaded.
 	deps := []string{
 		// directly imported dependencies:
-		"bytes", "io", "testing",
+		"bytes", "io", "golibexec_testing",
 		// indirect dependencies mentioned by
 		// the direct imports' export data
 		"sync", "unicode", "time",
@@ -129,9 +129,9 @@ func main() {
 	}
 
 	expectedCallee := []string{
-		"(*testing.T).Parallel",
-		"(*testing.common).Fail",
-		"testing.Short",
+		"(*golibexec_testing.T).Parallel",
+		"(*golibexec_testing.common).Fail",
+		"golibexec_testing.Short",
 		"N/A",
 	}
 	callNum := 0

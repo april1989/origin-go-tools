@@ -73,6 +73,6 @@ func TesttooManyParams(*testing.T, string) {} // OK because it takes too many pa
 
 func TesttooManyNames(a, b *testing.T) {} // OK because it takes too many names.
 
-func TestnoTParam(string) {} // OK because it doesn't take a *testing.T
+func TestnoTParam(string) {} // OK because it doesn't take a *golibexec_testing.T
 
 func BenchmarkbadSuffix(*testing.B) {} // want "first letter after 'Benchmark' must not be lowercase"

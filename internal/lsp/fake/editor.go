@@ -33,7 +33,7 @@ type Editor struct {
 	sandbox    *Sandbox
 	defaultEnv map[string]string
 
-	// Since this editor is intended just for testing, we use very coarse
+	// Since this editor is intended just for golibexec_testing, we use very coarse
 	// locking.
 	mu sync.Mutex
 	// Editor state.

@@ -64,18 +64,18 @@ func TestCallgraph(t *testing.T) {
 		}},
 		// bz: comment; not needed test cases included
 		//// tests: both the package's main and the test's main are called.
-		//// The callgraph includes all the guts of the "testing" package.
+		//// The callgraph includes all the guts of the "golibexec_testing" package.
 		//{"rta", true, []string{
-		//	`pkg.test.main --> testing.MainStart`,
-		//	`testing.runExample --> pkg.Example`,
+		//	`pkg.test.main --> golibexec_testing.MainStart`,
+		//	`golibexec_testing.runExample --> pkg.Example`,
 		//	`pkg.Example --> (pkg.C).f`,
 		//	`pkg.main --> (pkg.C).f`,
 		//}},
 		//{"pta", true, []string{
 		//	`<root> --> pkg.test.main`,
 		//	`<root> --> pkg.main`,
-		//	`pkg.test.main --> testing.MainStart`,
-		//	`testing.runExample --> pkg.Example`,
+		//	`pkg.test.main --> golibexec_testing.MainStart`,
+		//	`golibexec_testing.runExample --> pkg.Example`,
 		//	`pkg.Example --> (pkg.C).f`,
 		//	`pkg.main --> (pkg.C).f`,
 		//}},

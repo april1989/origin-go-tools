@@ -61,7 +61,7 @@ func (state *golistState) processGolistOverlay(response *responseDeduper) (modif
 		base := filepath.Base(opath)
 		dir := filepath.Dir(opath)
 		var pkg *Package           // if opath belongs to both a package and its test variant, this will be the test variant
-		var testVariantOf *Package // if opath is a test file, this is the package it is testing
+		var testVariantOf *Package // if opath is a test file, this is the package it is golibexec_testing
 		var fileExists bool
 		isTestFile := strings.HasSuffix(opath, "_test.go")
 		pkgName, ok := extractPackageName(opath, contents)

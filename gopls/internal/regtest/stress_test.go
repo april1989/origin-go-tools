@@ -17,7 +17,7 @@ import (
 // arbitrarily in a file with lots of dependents.
 
 var pilosaPath = flag.String("pilosa_path", "", "Path to a directory containing "+
-	"github.com/pilosa/pilosa, for stress testing. Do not set this unless you "+
+	"github.com/pilosa/pilosa, for stress golibexec_testing. Do not set this unless you "+
 	"know what you're doing!")
 
 func stressTestOptions(dir string) []RunOption {

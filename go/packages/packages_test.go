@@ -887,7 +887,7 @@ func testParseFileModifyAST(t *testing.T, exporter packagestest.Exporter) {
 }
 
 func TestAdHocPackagesBadImport(t *testing.T) {
-	// This test doesn't use packagestest because we are testing ad-hoc packages,
+	// This test doesn't use packagestest because we are golibexec_testing ad-hoc packages,
 	// which are outside of $GOPATH and outside of a module.
 	tmp, err := ioutil.TempDir("", "a")
 	if err != nil {
@@ -2262,15 +2262,15 @@ func testForTestField(t *testing.T, exporter packagestest.Exporter) {
 		Name: "golang.org/fake",
 		Files: map[string]interface{}{
 			"a/a.go":      `package a; func hello() {};`,
-			"a/a_test.go": `package a; import "testing"; func TestA1(t *testing.T) {};`,
-			"a/x_test.go": `package a_test; import "testing"; func TestA2(t *testing.T) {};`,
+			"a/a_test.go": `package a; import "golibexec_testing"; func TestA1(t *golibexec_testing.T) {};`,
+			"a/x_test.go": `package a_test; import "golibexec_testing"; func TestA2(t *golibexec_testing.T) {};`,
 		}}})
 	defer exported.Cleanup()
 
 	// Add overlays to make sure they don't affect anything.
 	exported.Config.Overlay = map[string][]byte{
-		"a/a_test.go": []byte(`package a; import "testing"; func TestA1(t *testing.T) { hello(); };`),
-		"a/x_test.go": []byte(`package a_test; import "testing"; func TestA2(t *testing.T) { hello(); };`),
+		"a/a_test.go": []byte(`package a; import "golibexec_testing"; func TestA1(t *golibexec_testing.T) { hello(); };`),
+		"a/x_test.go": []byte(`package a_test; import "golibexec_testing"; func TestA2(t *golibexec_testing.T) { hello(); };`),
 	}
 	exported.Config.Tests = true
 	exported.Config.Mode = packages.NeedName | packages.NeedImports
@@ -2405,7 +2405,7 @@ func testInvalidFilesInXTest(t *testing.T, exporter packagestest.Exporter) {
 			Files: map[string]interface{}{
 				"d/d.go":      `package d; import "net/http"; const d = http.MethodGet; func Get() string { return d; }`,
 				"d/d2.go":     ``, // invalid file
-				"d/d_test.go": `package d_test; import "testing"; import "golang.org/fake/d"; func TestD(t *testing.T) { d.Get(); }`,
+				"d/d_test.go": `package d_test; import "golibexec_testing"; import "golang.org/fake/d"; func TestD(t *golibexec_testing.T) { d.Get(); }`,
 			},
 		},
 	})
@@ -2681,12 +2681,12 @@ func importGraph(initial []*packages.Package) (string, map[string]*packages.Pack
 			// To avoid a lot of noise,
 			// we prune uninteresting dependencies of testmain packages,
 			// which we identify by this import:
-			isTestMain := p.Imports["testing/internal/testdeps"] != nil
+			isTestMain := p.Imports["golibexec_testing/internal/testdeps"] != nil
 
 			for _, imp := range p.Imports {
 				if isTestMain {
 					switch imp.ID {
-					case "os", "reflect", "testing", "testing/internal/testdeps":
+					case "os", "reflect", "golibexec_testing", "golibexec_testing/internal/testdeps":
 						continue
 					}
 				}

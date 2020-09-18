@@ -7,7 +7,7 @@ import (
 	"golang.org/x/tools/internal/lsp/snippets"
 )
 
-func TestSomething(t *testing.T) { //@item(TestSomething, "TestSomething(t *testing.T)", "", "func")
+func TestSomething(t *testing.T) { //@item(TestSomething, "TestSomething(t *golibexec_testing.T)", "", "func")
 	var x int //@mark(testyX, "x"),diag("x", "compiler", "x declared but not used", "error"),refs("x", testyX)
 	a()       //@mark(testyA, "a")
 }

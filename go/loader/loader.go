@@ -210,7 +210,7 @@ func (conf *Config) fset() *token.FileSet {
 	return conf.Fset
 }
 
-// ParseFile is a convenience function (intended for testing) that invokes
+// ParseFile is a convenience function (intended for golibexec_testing) that invokes
 // the parser using the Config's FileSet, which is initialized if nil.
 //
 // src specifies the parser input as a string, []byte, or io.Reader, and

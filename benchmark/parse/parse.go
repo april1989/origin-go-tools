@@ -36,7 +36,7 @@ type Benchmark struct {
 	Ord               int     // ordinal position within a benchmark run
 }
 
-// ParseLine extracts a Benchmark from a single line of testing.B
+// ParseLine extracts a Benchmark from a single line of golibexec_testing.B
 // output.
 func ParseLine(line string) (*Benchmark, error) {
 	fields := strings.Fields(line)
@@ -105,10 +105,10 @@ func (b *Benchmark) String() string {
 }
 
 // Set is a collection of benchmarks from one
-// testing.B run, keyed by name to facilitate comparison.
+// golibexec_testing.B run, keyed by name to facilitate comparison.
 type Set map[string][]*Benchmark
 
-// ParseSet extracts a Set from testing.B output.
+// ParseSet extracts a Set from golibexec_testing.B output.
 // ParseSet preserves the order of benchmarks that have identical
 // names.
 func ParseSet(r io.Reader) (Set, error) {

@@ -416,7 +416,7 @@ type T time.Time
 
 import (
 	"flag"
-	"testing"
+	"golibexec_testing"
 
 	"rsc.io/p"
 )
@@ -426,7 +426,7 @@ import (
 import (
 	"flag"
 	"regexp"
-	"testing"
+	"golibexec_testing"
 
 	"rsc.io/p"
 )
@@ -1843,10 +1843,10 @@ var importsTests = []struct {
 
 import (
 	"fmt"
-	"testing"
+	"golibexec_testing"
 )
 `,
-		want: [][]string{{"fmt", "testing"}},
+		want: [][]string{{"fmt", "golibexec_testing"}},
 	},
 	{
 		name: "four groups",
@@ -1855,7 +1855,7 @@ import (
 import "C"
 import (
 	"fmt"
-	"testing"
+	"golibexec_testing"
 
 	"appengine"
 
@@ -1865,7 +1865,7 @@ import (
 `,
 		want: [][]string{
 			{"C"},
-			{"fmt", "testing"},
+			{"fmt", "golibexec_testing"},
 			{"appengine"},
 			{"myproject/mylib1", "myproject/mylib2"},
 		},
@@ -1876,7 +1876,7 @@ import (
 
 import (
 	"fmt"
-	"testing"
+	"golibexec_testing"
 
 	"appengine"
 )
@@ -1887,7 +1887,7 @@ import (
 )
 `,
 		want: [][]string{
-			{"fmt", "testing"},
+			{"fmt", "golibexec_testing"},
 			{"appengine"},
 			{"reflect"},
 			{"bytes"},

@@ -1165,7 +1165,7 @@ func TestSimpleCases(t *testing.T) {
 						Name:  "golang.org/fake",
 						Files: fm{"x.go": tt.in},
 					},
-					// Skeleton non-stdlib packages for use during testing.
+					// Skeleton non-stdlib packages for use during golibexec_testing.
 					// Each includes one arbitrary symbol, e.g. the first declaration in the first file.
 					// Try not to add more without a good reason.
 					// DO NOT USE PACKAGES NOT LISTED HERE -- they will be downloaded!
@@ -2790,6 +2790,6 @@ var _, _ = fmt.Sprintf, dot.Dot
 				},
 			},
 		},
-		gopathOnly: true, // our modules testing setup doesn't allow modules without dots.
+		gopathOnly: true, // our modules golibexec_testing setup doesn't allow modules without dots.
 	}.processTest(t, "golang.org/fake", "x.go", nil, nil, want)
 }

@@ -92,7 +92,7 @@ func TestParseLine(t *testing.T) {
 
 func TestParseSet(t *testing.T) {
 	// Test two things:
-	// 1. The noise that can accompany testing.B output gets ignored.
+	// 1. The noise that can accompany golibexec_testing.B output gets ignored.
 	// 2. Benchmarks with the same name have their order preserved.
 	in := `
 		?   	crypto	[no test files]

@@ -39,31 +39,31 @@ func TestFindTests(t *testing.T) {
 	test := `
 package foo
 
-import "testing"
+import "golibexec_testing"
 
 type T int
 
 // Tests:
-func Test(t *testing.T) {}
-func TestA(t *testing.T) {}
-func TestB(t *testing.T) {}
+func Test(t *golibexec_testing.T) {}
+func TestA(t *golibexec_testing.T) {}
+func TestB(t *golibexec_testing.T) {}
 
 // Not tests:
-func testC(t *testing.T) {}
+func testC(t *golibexec_testing.T) {}
 func TestD() {}
-func testE(t *testing.T) int { return 0 }
-func (T) Test(t *testing.T) {}
+func testE(t *golibexec_testing.T) int { return 0 }
+func (T) Test(t *golibexec_testing.T) {}
 
 // Benchmarks:
-func Benchmark(*testing.B) {}
-func BenchmarkA(b *testing.B) {}
-func BenchmarkB(*testing.B) {}
+func Benchmark(*golibexec_testing.B) {}
+func BenchmarkA(b *golibexec_testing.B) {}
+func BenchmarkB(*golibexec_testing.B) {}
 
 // Not benchmarks:
-func benchmarkC(t *testing.T) {}
+func benchmarkC(t *golibexec_testing.T) {}
 func BenchmarkD() {}
-func benchmarkE(t *testing.T) int { return 0 }
-func (T) Benchmark(t *testing.T) {}
+func benchmarkE(t *golibexec_testing.T) int { return 0 }
+func (T) Benchmark(t *golibexec_testing.T) {}
 
 // Examples:
 func Example() {}
@@ -71,7 +71,7 @@ func ExampleA() {}
 
 // Not examples:
 func exampleC() {}
-func ExampleD(t *testing.T) {}
+func ExampleD(t *golibexec_testing.T) {}
 func exampleE() int { return 0 }
 func (T) Example() {}
 `
@@ -98,7 +98,7 @@ func TestFindTestsTesting(t *testing.T) {
 	test := `
 package foo
 
-// foo does not import "testing", but defines Examples.
+// foo does not import "golibexec_testing", but defines Examples.
 
 func Example() {}
 func ExampleA() {}

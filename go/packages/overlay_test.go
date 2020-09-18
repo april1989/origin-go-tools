@@ -162,7 +162,7 @@ func testOverlayXTests(t *testing.T, exporter packagestest.Exporter) {
 	const aFile = `package a; const C = "C"; func Hello() {}`
 	const aTestVariant = `package a
 
-import "testing"
+import "golibexec_testing"
 
 const TestC = "test" + C
 
@@ -172,14 +172,14 @@ func TestHello(){
 	const aXTest = `package a_test
 
 import (
-	"testing"
+	"golibexec_testing"
 
 	"golang.org/fake/a"
 )
 
 const xTestC = "x" + a.C
 
-func TestHello(t *testing.T) {
+func TestHello(t *golibexec_testing.T) {
 	a.Hello()
 }`
 
@@ -244,7 +244,7 @@ func testOverlay(t *testing.T, exporter packagestest.Exporter) {
 			"a/a.go":      `package a; import "golang.org/fake/b"; const A = "a" + b.B`,
 			"b/b.go":      `package b; import "golang.org/fake/c"; const B = "b" + c.C`,
 			"c/c.go":      `package c; const C = "c"`,
-			"c/c_test.go": `package c; import "testing"; func TestC(t *testing.T) {}`,
+			"c/c_test.go": `package c; import "golibexec_testing"; func TestC(t *golibexec_testing.T) {}`,
 			"d/d.go":      `package d; const D = "d"`,
 		}}})
 	defer exported.Cleanup()
@@ -310,7 +310,7 @@ func testOverlayDeps(t *testing.T, exporter packagestest.Exporter) {
 		Name: "golang.org/fake",
 		Files: map[string]interface{}{
 			"c/c.go":      `package c; const C = "c"`,
-			"c/c_test.go": `package c; import "testing"; func TestC(t *testing.T) {}`,
+			"c/c_test.go": `package c; import "golibexec_testing"; func TestC(t *golibexec_testing.T) {}`,
 		},
 	}})
 	defer exported.Cleanup()
@@ -470,7 +470,7 @@ func testOverlayNewPackageAndTest(t *testing.T, exporter packagestest.Exporter) 
 	dir := filepath.Dir(exported.File("golang.org/fake", "foo.txt"))
 	exported.Config.Overlay = map[string][]byte{
 		filepath.Join(dir, "a.go"):      []byte(`package a;`),
-		filepath.Join(dir, "a_test.go"): []byte(`package a; import "testing";`),
+		filepath.Join(dir, "a_test.go"): []byte(`package a; import "golibexec_testing";`),
 	}
 	initial, err := packages.Load(exported.Config, "file="+filepath.Join(dir, "a.go"), "file="+filepath.Join(dir, "a_test.go"))
 	if err != nil {
@@ -484,7 +484,7 @@ func testOverlayNewPackageAndTest(t *testing.T, exporter packagestest.Exporter) 
 func TestAdHocOverlays(t *testing.T) {
 	testenv.NeedsTool(t, "go")
 
-	// This test doesn't use packagestest because we are testing ad-hoc packages,
+	// This test doesn't use packagestest because we are golibexec_testing ad-hoc packages,
 	// which are outside of $GOPATH and outside of a module.
 	tmp, err := ioutil.TempDir("", "testAdHocOverlays")
 	if err != nil {
@@ -766,7 +766,7 @@ func testInvalidFilesBeforeOverlayContains(t *testing.T, exporter packagestest.E
 		{
 			"test_variant",
 			map[string][]byte{
-				filepath.Join(dir, "d", "d_test.go"): []byte(`package d; import "testing"; const D = Get + "_test"; func TestD(t *testing.T) {};`),
+				filepath.Join(dir, "d", "d_test.go"): []byte(`package d; import "golibexec_testing"; const D = Get + "_test"; func TestD(t *golibexec_testing.T) {};`),
 			},
 			`"GET_test"`, "golang.org/fake/d [golang.org/fake/d.test]",
 		},
@@ -789,7 +789,7 @@ func testInvalidFilesBeforeOverlayContains(t *testing.T, exporter packagestest.E
 		{
 			"xtest",
 			map[string][]byte{
-				filepath.Join(dir, "d", "d_test.go"): []byte(`package d_test; import "golang.org/fake/d"; import "testing"; const D = d.Get + "_xtest"; func TestD(t *testing.T) {};`),
+				filepath.Join(dir, "d", "d_test.go"): []byte(`package d_test; import "golang.org/fake/d"; import "golibexec_testing"; const D = d.Get + "_xtest"; func TestD(t *golibexec_testing.T) {};`),
 			},
 			`"GET_xtest"`, "golang.org/fake/d_test [golang.org/fake/d.test]",
 		},

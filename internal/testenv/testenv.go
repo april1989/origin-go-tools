@@ -18,7 +18,7 @@ import (
 	"sync"
 )
 
-// Testing is an abstraction of a *testing.T.
+// Testing is an abstraction of a *golibexec_testing.T.
 type Testing interface {
 	Skipf(format string, args ...interface{})
 	Fatalf(format string, args ...interface{})

@@ -1,4 +1,4 @@
-// Package a is a package for testing go to definition.
+// Package a is a package for golibexec_testing go to definition.
 package a //@mark(aPackage, "a "),hover("a ", aPackage)
 
 import (

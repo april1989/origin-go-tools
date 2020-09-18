@@ -575,7 +575,7 @@ func plural(n int) string {
 	return ""
 }
 
-// writeFile is a seam for testing and for the -d flag.
+// writeFile is a seam for golibexec_testing and for the -d flag.
 var writeFile = reallyWriteFile
 
 func reallyWriteFile(filename string, content []byte) error {

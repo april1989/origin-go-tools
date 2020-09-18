@@ -43,7 +43,7 @@ var Analyzer = &analysis.Analyzer{
 var whitelist = true
 
 func init() {
-	Analyzer.Flags.BoolVar(&whitelist, "whitelist", whitelist, "use composite white list; for testing only")
+	Analyzer.Flags.BoolVar(&whitelist, "whitelist", whitelist, "use composite white list; for golibexec_testing only")
 }
 
 // runUnkeyedLiteral checks if a composite literal is a struct literal with

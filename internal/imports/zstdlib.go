@@ -9984,7 +9984,7 @@ var stdlib = map[string][]string{
 		"ValueOf",
 		"Wrapper",
 	},
-	"testing": []string{
+	"golibexec_testing": []string{
 		"AllocsPerRun",
 		"B",
 		"Benchmark",
@@ -10010,7 +10010,7 @@ var stdlib = map[string][]string{
 		"TB",
 		"Verbose",
 	},
-	"testing/iotest": []string{
+	"golibexec_testing/iotest": []string{
 		"DataErrReader",
 		"ErrTimeout",
 		"HalfReader",
@@ -10020,7 +10020,7 @@ var stdlib = map[string][]string{
 		"TimeoutReader",
 		"TruncateWriter",
 	},
-	"testing/quick": []string{
+	"golibexec_testing/quick": []string{
 		"Check",
 		"CheckEqual",
 		"CheckEqualError",

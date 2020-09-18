@@ -13,7 +13,7 @@ package interp_test
 // subset of simple functions useful for writing assertions.
 //
 // We no longer attempt to interpret any real standard packages such as
-// fmt or testing, as it proved too fragile.
+// fmt or golibexec_testing, as it proved too fragile.
 
 import (
 	"bytes"

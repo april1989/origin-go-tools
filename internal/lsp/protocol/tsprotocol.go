@@ -2500,7 +2500,7 @@ type RenameClientCapabilities struct {
 	 */
 	DynamicRegistration bool `json:"dynamicRegistration,omitempty"`
 	/**
-	 * Client supports testing for validity of rename operations
+	 * Client supports golibexec_testing for validity of rename operations
 	 * before execution.
 	 *
 	 * @since version 3.12.0

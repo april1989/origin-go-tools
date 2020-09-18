@@ -122,7 +122,7 @@ func testDir(t *testing.T, dir string, endTime time.Time) (nimports int) {
 	}
 	for _, f := range list {
 		if time.Now().After(endTime) {
-			t.Log("testing time used up")
+			t.Log("golibexec_testing time used up")
 			return
 		}
 		switch {

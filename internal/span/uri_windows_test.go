@@ -15,7 +15,7 @@ import (
 // TestURI tests the conversion between URIs and filenames. The test cases
 // include Windows-style URIs and filepaths, but we avoid having OS-specific
 // tests by using only forward slashes, assuming that the standard library
-// functions filepath.ToSlash and filepath.FromSlash do not need testing.
+// functions filepath.ToSlash and filepath.FromSlash do not need golibexec_testing.
 func TestURIFromPath(t *testing.T) {
 	for _, test := range []struct {
 		path, wantFile string

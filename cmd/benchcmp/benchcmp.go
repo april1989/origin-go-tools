@@ -172,7 +172,7 @@ func selectBest(bs parse.Set) {
 }
 
 // formatNs formats ns measurements to expose a useful amount of
-// precision. It mirrors the ns precision logic of testing.B.
+// precision. It mirrors the ns precision logic of golibexec_testing.B.
 func formatNs(ns float64) string {
 	prec := 0
 	switch {

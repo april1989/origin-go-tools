@@ -33,9 +33,11 @@ func findMainPackages(pkgs []*ssa.Package) ([]*ssa.Package, error) {
 // ../go2/race_checker/GoBench/Kubernetes/88331/main.go
 // ../go2/race_checker/GoBench/Grpc/3090/main.go
 // ../go2/race_checker/GoBench/Istio/8967/main.go
+//
 //CURRENT:
-// cmd/callgraph/testdata/src/pkg/pkg.go
+// cmd/callgraph/testdata/src/pkg/pkg.go  --> extra calls
 // ../go2/race_checker/pointe_analysis_test/main.go
+// pointer/testdata/channels.go
 func main() {
 	flag.Bool("ptrAnalysis", false, "Prints pointer analysis results. ")
 	flag.Parse()
@@ -78,20 +80,20 @@ func main() {
 	}
 
 	//create my log file
-	logfile, err := os.OpenFile("gologfile", os.O_WRONLY|os.O_CREATE, 0600) //os.O_APPEND|
+	logfile, err := os.OpenFile("golog", os.O_WRONLY|os.O_CREATE, 0600) //os.O_APPEND|
 	log.SetFormatter(&log.TextFormatter{
 		FullTimestamp: true,
 	})
 
 	// Configure pointer analysis to build call-graph
 	ptaConfig := &pointer.Config{
-		Mains:          mains, //bz: NOW assume only one main
-		//Reflection:     true,
-		BuildCallGraph: true,
-		Log:            logfile,
-		CallSiteSensitive: true,
-		K: 2,
-		LimitScope: true, //bz: only consider app methods now
+		Mains:             mains, //bz: NOW assume only one main
+		//Reflection:      true,
+		BuildCallGraph:    true,
+		Log:               logfile,
+		CallSiteSensitive: false,
+		K:                 2,
+		LimitScope:        true, //bz: only consider app methods now
 	}
 
 	//*** compute pta here

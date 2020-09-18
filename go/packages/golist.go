@@ -418,7 +418,7 @@ func (state *golistState) createDriverResponse(words ...string) (*driverResponse
 	//
 	// The packages p that are built differently for a test q.test
 	// are q itself, plus any helpers used by the external test q_test,
-	// typically including "testing" and all its dependencies.
+	// typically including "golibexec_testing" and all its dependencies.
 
 	// Run "go list" for complete
 	// information on the specified packages.

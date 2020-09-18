@@ -69,7 +69,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 
 	// Export a fact for each matching function.
 	//
-	// These facts are produced only to test the testing
+	// These facts are produced only to test the golibexec_testing
 	// infrastructure in the analysistest package.
 	// They are not consumed by the findcall Analyzer
 	// itself, as would happen in a more realistic example.

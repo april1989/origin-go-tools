@@ -139,7 +139,7 @@ func (p *Presentation) serveSearchDesc(w http.ResponseWriter, r *http.Request) {
 func tocColCount(result SearchResult) int {
 	tocLen := tocLen(result)
 	colCount := 0
-	// Simple heuristic based on visual aesthetic in manual testing.
+	// Simple heuristic based on visual aesthetic in manual golibexec_testing.
 	switch {
 	case tocLen <= 10:
 		colCount = 1

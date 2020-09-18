@@ -5,7 +5,7 @@
 // Package ssa/interp defines an interpreter for the SSA
 // representation of Go programs.
 //
-// This interpreter is provided as an adjunct for testing the SSA
+// This interpreter is provided as an adjunct for golibexec_testing the SSA
 // construction algorithm.  Its purpose is to provide a minimal
 // metacircular implementation of the dynamic semantics of each SSA
 // instruction.  It is not, and will never be, a production-quality Go
@@ -20,7 +20,7 @@
 //
 // * The reflect package is only partially implemented.
 //
-// * The "testing" package is no longer supported because it
+// * The "golibexec_testing" package is no longer supported because it
 // depends on low-level details that change too often.
 //
 // * "sync/atomic" operations are not atomic due to the "boxed" value

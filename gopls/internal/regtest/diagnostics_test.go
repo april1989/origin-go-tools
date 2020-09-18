@@ -51,7 +51,7 @@ func TestDiagnosticErrorInEditedFile(t *testing.T) {
 				env.DiagnosticAtRegexp("main.go", "Printl"),
 			),
 			// Assert that this test has sent no error logs to the client. This is not
-			// strictly necessary for testing this regression, but is included here
+			// strictly necessary for golibexec_testing this regression, but is included here
 			// as an example of using the NoErrorLogs() expectation. Feel free to
 			// delete.
 			NoErrorLogs(),
@@ -194,9 +194,9 @@ func f() {}
 -- a_test.go --
 package x
 
-import "testing"
+import "golibexec_testing"
 
-func TestA(t *testing.T) {
+func TestA(t *golibexec_testing.T) {
 	f(3)
 }
 `
@@ -303,13 +303,13 @@ func Hello(x string) {
 -- lib_test.go --
 package lib
 
-import "testing"
+import "golibexec_testing"
 
 type testStruct struct{
 	name string
 }
 
-func TestHello(t *testing.T) {
+func TestHello(t *golibexec_testing.T) {
 	testStructs := []*testStruct{
 		&testStruct{"hello"},
 		&testStruct{"goodbye"},
@@ -785,9 +785,9 @@ func Hello() {
 -- hello/hello_test.go --
 package hello
 
-import "testing"
+import "golibexec_testing"
 
-func TestHello(t *testing.T) {
+func TestHello(t *golibexec_testing.T) {
 	var x int
 	Hello()
 }
@@ -816,10 +816,10 @@ func TestHello(t *testing.T) {
 		env.EditBuffer("hello/hello_x_test.go", fake.NewEdit(0, 0, 0, 0, `package hello_test
 
 import (
-	"testing"
+	"golibexec_testing"
 )
 
-func TestHello(t *testing.T) {
+func TestHello(t *golibexec_testing.T) {
 	hello.Hello()
 }
 `))
@@ -1027,21 +1027,21 @@ func main() {
 			writeGoVim(env, "main.go", main)
 			writeGoVim(env, "p/p_test.go", `package p
 	
-import "testing"
+import "golibexec_testing"
 	
-func TestDoIt(t *testing.T) {
+func TestDoIt(t *golibexec_testing.T) {
 	DoIt(5)
 }
 `)
 			writeGoVim(env, "p/x_test.go", `package p_test
 	
 import (
-	"testing"
+	"golibexec_testing"
 
 	"mod.com/p"
 )
 	
-func TestDoIt(t *testing.T) {
+func TestDoIt(t *golibexec_testing.T) {
 	p.DoIt(5)
 }
 `)

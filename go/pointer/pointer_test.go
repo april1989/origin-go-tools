@@ -189,7 +189,7 @@ func doOneInput(input, filename string) bool {
 	}
 
 	// Find all calls to the built-in print(x).  Analytically,
-	// print is a no-op, but it's a convenient hook for testing
+	// print is a no-op, but it's a convenient hook for golibexec_testing
 	// the PTS of an expression, so our tests use it.
 	probes := make(map[*ssa.CallCommon]bool)
 	for fn := range ssautil.AllFunctions(prog) {

@@ -364,7 +364,7 @@ func parse(rd io.Reader) (graph, error) {
 	return g, nil
 }
 
-// Overridable for testing purposes.
+// Overridable for golibexec_testing purposes.
 var stdin io.Reader = os.Stdin
 var stdout io.Writer = os.Stdout
 

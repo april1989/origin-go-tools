@@ -247,7 +247,7 @@ var (
 	go115 = false
 )
 
-// Load creates the folder structure required when testing with modules.
+// Load creates the folder structure required when golibexec_testing with modules.
 // The directory structure of a test needs to look like the example below:
 //
 // - dir
@@ -754,7 +754,7 @@ func Run(t *testing.T, tests Tests, data *Data) {
 	t.Run("Link", func(t *testing.T) {
 		t.Helper()
 		for uri, wantLinks := range data.Links {
-			// If we are testing GOPATH, then we do not want links with
+			// If we are golibexec_testing GOPATH, then we do not want links with
 			// the versions attached (pkg.go.dev/repoa/moda@v1.1.0/pkg),
 			// unless the file is a go.mod, then we can skip it alltogether.
 			if data.Exported.Exporter == packagestest.GOPATH {

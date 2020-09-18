@@ -24,7 +24,7 @@ func TestNLZ(t *testing.T) {
 	}
 }
 
-// Backdoor for testing.
+// Backdoor for golibexec_testing.
 func (s *Sparse) Check() error { return s.check() }
 
 func dumbPopcount(x word) int {

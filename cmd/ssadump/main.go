@@ -57,7 +57,7 @@ Examples:
 
 The -run flag causes ssadump to run the first package named main.
 
-Interpretation of the standard "testing" package is no longer supported.
+Interpretation of the standard "golibexec_testing" package is no longer supported.
 `
 
 func main() {

@@ -25,7 +25,7 @@ func init() {
 	}
 }
 
-// TestTheTest tests the analysistest testing infrastructure.
+// TestTheTest tests the analysistest golibexec_testing infrastructure.
 func TestTheTest(t *testing.T) {
 	testenv.NeedsTool(t, "go")
 
@@ -116,7 +116,7 @@ func println(...interface{}) { println_TEST_() } // want println:"found" "call o
 	defer cleanup()
 
 	var got []string
-	t2 := errorfunc(func(s string) { got = append(got, s) }) // a fake *testing.T
+	t2 := errorfunc(func(s string) { got = append(got, s) }) // a fake *golibexec_testing.T
 	analysistest.RunWithSuggestedFixes(t2, dir, findcall.Analyzer, "a")
 
 	want := []string{

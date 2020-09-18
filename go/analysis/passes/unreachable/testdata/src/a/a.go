@@ -914,7 +914,7 @@ L:
 }
 
 // again, but without the leading print(1).
-// testing that everything works when the terminating statement is first.
+// golibexec_testing that everything works when the terminating statement is first.
 
 func _() int {
 	println() // ok
@@ -1967,7 +1967,7 @@ L:
 }
 
 // again, but without the leading print(1).
-// testing that everything works when the terminating statement is first.
+// golibexec_testing that everything works when the terminating statement is first.
 
 var _ = func() int {
 	println() // ok

@@ -21,21 +21,21 @@ package main
 func f() {}
 `
 	const ntest = `package main
-func TestZ(t *testing.T) {
+func TestZ(t *golibexec_testing.T) {
 	f()
 }
 `
 	const want = `package main
 
-import "testing"
+import "golibexec_testing"
 
-func TestZ(t *testing.T) {
+func TestZ(t *golibexec_testing.T) {
 	f()
 }
 `
 
 	// it was returning
-	// "package main\nimport \"testing\"\npackage main..."
+	// "package main\nimport \"golibexec_testing\"\npackage main..."
 	runner.Run(t, needs, func(t *testing.T, env *Env) {
 		env.CreateBuffer("a_test.go", ntest)
 		env.SaveBuffer("a_test.go")

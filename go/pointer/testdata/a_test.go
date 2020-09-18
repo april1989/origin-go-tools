@@ -36,7 +36,7 @@ func ExampleBar() {
 }
 
 // Excludes TestingQuux.
-// @calls testing.tRunner -> main.Test
-// @calls testing.tRunner -> main.TestFoo
-// @calls testing.runExample -> main.ExampleBar
-// @calls (*testing.B).runN -> main.BenchmarkFoo
+// @calls golibexec_testing.tRunner -> main.Test
+// @calls golibexec_testing.tRunner -> main.TestFoo
+// @calls golibexec_testing.runExample -> main.ExampleBar
+// @calls (*golibexec_testing.B).runN -> main.BenchmarkFoo

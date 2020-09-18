@@ -53,7 +53,7 @@ func computeImplements(cache *typeutil.MethodSetCache, allNamed []*types.Named) 
 	// for io.ReadWriter would be {'R','W'}.  AssignableTo(T, U)
 	// cannot be true unless mask(T)&mask(U)==mask(U).
 	//
-	// As with a Bloom filter, we can improve precision by testing
+	// As with a Bloom filter, we can improve precision by golibexec_testing
 	// additional hashes, e.g. using the last letter of each
 	// method name, so long as the subset mask property holds.
 	//

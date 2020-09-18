@@ -3,3 +3,7 @@ last-change
 .idea/
 gologfile
 mytest/*
+
+.DS_Store
+golog
+gologfile\ copy
