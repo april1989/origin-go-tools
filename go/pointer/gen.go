@@ -99,7 +99,7 @@ func (a *analysis) addOneNodeSpecial(typ types.Type, comment string, subelement 
 
 // setValueNode associates node id with the value v.
 // cgn identifies the context iff v is a local variable.
-//
+// bz: will be nullify at the end of genFunc()
 func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 	if cgn != nil {
 		a.localval[v] = id
@@ -465,7 +465,7 @@ func (a *analysis) valueNodeClosure(cgn *cgnode, closure *ssa.MakeClosure, v ssa
 		if obj := a.objectNodeSpecial(cgn, closure, nil, v); obj != 0 {
 			a.addressOf(v.Type(), id, obj)
 		}
-		a.setValueNode(v, id, nil)
+		a.setValueNode(v, id, nil) //bz: multi closure will have different $num, no replacements
 	}
 	return id
 }
@@ -1004,7 +1004,7 @@ func (a *analysis) valueNodeInvoke(caller *cgnode, site *callsite, sig *types.Si
 				if obj := a.objectNodeSpecial(caller, nil, site, m); obj != 0 {
 					a.addressOf(m.Type(), id, obj)
 				}
-				a.setValueNode(m, id, nil)
+				a.setValueNode(m, id, nil)  //bz: value will be replaced ...
 			}
 
 			a.atFuncs[m] = true // Methods of concrete types are address-taken functions.
@@ -1013,7 +1013,7 @@ func (a *analysis) valueNodeInvoke(caller *cgnode, site *callsite, sig *types.Si
 }
 
 // genInvoke generates constraints for a dynamic method invocation.
-// bz: working on this, needs to work with pointer/solver.go@func (c *invokeConstraint) solve(a *analysis, delta *nodeset) ...
+// bz: NOTE: not every x.m() is treated by genInvoke() here, some is treated by genStaticCall(), why ...
 func (a *analysis) genInvoke(caller *cgnode, site *callsite, call *ssa.CallCommon, result nodeid) {
 	if call.Value.Type() == a.reflectType {
 		a.genInvokeReflectType(caller, site, call, result)
@@ -1049,7 +1049,7 @@ func (a *analysis) genInvoke(caller *cgnode, site *callsite, call *ssa.CallCommo
 	// We add a dynamic invoke constraint that will connect the
 	// caller's and the callee's P/R blocks for each discovered
 	// call target.
-	a.addConstraint(&invokeConstraint{call.Method, a.valueNode(call.Value), block}) //bz: call.Value is local
+	a.addConstraint(&invokeConstraint{call.Method, a.valueNode(call.Value), block}) //bz: call.Value is local and base, e.g., t1
 }
 
 // genInvokeReflectType is a specialization of genInvoke where the

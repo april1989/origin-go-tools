@@ -80,7 +80,9 @@ func main() {
 	}
 
 	//create my log file
-	logfile, err := os.OpenFile("golog", os.O_WRONLY|os.O_CREATE, 0600) //os.O_APPEND|
+	var logName string
+	logName = "log_" + mains[0].String()
+	logfile, err := os.OpenFile(logName, os.O_WRONLY|os.O_CREATE, 0600) //os.O_APPEND|
 	log.SetFormatter(&log.TextFormatter{
 		FullTimestamp: true,
 	})
@@ -88,10 +90,10 @@ func main() {
 	// Configure pointer analysis to build call-graph
 	ptaConfig := &pointer.Config{
 		Mains:             mains, //bz: NOW assume only one main
-		//Reflection:      true,
+		Reflection:        false,
 		BuildCallGraph:    true,
 		Log:               logfile,
-		CallSiteSensitive: false,
+		CallSiteSensitive: true,
 		K:                 2,
 		LimitScope:        true, //bz: only consider app methods now
 	}

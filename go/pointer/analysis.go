@@ -121,10 +121,10 @@ type analysis struct {
 	cgnodes     []*cgnode                   // all cgnodes       --> bz: nodes in cg; will copy to callgraph.cg at the end
 	genq        []*cgnode                   // queue of functions to generate constraints for
 	intrinsics  map[*ssa.Function]intrinsic // non-nil values are summaries for intrinsic fns
-	globalval   map[ssa.Value]nodeid        // node for each global ssa.Value
+	globalval   map[ssa.Value]nodeid        // node for each global ssa.Value          ---> bz: localval/globalval: only used in valueNode() and setValueNode() for each function, will be nil.
+	localval    map[ssa.Value]nodeid        // node for each local ssa.Value           ---> bz: BUT the key will be replaced if multiple ctx exist
 	globalobj   map[ssa.Value]nodeid        // maps v to sole member of pts(v), if singleton      ---> bz: for makeclosure, fn is not enough
-	localval    map[ssa.Value]nodeid        // node for each local ssa.Value
-	localobj    map[ssa.Value]nodeid        // maps v to sole member of pts(v), if singleton
+	localobj    map[ssa.Value]nodeid        // maps v to sole member of pts(v), if singleton      ---> bz: only used in objectNode()
 	atFuncs     map[*ssa.Function]bool      // address-taken functions (for presolver)
 	mapValues   []nodeid                    // values of makemap objects (indirect in HVN)
 	work        nodeset                     // solver's worklist
