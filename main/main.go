@@ -81,7 +81,7 @@ func main() {
 
 	//create my log file
 	var logName string
-	logName = "log_" + mains[0].String()
+	logName = "gologfile"
 	logfile, err := os.OpenFile(logName, os.O_WRONLY|os.O_CREATE, 0600) //os.O_APPEND|
 	log.SetFormatter(&log.TextFormatter{
 		FullTimestamp: true,

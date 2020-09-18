@@ -1633,7 +1633,9 @@ func (a *analysis) genFunc(cgn *cgnode) {
 	impl := a.findIntrinsic(fn)
 
 	if a.log != nil {
-		fmt.Fprintf(a.log, "\n\n==== Generating constraints for %s, %s\n", cgn, cgn.contour(a.config.CallSiteSensitive))
+		if a.withinScope(fn.String()) { //bz: too much info, focus on package ones
+			fmt.Fprintf(a.log, "\n\n==== Generating constraints for %s, %s\n", cgn, cgn.contour(a.config.CallSiteSensitive))
+		}
 
 		// Hack: don't display body if intrinsic.
 		if impl != nil {
