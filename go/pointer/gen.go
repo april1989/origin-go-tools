@@ -51,6 +51,18 @@ func (a *analysis) addNodes(typ types.Type, comment string) nodeid {
 	return id
 }
 
+//bz: with context here
+func (a *analysis) addNodesSpecial(typ types.Type, comment string, sites []*callsite) nodeid {
+	id := a.nextNode()
+	for _, fi := range a.flatten(typ) {
+		a.addOneNodeSpecial(fi.typ, comment, fi, sites)
+	}
+	if id == a.nextNode() {
+		return 0 // type contained no pointers
+	}
+	return id
+}
+
 // addOneNode creates a single node with type typ, and returns its id.
 //
 // typ should generally be scalar (except for tagged.T nodes
@@ -61,6 +73,10 @@ func (a *analysis) addNodes(typ types.Type, comment string) nodeid {
 //
 func (a *analysis) addOneNode(typ types.Type, comment string, subelement *fieldInfo) nodeid {
 	id := a.nextNode()
+	if strings.Contains(typ.String(), "*command-line-arguments.framework") {
+		fmt.Print()
+	}
+
 	a.nodes = append(a.nodes, &node{typ: typ, subelement: subelement, solve: new(solverState)})
 	if a.log != nil {
 		fmt.Fprintf(a.log, "\tcreate n%d %s for %s%s\n",
@@ -69,12 +85,18 @@ func (a *analysis) addOneNode(typ types.Type, comment string, subelement *fieldI
 	return id
 }
 
+//bz: with context
 func (a *analysis) addOneNodeSpecial(typ types.Type, comment string, subelement *fieldInfo, sites []*callsite) nodeid {
 	id := a.nextNode()
 	a.nodes = append(a.nodes, &node{typ: typ, subelement: subelement, solve: new(solverState), callsite: sites})
 	if a.log != nil {
-		fmt.Fprintf(a.log, "\tcreate n%d %s for %s%s\n",
-			id, typ, comment, subelement.path())
+		if sites[0] != nil {
+			fmt.Fprintf(a.log, "\tcreate n%d %s for %s%s%s\n",
+				id, typ, comment, subelement.path(), sites[0].String())
+		}else{
+			fmt.Fprintf(a.log, "\tcreate n%d %s for %s%s\n",
+				id, typ, comment, subelement.path())
+		}
 	}
 	return id
 }
@@ -130,6 +152,16 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 		}
 		a.copy(query.ptr.n, nid, a.sizeof(t))
 	}
+}
+
+//bz: debug
+func contextToString(sites []*callsite) string {
+	s := "["
+	for _, site := range sites {
+		s = s + site.String() + ";"
+	}
+	s = s + "]"
+	return s
 }
 
 // endObject marks the end of a sequence of calls to addNodes denoting
@@ -325,9 +357,9 @@ func (a *analysis) updateFn2NodeID(fn *ssa.Function, multiFn bool, newFnIdx []in
 //doing things similar to makeFunctionObject() but after makeCGNode()
 func (a *analysis) makeParamResultNodes(fn *ssa.Function, obj nodeid, cgn *cgnode) {
 	sig := fn.Signature
-	a.addOneNodeSpecial(sig, "func.cgnode", nil, cgn.callersite) // (scalar with Signature type)
-	if recv := sig.Recv(); recv != nil {
-		a.addNodes(recv.Type(), "func.recv")
+	a.addOneNode(sig, "func.cgnode", nil) // (scalar with Signature type)
+	if recv := sig.Recv(); recv != nil { //invoke ???
+		a.addNodesSpecial(recv.Type(), "func.recv", cgn.callersite)
 	}
 	a.addNodes(sig.Params(), "func.params")
 	a.addNodes(sig.Results(), "func.results")
@@ -377,6 +409,14 @@ func (a *analysis) copyKCallSite(this []*callsite) []*callsite {
 func (a *analysis) makeTagged(typ types.Type, cgn *cgnode, data interface{}) nodeid {
 	obj := a.addOneNode(typ, "tagged.T", nil) // NB: type may be non-scalar!
 	a.addNodes(typ, "tagged.v")
+	a.endObject(obj, cgn, data).flags |= otTagged
+	return obj
+}
+
+// bz: makeTagged creates a tagged object of type typ. WITH CONTEXT
+func (a *analysis) makeTaggedSpecial(typ types.Type, cgn *cgnode, data interface{}) nodeid {
+	obj := a.addOneNodeSpecial(typ, "tagged.T", nil, cgn.callersite) // NB: type may be non-scalar!
+	a.addNodesSpecial(typ, "tagged.v", cgn.callersite)
 	a.endObject(obj, cgn, data).flags |= otTagged
 	return obj
 }
@@ -980,12 +1020,11 @@ func (a *analysis) genInvoke(caller *cgnode, site *callsite, call *ssa.CallCommo
 		a.genInvokeReflectType(caller, site, call, result)
 		return
 	}
-
 	sig := call.Signature()
 
 	//bz: simple solution; start to be kcfa from main.main; INSTEAD OF genMethodsOf(), we create it here
 	if a.considerKContext(sig.Recv().Type().String()) { //requires receiver type
-		fmt.Println("CAUGHT APP INVOKE METHOD -- " + sig.String()) //Recv().Type().String()
+		fmt.Println("CAUGHT APP INVOKE METHOD -- " + sig.Recv().Type().String())
 		a.valueNodeInvoke(caller, site, sig)
 	}
 
@@ -1262,13 +1301,14 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 
 		case *ssa.MakeInterface: //bz: work with a.iface2struct[]
 			tConc := v.X.Type()
-			obj = a.makeTagged(tConc, cgn, v)
-
 			if a.considerKContext(cgn.fn.String()){ //update a.iface2struct[]
+				obj = a.makeTaggedSpecial(tConc, cgn, v) //bz: for context match
 				if a.log != nil {
-					fmt.Println(a.log, "RECORD MakeInterface -- " + v.String() + "  " + v.X.Type().String() + "  " + v.RegisterType().String())
+					fmt.Fprintln(a.log, "RECORD MakeInterface -- " + v.String() + "  " + v.X.Type().String() + "  " + v.RegisterType().String())
 				}
 				a.updateIface2struct(tConc, v.RegisterType())
+			}else{ //default: context-insensitive
+				obj = a.makeTagged(tConc, cgn, v)
 			}
 
 			// Copy the value into it, if nontrivial.
@@ -1303,6 +1343,7 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 	return obj
 }
 
+//bz:
 func (a *analysis) updateIface2struct(impl types.Type, iface types.Type) {
 	if isInterface(impl) { return } //TODO: imple should not be interface ... panic?
 	impls, ok := a.iface2struct[iface]
@@ -1647,13 +1688,18 @@ func (a *analysis) genFunc(cgn *cgnode) {
 				if a.log != nil {
 					comment = instr.Name()
 				}
-				id := a.addNodes(instr.Type(), comment)
+				var id nodeid
+				if a.considerKContext(fn.String()) { //bz: for context match
+					id = a.addNodesSpecial(instr.Type(), comment, cgn.callersite)
+				}else{ //default: context-insensitive
+					id = a.addNodes(instr.Type(), comment)
+				}
 				a.setValueNode(instr, id, cgn)
 			}
 
 			// Record all address-taken functions (for presolver).
 			rands := instr.Operands(space[:0])
-			if call, ok := instr.(ssa.CallInstruction); ok && !call.Common().IsInvoke() {
+			if call, ok := instr.(ssa  .CallInstruction); ok && !call.Common().IsInvoke() {
 				// Skip CallCommon.Value in "call" mode.
 				// TODO(adonovan): fix: relies on unspecified ordering.  Specify it.
 				rands = rands[1:]

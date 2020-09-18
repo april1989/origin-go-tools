@@ -337,8 +337,7 @@ func (c *invokeConstraint) solve(a *analysis, delta *nodeset) {
 			idxes, ok := a.fn2cgnodeIdx[fn]
 			if ok { // multiple contexts, TODO: we need context match here...
 				for _, idx := range idxes {
-					fmt.Println(" eachSolve --> " + fn.String() + "@" + a.cgnodes[idx].contourkFull())
-					
+					//fmt.Println(" eachSolve --> " + fn.String() + "@" + a.cgnodes[idx].contourkFull()) //debug
 					_fnObj := a.cgnodes[idx].obj
 					c.eachSolve(a, _fnObj, sig, v, true)
 				}
@@ -368,13 +367,20 @@ func (c *invokeConstraint) eachSolve(a *analysis, fnObj nodeid, sig *types.Signa
 	arg0 := a.funcParams(fnObj)
 	recvSize := a.sizeof(sig.Recv().Type())
 
-	if doMatch { //bz: match invoke here --> only match the 1st callsite of src and last of des
-		arg0CSs := a.nodes[arg0].callsite //des [c*,c1]  [c*,c2]
-		vCSs := a.nodes[v].callsite       //src [c1,c]  [c2,c]
-		if vCSs[0] != arg0CSs[len(arg0CSs)-1] {
-			return //mismatch
-		}
-	}
+	//if doMatch { //bz: match invoke here --> only match the 1st callsite of src and last of des
+	//	arg0CSs := a.nodes[arg0].callsite //des [c*,c1]  [c*,c2]
+	//	vCSs := a.nodes[v].callsite       //src [c1,c]  [c2,c]
+	//	if vCSs == nil {
+	//		//p := a.nodes[v].typ.(*types.Pointer)
+	//		//fmt.Println(p.String())
+	//		return
+	//	}
+	//
+	//	fmt.Println("  v = " + v.String() + "  ** " + contextToString(vCSs) + "\n  ** " + contextToString(arg0CSs)) //debug
+	//	if vCSs[0] != arg0CSs[len(arg0CSs) - 1] {
+	//		return //mismatch
+	//	}
+	//}
 
 	//continue with normal workflow
 	a.onlineCopyN(arg0, v, recvSize)

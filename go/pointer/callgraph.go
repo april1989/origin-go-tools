@@ -90,9 +90,10 @@ func (c *callsite) equal(o *callsite) bool {
 
 func (c *callsite) String() string {
 	if c.instr != nil {
-		return c.instr.Common().Description()
+		//return c.instr.Common().Description() //bz: original code
+		return c.instr.String() + "@" + c.instr.Parent().String()
 	}
-	return "synthetic function call"
+	return "synthetic function call@" + c.targets.String()
 }
 
 // pos returns the source position of this callsite, or token.NoPos if implicit.
