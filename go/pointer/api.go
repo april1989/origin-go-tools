@@ -77,6 +77,7 @@ type Config struct {
 	K_Origin           int //how many level? or as many as necessary?
 	//bz: shared config by context-sensitive
 	LimitScope         bool  //only apply kcfa to app methods
+	DEBUG             bool
 }
 
 type track uint32

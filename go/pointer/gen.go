@@ -51,18 +51,6 @@ func (a *analysis) addNodes(typ types.Type, comment string) nodeid {
 	return id
 }
 
-//bz: with context here
-func (a *analysis) addNodesSpecial(typ types.Type, comment string, sites []*callsite) nodeid {
-	id := a.nextNode()
-	for _, fi := range a.flatten(typ) {
-		a.addOneNodeSpecial(fi.typ, comment, fi, sites)
-	}
-	if id == a.nextNode() {
-		return 0 // type contained no pointers
-	}
-	return id
-}
-
 // addOneNode creates a single node with type typ, and returns its id.
 //
 // typ should generally be scalar (except for tagged.T nodes
@@ -77,22 +65,6 @@ func (a *analysis) addOneNode(typ types.Type, comment string, subelement *fieldI
 	if a.log != nil {
 		fmt.Fprintf(a.log, "\tcreate n%d %s for %s%s\n",
 			id, typ, comment, subelement.path())
-	}
-	return id
-}
-
-//bz: with context
-func (a *analysis) addOneNodeSpecial(typ types.Type, comment string, subelement *fieldInfo, sites []*callsite) nodeid {
-	id := a.nextNode()
-	a.nodes = append(a.nodes, &node{typ: typ, subelement: subelement, solve: new(solverState), callsite: sites})
-	if a.log != nil {
-		if sites[0] != nil {
-			fmt.Fprintf(a.log, "\tcreate n%d %s for %s%s%s\n",
-				id, typ, comment, subelement.path(), sites[0].String())
-		} else {
-			fmt.Fprintf(a.log, "\tcreate n%d %s for %s%s\n",
-				id, typ, comment, subelement.path())
-		}
 	}
 	return id
 }
@@ -150,15 +122,6 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 	}
 }
 
-//bz: debug
-func contextToString(sites []*callsite) string {
-	s := "["
-	for _, site := range sites {
-		s = s + site.String() + ";"
-	}
-	s = s + "]"
-	return s
-}
 
 // endObject marks the end of a sequence of calls to addNodes denoting
 // a single object allocation.
@@ -196,7 +159,7 @@ func (a *analysis) makeFunctionObject(fn *ssa.Function, callersite *callsite) no
 		fmt.Fprintf(a.log, "\t---- makeFunctionObject %s\n", fn)
 	}
 
-	if strings.Contains(fn.String(), "command-line-arguments.") {
+	if a.config.DEBUG && strings.Contains(fn.String(), "command-line-arguments.") {
 		fmt.Println("  DEBUG(makeFunctionObject): " + fn.String())
 		if len(fn.Params) > 0 {
 			fmt.Println(fn.Params[0].Type().String()) //---> receiver struct type
@@ -252,10 +215,12 @@ func (a *analysis) makeFunctionObjectWithContext(caller *cgnode, fn *ssa.Functio
 	if a.log != nil {
 		fmt.Fprintf(a.log, "\t---- makeFunctionObjectWithContext (kcfa) %s\n", fn)
 	}
-	fmt.Printf("\t---- makeFunctionObjectWithContext (kcfa) for %s\n", fn)
 
-	if strings.Contains(fn.String(), "command-line-arguments.ParallelizeUntil$1") {
-		fmt.Println("  DEBUG (makeFunctionObjectWithContext): " + fn.String())
+	if a.config.DEBUG {
+		fmt.Printf("\t---- makeFunctionObjectWithContext (kcfa) for %s\n", fn)
+		if strings.Contains(fn.String(), "command-line-arguments.ParallelizeUntil$1") {
+			fmt.Println("  DEBUG (makeFunctionObjectWithContext): " + fn.String())
+		}
 	}
 
 	if callersite == nil { //make closure -> we checked before and will update the a.closures[] outside
@@ -294,8 +259,9 @@ func (a *analysis) existContextForComb(fn *ssa.Function, callersite *callsite, c
 				if a.log != nil { //debug
 					fmt.Fprintf(a.log, "    EXIST**: "+strconv.Itoa(i+1)+"th: K-CALLSITE -- "+_fnCGNode.contourkFull()+"\n")
 				}
-				fmt.Printf("    EXIST**: " + strconv.Itoa(i+1) + "th: K-CALLSITE -- " + _fnCGNode.contourkFull() + "\n")
-
+				if a.config.DEBUG {
+					fmt.Printf("    EXIST**: " + strconv.Itoa(i+1) + "th: K-CALLSITE -- " + _fnCGNode.contourkFull() + "\n")
+				}
 				return existFnIdx, multiFn, _fnCGNode.obj, false
 			}
 		}
@@ -324,7 +290,9 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 	if a.log != nil {   //debug
 		fmt.Fprintf(a.log, "     K-CALLSITE -- "+cgn.contourkFull()+"\n")
 	}
-	fmt.Printf("     K-CALLSITE -- " + cgn.contourkFull() + "\n")
+	if a.config.DEBUG {
+		fmt.Printf("     K-CALLSITE -- " + cgn.contourkFull() + "\n")
+	}
 
 	a.cgnodes = append(a.cgnodes, cgn)
 
@@ -355,8 +323,8 @@ func (a *analysis) updateFn2NodeID(fn *ssa.Function, multiFn bool, newFnIdx []in
 func (a *analysis) makeParamResultNodes(fn *ssa.Function, obj nodeid, cgn *cgnode) {
 	sig := fn.Signature
 	a.addOneNode(sig, "func.cgnode", nil) // (scalar with Signature type)
-	if recv := sig.Recv(); recv != nil {  //invoke ???
-		a.addNodesSpecial(recv.Type(), "func.recv", cgn.callersite)
+	if recv := sig.Recv(); recv != nil {
+		a.addNodes(recv.Type(), "func.recv")
 	}
 	a.addNodes(sig.Params(), "func.params")
 	a.addNodes(sig.Results(), "func.results")
@@ -406,14 +374,6 @@ func (a *analysis) copyKCallSite(this []*callsite) []*callsite {
 func (a *analysis) makeTagged(typ types.Type, cgn *cgnode, data interface{}) nodeid {
 	obj := a.addOneNode(typ, "tagged.T", nil) // NB: type may be non-scalar!
 	a.addNodes(typ, "tagged.v")
-	a.endObject(obj, cgn, data).flags |= otTagged
-	return obj
-}
-
-// bz: makeTagged creates a tagged object of type typ. WITH CONTEXT
-func (a *analysis) makeTaggedSpecial(typ types.Type, cgn *cgnode, data interface{}) nodeid {
-	obj := a.addOneNodeSpecial(typ, "tagged.T", nil, cgn.callersite) // NB: type may be non-scalar!
-	a.addNodesSpecial(typ, "tagged.v", cgn.callersite)
 	a.endObject(obj, cgn, data).flags |= otTagged
 	return obj
 }
@@ -889,7 +849,7 @@ func (a *analysis) genStaticCall(caller *cgnode, site *callsite, call *ssa.CallC
 		return
 	}
 
-	if strings.Contains(fn.String(), "command-line-arguments.") {
+	if a.config.DEBUG && strings.Contains(fn.String(), "command-line-arguments.") {
 		fmt.Println("  DEBUG (genStaticCall): " + fn.String())
 	}
 
@@ -899,10 +859,14 @@ func (a *analysis) genStaticCall(caller *cgnode, site *callsite, call *ssa.CallC
 
 	if a.considerKContext(fn.String()) {
 		//bz: simple brute force solution; start to be kcfa from main.main
-		fmt.Println("CAUGHT APP METHOD -- " + fn.String()) //debug
+		if a.config.DEBUG {
+		    fmt.Println("CAUGHT APP METHOD -- " + fn.String()) //debug
+		}
 		_, ok := site.instr.(*ssa.Go)
 		if ok { //we created cgnode/obj for ssa.GO before, skip here
-			fmt.Println("                  BUT ssa.GO -- " + site.instr.String() + "   SKIP.") //debug
+			if a.config.DEBUG {
+			    fmt.Println("                  BUT ssa.GO -- " + site.instr.String() + "   SKIP.") //debug
+			}
 			obj, ok, _ = a.existClosure(fn, caller.callersite[0])
 			isNew = true //add its constraints
 		} else {
@@ -960,13 +924,6 @@ func (a *analysis) genDynamicCall(caller *cgnode, site *callsite, call *ssa.Call
 
 	sig := call.Signature()
 
-	////bz: simple solution; start to be kcfa from main.main; INSTEAD OF genMethodsOf(), we create it here
-	//if a.considerKContext(sig.String()) {
-	//	fmt.Println("CAUGHT APP DYNAMIC METHOD -- " + sig.String())
-	//	a.valueNodeInvoke(caller, site, sig)
-	//	return
-	//}
-
 	var offset uint32 = 1 // P/R block starts at offset 1
 	for i, arg := range call.Args {
 		sz := a.sizeof(sig.Params().At(i).Type())
@@ -1008,7 +965,7 @@ func (a *analysis) valueNodeInvoke(caller *cgnode, site *callsite, fn *ssa.Funct
 		if obj = a.objectNodeSpecial(caller, nil, site, fn); obj != 0 {
 			a.addressOf(fn.Type(), id, obj)
 		}
-		//a.setValueNode(m, id, nil) //bz: do we need this??
+		//a.setValueNode(m, id, nil) //bz: do we need this?? for now, no since we will not use it
 		a.atFuncs[fn] = true // Methods of concrete types are address-taken functions.
 		return obj
 	}
@@ -1026,7 +983,6 @@ func (a *analysis) genInvoke(caller *cgnode, site *callsite, call *ssa.CallCommo
 	}
 	sig := call.Signature()
 
-	// back to normal work flow
 	// Allocate a contiguous targets/params/results block for this call.
 	block := a.nextNode() //bz: <----- this node is empty, just to mark this is the start of P/R block
 	// pts(targets) will be the set of possible call targets
@@ -1050,7 +1006,9 @@ func (a *analysis) genInvoke(caller *cgnode, site *callsite, call *ssa.CallCommo
 	// call target.
 	if a.considerKContext(sig.Recv().Type().String()) { //requires receiver type
 		//bz: simple solution; start to be kcfa from main.main; INSTEAD OF genMethodsOf(), we create it online
-		fmt.Println("CAUGHT APP INVOKE METHOD -- " + sig.Recv().Type().String() + "   WILL CREATE ONLINE LATER.")
+		if a.config.DEBUG {
+			fmt.Println("CAUGHT APP INVOKE METHOD -- " + sig.Recv().Type().String() + "   WILL CREATE ONLINE LATER.")
+		}
 		a.addConstraint(&invokeConstraint{call.Method, a.valueNode(call.Value), block, site, caller}) //bz: we need sites later online
 	}else{
 		a.addConstraint(&invokeConstraint{call.Method, a.valueNode(call.Value), block, nil, nil}) //bz: call.Value is local and base, e.g., t1
@@ -1306,7 +1264,7 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 			}
 			a.endObject(obj, cgn, v)
 
-		case *ssa.MakeInterface: //bz: work with a.iface2struct[]
+		case *ssa.MakeInterface:
 			tConc := v.X.Type()
 			obj = a.makeTagged(tConc, cgn, v)
 
@@ -1489,7 +1447,9 @@ func (a *analysis) genInstr(cgn *cgnode, instr ssa.Instruction) {
 	case *ssa.MakeClosure:
 		fn := instr.Fn.(*ssa.Function) //bz: fn should not be nil, because we are closuring on a static go routine, we will adjust in objectNode()
 		if a.considerKContext(fn.String()) {
-			fmt.Println("CAUGHT APP (MakeClosure) METHOD -- " + fn.String()) //debug
+			if a.config.DEBUG {
+				fmt.Println("CAUGHT APP (MakeClosure) METHOD -- " + fn.String()) //debug
+			}
 			a.copy(a.valueNode(instr), a.valueNodeClosure(cgn, instr, fn), 1)
 		} else {
 			a.copy(a.valueNode(instr), a.valueNode(fn), 1)

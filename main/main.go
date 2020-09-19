@@ -35,7 +35,7 @@ func findMainPackages(pkgs []*ssa.Package) ([]*ssa.Package, error) {
 // ../go2/race_checker/GoBench/Istio/8967/main.go
 //
 //CURRENT:
-// cmd/callgraph/testdata/src/pkg/pkg.go  --> extra calls
+// cmd/callgraph/testdata/src/pkg/pkg.go
 // ../go2/race_checker/pointe_analysis_test/main.go
 // pointer/testdata/channels.go
 func main() {
@@ -89,13 +89,14 @@ func main() {
 
 	// Configure pointer analysis to build call-graph
 	ptaConfig := &pointer.Config{
-		Mains:             mains, //bz: NOW assume only one main
+		Mains:             mains, //bz: NOW assume onlfy one main
 		Reflection:        false,
 		BuildCallGraph:    true,
 		Log:               logfile,
 		CallSiteSensitive: true,
 		K:                 2,
 		LimitScope:        true, //bz: only consider app methods now
+		DEBUG:             false,//bz: rm all print out
 	}
 
 	//*** compute pta here
