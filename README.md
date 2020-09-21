@@ -3,3 +3,30 @@
 Git clone from https://github.com/golang/tools
 
 Start from commit 146a0deefdd11b942db7520f68c117335329271a
+
+## kCFA
+Stable version: ```v3```
+
+### Main Changes
+- Create k-callsite-sensitive contexts for static/invoke calls
+- Generate constraints/cgnode online for invoke calls and targets when it is necessary
+- Currently, skip the creation of reflection and dynamic calls due to the huge number
+
+## Origin-sensitive
+Stable version: ```v4```
+
+### What is Origin? 
+For origin-sensitive in Go, we have two cases:
+- Case 1: no ```make closure```, Go directly invokes a static function: e.g., 
+
+```go Producer(t0, t1, t3)```
+
+we create a new origin context for it.
+
+- Case 2: a go routine requires a ```make closure```: e.g., 
+
+```t37 = make closure (*B).RunParallel$1 [t35, t29, t6, t0, t1] ```
+
+```go t37() ``` 
+
+the make closure has been treated with origin-sensitive and its origin context has been created earlier, here we find the çreated obj and use its context to use here.
