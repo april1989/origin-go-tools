@@ -16,6 +16,8 @@ Stable version: ```v3```
 Stable version: ```v4```
 
 ### What is Origin? 
+We treat a go routine instruction as an origin entry point, and all variables/function calls inside this go rountine share the same context as their belonging go routine.
+
 For origin-sensitive in Go, we have two cases:
 - Case 1: no ```make closure```, Go directly invokes a static function: e.g., 
 
