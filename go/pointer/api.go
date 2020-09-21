@@ -71,11 +71,10 @@ type Config struct {
 
 	//bz: kcfa
 	CallSiteSensitive  bool
-	K                  int //how many level?
 	//bz: origin-sensitive -> go routine as origin-entry
 	Origin             bool
-	K_Origin           int //how many level? or as many as necessary?
 	//bz: shared config by context-sensitive
+	K                  int //how many level? the most recent callsite/origin?
 	LimitScope         bool  //only apply kcfa to app methods
 	DEBUG             bool
 }

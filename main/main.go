@@ -29,7 +29,7 @@ func findMainPackages(pkgs []*ssa.Package) ([]*ssa.Package, error) {
 }
 
 //bz: tested
-// godel2: dine3-chan-race, no-race-mut-bad, prod-cons-race
+// godel2: mytest/dine3-chan-race.go, mytest/no-race-mut-bad.go, mytest/prod-cons-race.go
 // ../go2/race_checker/GoBench/Kubernetes/88331/main.go
 // ../go2/race_checker/GoBench/Grpc/3090/main.go
 // ../go2/race_checker/GoBench/Istio/8967/main.go
@@ -37,7 +37,6 @@ func findMainPackages(pkgs []*ssa.Package) ([]*ssa.Package, error) {
 //CURRENT:
 // cmd/callgraph/testdata/src/pkg/pkg.go
 // ../go2/race_checker/pointe_analysis_test/main.go
-// pointer/testdata/channels.go
 func main() {
 	flag.Bool("ptrAnalysis", false, "Prints pointer analysis results. ")
 	flag.Parse()
@@ -93,10 +92,14 @@ func main() {
 		Reflection:        false,
 		BuildCallGraph:    true,
 		Log:               logfile,
-		CallSiteSensitive: true,
-		K:                 2,
+		////kcfa
+		//CallSiteSensitive: true,
+		//origin
+		Origin:            true,
+		//shared config
+		K:                 1,
 		LimitScope:        true, //bz: only consider app methods now
-		DEBUG:             false,//bz: rm all print out
+		DEBUG:             true, //bz: rm all printed out info in console
 	}
 
 	//*** compute pta here

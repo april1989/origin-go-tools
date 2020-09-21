@@ -253,6 +253,7 @@ func Analyze(config *Config) (result *Result, err error) {
 			IndirectQueries: make(map[ssa.Value]Pointer),
 		},
 		deltaSpace:   make([]int, 0, 100),
+		//bz: i did not clear these after offline TODO: do I ?
 		fn2cgnodeIdx: make(map[*ssa.Function][]int),
 		closures:     make(map[*ssa.Function]*Ctx2nodeid),
 	}

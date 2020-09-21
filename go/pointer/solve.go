@@ -335,14 +335,14 @@ func (c *invokeConstraint) solve(a *analysis, delta *nodeset) {
 
 		if fnObj == 0 {
 			// a.objectNode(fn) was not called during gen phase.
-			if a.considerKContext(fn.String()) {
+			if a.considerMyContext(fn.String()) {
 				//bz: special handling of invoke targets, create here
 				if a.config.DEBUG {
 					fmt.Println("!! GENERATING INVOKE FUNC HERE: " + fn.String())
 				}
 				fnObj = a.genOnline(c.caller, c.site, fn)
-			}else{
-				panic(fmt.Sprintf("a.globalobj[%s]==nil", fn))
+			}else{ //newly created app func invokes lib func: all use share contour
+				fnObj = a.genOnline(nil, nil, fn)
 			}
 		}
 
