@@ -10,6 +10,7 @@ import (
 	"golang.org/x/tools/go/ssa/ssautil"
 	"os"
 	"strconv"
+	"time"
 )
 
 
@@ -92,22 +93,26 @@ func main() {
 		Reflection:        false,
 		BuildCallGraph:    true,
 		Log:               logfile,
-		////kcfa
-		//CallSiteSensitive: true,
+		//kcfa
+		CallSiteSensitive: true,
 		//origin
-		Origin:            true,
+		//Origin:            true,
 		//shared config
-		K:                 1,
+		K:                 2,
 		LimitScope:        true, //bz: only consider app methods now
 		DEBUG:             true, //bz: rm all printed out info in console
 	}
 
 	//*** compute pta here
+	start := time.Now() //performance
 	result, err := pointer.Analyze(ptaConfig) // conduct pointer analysis
+	t := time.Now()
+	elapsed := t.Sub(start)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer logfile.Close()
 	log.SetOutput(logfile)
-	fmt.Println("Done  -- PTA/CG Build; Go check gologfile for detail. " + strconv.Itoa(len(result.CallGraph.Nodes)))
+	fmt.Println("Done  -- PTA/CG Build; Using " + elapsed.String() + ". \nGo check gologfile for detail. ")
+	fmt.Println("#CGNode: " + strconv.Itoa(len(result.CallGraph.Nodes)))
 }

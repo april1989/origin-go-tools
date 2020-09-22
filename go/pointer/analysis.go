@@ -16,6 +16,7 @@ import (
 	"runtime"
 	"runtime/debug"
 	"sort"
+	"strconv"
 
 	"golang.org/x/tools/go/callgraph"
 	"golang.org/x/tools/go/ssa"
@@ -105,7 +106,7 @@ type node struct {
 	solve *solverState
 
 	//bz: want context match for receiver/params/results between calls
-	callsite  []*callsite
+	callsite []*callsite
 }
 
 // An analysis instance holds the state of a single pointer analysis problem.
@@ -144,10 +145,11 @@ type analysis struct {
 	runtimeSetFinalizer *ssa.Function   // runtime.SetFinalizer
 
 	//bz: record
-	fn2cgnodeIdx    map[*ssa.Function][]int //bz: a map of fn with a set of its cgnodes represented by the indexes of cgnodes[]
-	                                        // NOW also used for static and invoke calls
-	                                        // TODO: may be should use nodeid not int (idx) ?
-    closures        map[*ssa.Function]*Ctx2nodeid //bz: solution for makeclosure
+	fn2cgnodeIdx        map[*ssa.Function][]int //bz: a map of fn with a set of its cgnodes represented by the indexes of cgnodes[]
+	// NOW also used for static and invoke calls
+	// TODO: may be should use nodeid not int (idx) ?
+	closures            map[*ssa.Function]*Ctx2nodeid //bz: solution for makeclosure
+
 }
 
 // enclosingObj returns the first node of the addressable memory
@@ -252,7 +254,7 @@ func Analyze(config *Config) (result *Result, err error) {
 			Queries:         make(map[ssa.Value]Pointer),
 			IndirectQueries: make(map[ssa.Value]Pointer),
 		},
-		deltaSpace:   make([]int, 0, 100),
+		deltaSpace: make([]int, 0, 100),
 		//bz: i did not clear these after offline TODO: do I ?
 		fn2cgnodeIdx: make(map[*ssa.Function][]int),
 		closures:     make(map[*ssa.Function]*Ctx2nodeid),
@@ -262,9 +264,19 @@ func Analyze(config *Config) (result *Result, err error) {
 		a.log = os.Stderr // for debugging crashes; extremely verbose
 	}
 
-	if a.log != nil {
-		fmt.Fprintln(a.log, "==== Starting analysis")
+	var mode string //which pta is running
+	if a.config.Origin {
+		mode = strconv.Itoa(a.config.K) + "-ORIGIN-SENSITIVE"
+	} else if a.config.CallSiteSensitive {
+		mode = strconv.Itoa(a.config.K) + "-CFA"
+	} else {
+		mode = "CONTEXT-INSENSITIVE"
 	}
+
+	if a.log != nil {
+		fmt.Fprintln(a.log, "==== Starting analysis: " + mode)
+	}
+	fmt.Println(" *** MODE: " + mode + " *** ")
 
 	// Pointer analysis requires a complete program for soundness.
 	// Check to prevent accidental misconfiguration.
@@ -301,7 +313,7 @@ func Analyze(config *Config) (result *Result, err error) {
 	}
 	a.computeTrackBits() //bz: use when there is input queries before running this analysis; we do not need this for now?
 
-	a.generate() //bz: a preprocess for reflection/runtime/import libs
+	a.generate()   //bz: a preprocess for reflection/runtime/import libs
 	a.showCounts() //bz: print out size ...
 
 	if optRenumber {

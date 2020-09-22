@@ -122,7 +122,6 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 	}
 }
 
-
 // endObject marks the end of a sequence of calls to addNodes denoting
 // a single object allocation.
 //
@@ -187,7 +186,6 @@ func (a *analysis) makeFunctionObject(fn *ssa.Function, callersite *callsite) no
 
 	return obj
 }
-
 
 //bz: we make function body nodes and param/result nodes together, instead of calling makeCGNode
 //because for kcfa, we might have multiple cgnodes for fn
@@ -282,7 +280,7 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 	var cgn *cgnode
 
 	//TODO: this ifelse is a bit huge ....
-	if a.config.Origin { 	//bz: for origin-sensitive
+	if a.config.Origin { //bz: for origin-sensitive
 		if callersite == nil { //we only create new context for make cloure and go instruction
 			special := &callsite{targets: obj} //case 2: create one with only target, make closure is not ssa.CallInstruction
 			fnkcs := a.createKCallSite(caller.callersite, special)
@@ -290,10 +288,10 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 		} else if _, ok := callersite.instr.(*ssa.Go); ok { //case 1: this is a *ssa.GO without closure
 			fnkcs := a.createKCallSite(caller.callersite, callersite)
 			cgn = &cgnode{fn: fn, obj: obj, callersite: fnkcs}
-		}else { //use caller context
+		} else { //use caller context
 			cgn = &cgnode{fn: fn, obj: obj, callersite: caller.callersite}
 		}
-	}else if a.config.CallSiteSensitive {  //bz: for kcfa
+	} else if a.config.CallSiteSensitive { //bz: for kcfa
 		if callersite == nil { //fn is make closure
 			special := &callsite{targets: obj} //create one with only target, make closure is not ssa.CallInstruction
 			fnkcs := a.createKCallSite(caller.callersite, special)
@@ -305,7 +303,7 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 			fnkcs := a.createKCallSite(caller.callersite, callersite)
 			cgn = &cgnode{fn: fn, obj: obj, callersite: fnkcs}
 		}
-	}else {
+	} else {
 		panic("NO SELECTED MY CONTEXT IN a.config. GO SELECT ONE.")
 	}
 
@@ -868,24 +866,24 @@ func (a *analysis) genStaticCall(caller *cgnode, site *callsite, call *ssa.CallC
 	if a.considerMyContext(fn.String()) {
 		//bz: simple brute force solution; start to be kcfa from main.main
 		if a.config.DEBUG {
-		    fmt.Println("CAUGHT APP METHOD -- " + fn.String()) //debug
+			fmt.Println("CAUGHT APP METHOD -- " + fn.String()) //debug
 		}
 		_, ok := site.instr.(*ssa.Go)
 		if ok { //detail check for different context-sensitivities
 			if a.config.DEBUG { //debug
 				if a.config.CallSiteSensitive {
 					fmt.Println("        BUT ssa.GO -- " + site.instr.String() + "   SKIP.")
-				}else if a.config.Origin {
+				} else if a.config.Origin {
 					fmt.Println("        BUT ssa.GO -- " + site.instr.String() + "   LET'S SEE.")
 				}
 			}
 			obj, ok, _ = a.existClosure(fn, caller.callersite[0])
 			if ok {
 				isNew = true //exist closure, add its constraints
-			}else if a.considerOrigin(fn.String()){ //bz: case 1: we need a new contour and a new context for origin
+			} else if a.considerOrigin(fn.String()) { //bz: case 1: we need a new contour and a new context for origin
 				obj, isNew = a.makeFunctionObjectWithContext(caller, fn, site)
 			}
-		} else  {
+		} else {
 			//for kcfa: we need a new contour
 			//for origin: whatever left, we use caller context
 			obj, isNew = a.makeFunctionObjectWithContext(caller, fn, site)
@@ -955,7 +953,7 @@ func (a *analysis) genDynamicCall(caller *cgnode, site *callsite, call *ssa.Call
 
 //bz: online iteratively doing genFunc <-> genInstr
 func (a *analysis) genOnline(caller *cgnode, site *callsite, fn *ssa.Function) nodeid {
-	//reinitilaize TODO: do we need to copy these somewhere and add them back here ???
+	//reinitilaize TODO: do we need to save these somewhere and copy them back here ???
 	if a.globalval == nil {
 		a.globalval = make(map[ssa.Value]nodeid)
 	}
@@ -970,9 +968,8 @@ func (a *analysis) genOnline(caller *cgnode, site *callsite, fn *ssa.Function) n
 		a.genFunc(cgn)
 	}
 	//TODO: we skip optimization now, just in case it will mess up. maybe add it later??
-    return fnObj
+	return fnObj
 }
-
 
 //bz: special handling for invoke, doing something like genMethodsOf() and valueNode() for invoke calls; called online
 //must be global
@@ -997,7 +994,6 @@ func (a *analysis) valueNodeInvoke(caller *cgnode, site *callsite, fn *ssa.Funct
 		a.atFuncs[fn] = true // Methods of concrete types are address-taken functions.
 		return obj
 	}
-
 	return obj
 }
 
@@ -1035,14 +1031,13 @@ func (a *analysis) genInvoke(caller *cgnode, site *callsite, call *ssa.CallCommo
 	if a.considerMyContext(sig.Recv().Type().String()) { //requires receiver type
 		//bz: simple solution; start to be kcfa from main.main; INSTEAD OF genMethodsOf(), we create it online
 		if a.config.DEBUG {
-			fmt.Println("CAUGHT APP INVOKE METHOD -- " + sig.Recv().Type().String() + "   WILL CREATE IT ONLINE LATER.")
+			fmt.Println("CAUGHT APP INVOKE METHOD -- " + sig.Recv().Type().String() + "   NO FUNC, WILL CREATE IT ONLINE LATER.")
 		}
 		a.addConstraint(&invokeConstraint{call.Method, a.valueNode(call.Value), block, site, caller}) //bz: we need sites later online
-	}else{
+	} else {
 		a.addConstraint(&invokeConstraint{call.Method, a.valueNode(call.Value), block, nil, nil}) //bz: call.Value is local and base, e.g., t1
 	}
 }
-
 
 // genInvokeReflectType is a specialization of genInvoke where the
 // receiver type is a reflect.Type, under the assumption that there
@@ -1127,7 +1122,6 @@ func (a *analysis) genCall(caller *cgnode, instr ssa.CallInstruction) {
 		fmt.Fprintf(a.log, "\t%s to targets %s from %s\n", site, site.targets, caller)
 	}
 }
-
 
 //bz: special handling for closure, doing somthing similar to valueNode(); must be global
 func (a *analysis) valueNodeClosure(cgn *cgnode, closure *ssa.MakeClosure, v ssa.Value) nodeid {
@@ -1348,7 +1342,6 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 	}
 	return obj
 }
-
 
 // genLoad generates constraints for result = *(ptr + val).
 func (a *analysis) genLoad(cgn *cgnode, result nodeid, ptr ssa.Value, offset, sizeof uint32) {
@@ -1763,7 +1756,7 @@ func (a *analysis) generate() {
 		if a.considerMyContext(T.String()) {
 			//bz: we want to make function (called by interfaces) later for kcfa, here uses share contour
 			if a.config.DEBUG {
-				fmt.Println("SKIP genMethodsOf() offline: " + T.String() + "  " + T.Underlying().Underlying().String())
+				fmt.Println("SKIP genMethodsOf() offline for type: " + T.String())
 			}
 			continue
 		}
