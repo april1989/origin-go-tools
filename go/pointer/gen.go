@@ -91,18 +91,23 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 	// from the code@https://github.tamu.edu/jeffhuang/go2/blob/master/race_checker/pointerAnalysis.go
 	// seems like we only query pointers, so CURRENTLY only record for pointers in app methods
 	// go to commit@acb4db0349f131f8d10ddbec6d4fb686258becca to check original code
-	if cgn == nil { return } //bz: root cgn
+	if cgn == nil {
+		if a.config.DEBUG {
+			fmt.Println("nil cgn in setValueNode(): v:" + v.String())
+		}
+		return
+	} //bz: root cgn
 	if a.withinScope(cgn.fn.String()) {
 		t := v.Type()
 		if a.config.DEBUG {
 			fmt.Println("query " + t.String())
 		}
 		if CanPoint(t) { //queries
-			ptr := Pointer{a, a.addNodes(t, "query")}
+			ptr := PointerWCtx{a, a.addNodes(t, "query"), cgn}
 			ptrs, ok := a.result.Queries[v]
 			if !ok {
 				// First time?  Create the canonical query node.
-				ptrs = make([]Pointer, 1)
+				ptrs = make([]PointerWCtx, 1)
 				ptrs[0] = ptr
 			}else{
 				ptrs = append(ptrs, ptr)
@@ -110,12 +115,13 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 			a.result.Queries[v] = ptrs
 			a.copy(ptr.n, id, a.sizeof(t))
 		}
-		if underType, ok := v.Type().Underlying().(*types.Pointer); ok && CanPoint(underType.Elem()) { //copied from go2: indirect queries
-			ptr := Pointer{a, a.addNodes(v.Type(), "query.indirect")}
+		//this condition is copied from go2: indirect queries
+		if underType, ok := v.Type().Underlying().(*types.Pointer); ok && CanPoint(underType.Elem()) {
+			ptr := PointerWCtx{a, a.addNodes(v.Type(), "query.indirect"), cgn}
 			ptrs, ok := a.result.IndirectQueries[v]
 			if !ok {
 				// First time? Create the canonical indirect query node.
-				ptrs = make([]Pointer, 1)
+				ptrs = make([]PointerWCtx, 1)
 				ptrs[0] = ptr
 			}else{
 				ptrs = append(ptrs, ptr)

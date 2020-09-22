@@ -255,8 +255,8 @@ func Analyze(config *Config) (result *ResultWCtx, err error) { //Result
 		//	IndirectQueries: make(map[ssa.Value]Pointer),
 		//},
 		result: &ResultWCtx{
-			Queries:         make(map[ssa.Value][]Pointer),
-			IndirectQueries: make(map[ssa.Value][]Pointer),
+			Queries:         make(map[ssa.Value][]PointerWCtx),
+			IndirectQueries: make(map[ssa.Value][]PointerWCtx),
 		},
 		deltaSpace: make([]int, 0, 100),
 		//bz: i did not clear these after offline TODO: do I ?

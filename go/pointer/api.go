@@ -180,8 +180,8 @@ type Result struct {
 //bz: same as above, but we want contexts
 type ResultWCtx struct {
 	CallGraph       *callgraph.Graph      // discovered call graph
-	Queries         map[ssa.Value][]Pointer // pts(v) for each v in Config.Queries.
-	IndirectQueries map[ssa.Value][]Pointer // pts(*v) for each v in Config.IndirectQueries.
+	Queries         map[ssa.Value][]PointerWCtx // pts(v) for each v in Config.Queries.
+	IndirectQueries map[ssa.Value][]PointerWCtx // pts(*v) for each v in Config.IndirectQueries.
 	Warnings        []Warning             // warnings of unsoundness
 }
 
@@ -298,5 +298,41 @@ func (p Pointer) MayAlias(q Pointer) bool {
 
 // DynamicTypes returns p.PointsTo().DynamicTypes().
 func (p Pointer) DynamicTypes() *typeutil.Map {
+	return p.PointsTo().DynamicTypes()
+}
+
+
+// bz: a Pointer with context
+type PointerWCtx struct {
+	a *analysis
+	n nodeid
+	cgn *cgnode
+}
+
+//bz: return the cgn which calls setValueNode(); ctx is inside
+func (p PointerWCtx) Parent() *cgnode {
+	return p.cgn
+}
+
+func (p PointerWCtx) String() string {
+	return fmt.Sprintf("n%d@%s", p.n, p.cgn.contourkFull())
+}
+
+// PointsTo returns the points-to set of this pointer.
+func (p PointerWCtx) PointsTo() PointsToSet {
+	if p.n == 0 {
+		return PointsToSet{}
+	}
+	return PointsToSet{p.a, &p.a.nodes[p.n].solve.pts}
+}
+
+// MayAlias reports whether the receiver pointer may alias
+// the argument pointer.
+func (p PointerWCtx) MayAlias(q PointerWCtx) bool {
+	return p.PointsTo().Intersects(q.PointsTo())
+}
+
+// DynamicTypes returns p.PointsTo().DynamicTypes().
+func (p PointerWCtx) DynamicTypes() *typeutil.Map {
 	return p.PointsTo().DynamicTypes()
 }
