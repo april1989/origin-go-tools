@@ -4,6 +4,10 @@ Git clone from https://github.com/golang/tools
 
 Start from commit 146a0deefdd11b942db7520f68c117335329271a
 
+## Current Problems
+1. api.Result.Queries: seems like we cannot query after the pointer analysis, it requires the input before running pointer analysis, not useful -> dump all result out
+2. callgraph.Graph: Node does not contain context info, not useful -> add it on
+
 ## kCFA
 Stable version: ```v3```
 
