@@ -85,41 +85,76 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 	// Due to context-sensitivity, we may encounter the same Value
 	// in many contexts. We merge them to a canonical node, since
 	// that's what all clients want.
-	// bz: will this (merge) affect our precision ??
-	// Record the (v, id) relation if the client has queried pts(v). -> bz: goal: just in case later user issues the same query again ...
-	if _, ok := a.config.Queries[v]; ok {
+	// Record the (v, id) relation if the client has queried pts(v).
+	// !!!! bz: this part is evil ... they may considered the performance issue,
+	// BUT we want to directly query after running pointer analysis, not run after each query...
+	// from the code@https://github.tamu.edu/jeffhuang/go2/blob/master/race_checker/pointerAnalysis.go
+	// seems like we only query pointers, so CURRENTLY only record for pointers in app methods
+	// go to commit@acb4db0349f131f8d10ddbec6d4fb686258becca to check original code
+	if cgn == nil { return } //bz: root cgn
+	if a.withinScope(cgn.fn.String()) {
 		t := v.Type()
-		ptr, ok := a.result.Queries[v]
-		if !ok {
-			// First time?  Create the canonical query node.
-			ptr = Pointer{a, a.addNodes(t, "query")}
+		if a.config.DEBUG {
+			fmt.Println("query " + t.String())
+			if strings.Contains(v.String(), "toProcess") {
+			   fmt.Println(v.String() + " " + cgn.contourkFull())
+			}
+		}
+		if CanPoint(t) { //queries
+			ptr, ok := a.result.Queries[v]
+			if !ok {
+				// First time?  Create the canonical query node.
+				ptr = Pointer{a, a.addNodes(t, "query")}
+				a.result.Queries[v] = ptr
+			}
 			a.result.Queries[v] = ptr
+			a.copy(ptr.n, id, a.sizeof(t))
 		}
-		a.result.Queries[v] = ptr
-		a.copy(ptr.n, id, a.sizeof(t))
+		if underType, ok := v.Type().Underlying().(*types.Pointer); ok && CanPoint(underType.Elem()) {
+			//copied from go2: indirect queries
+			ptr, ok := a.result.IndirectQueries[v]
+			if !ok {
+				// First time? Create the canonical indirect query node.
+				ptr = Pointer{a, a.addNodes(v.Type(), "query.indirect")}
+				a.result.IndirectQueries[v] = ptr
+			}
+			a.genLoad(cgn, ptr.n, v, 0, a.sizeof(t))
+		}
 	}
 
-	// Record the (*v, id) relation if the client has queried pts(*v).
-	if _, ok := a.config.IndirectQueries[v]; ok {
-		t := v.Type()
-		ptr, ok := a.result.IndirectQueries[v]
-		if !ok {
-			// First time? Create the canonical indirect query node.
-			ptr = Pointer{a, a.addNodes(v.Type(), "query.indirect")}
-			a.result.IndirectQueries[v] = ptr
-		}
-		a.genLoad(cgn, ptr.n, v, 0, a.sizeof(t))
-	}
-
-	for _, query := range a.config.extendedQueries[v] {
-		t, nid := a.evalExtendedQuery(v.Type().Underlying(), id, query.ops)
-
-		if query.ptr.a == nil {
-			query.ptr.a = a
-			query.ptr.n = a.addNodes(t, "query.extended")
-		}
-		a.copy(query.ptr.n, nid, a.sizeof(t))
-	}
+	//if _, ok := a.config.Queries[v]; ok {
+	//	t := v.Type()
+	//	ptr, ok := a.result.Queries[v]
+	//	if !ok {
+	//		// First time?  Create the canonical query node.
+	//		ptr = Pointer{a, a.addNodes(t, "query")}
+	//		a.result.Queries[v] = ptr
+	//	}
+	//	a.result.Queries[v] = ptr
+	//	a.copy(ptr.n, id, a.sizeof(t))
+	//}
+	//
+	//// Record the (*v, id) relation if the client has queried pts(*v).
+	//if _, ok := a.config.IndirectQueries[v]; ok {
+	//	t := v.Type()
+	//	ptr, ok := a.result.IndirectQueries[v]
+	//	if !ok {
+	//		// First time? Create the canonical indirect query node.
+	//		ptr = Pointer{a, a.addNodes(v.Type(), "query.indirect")}
+	//		a.result.IndirectQueries[v] = ptr
+	//	}
+	//	a.genLoad(cgn, ptr.n, v, 0, a.sizeof(t))
+	//}
+	//
+	//for _, query := range a.config.extendedQueries[v] { //bz: from AddExtendedQuery(), not used
+	//	t, nid := a.evalExtendedQuery(v.Type().Underlying(), id, query.ops)
+	//
+	//	if query.ptr.a == nil {
+	//		query.ptr.a = a
+	//		query.ptr.n = a.addNodes(t, "query.extended")
+	//	}
+	//	a.copy(query.ptr.n, nid, a.sizeof(t))
+	//}
 }
 
 // endObject marks the end of a sequence of calls to addNodes denoting
@@ -278,33 +313,40 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 	obj := a.nextNode()
 	//doing task of makeCGNode()
 	var cgn *cgnode
-
 	//TODO: this ifelse is a bit huge ....
-	if a.config.Origin { //bz: for origin-sensitive
-		if callersite == nil { //we only create new context for make cloure and go instruction
-			special := &callsite{targets: obj} //case 2: create one with only target, make closure is not ssa.CallInstruction
-			fnkcs := a.createKCallSite(caller.callersite, special)
-			cgn = &cgnode{fn: fn, obj: obj, callersite: fnkcs}
-		} else if _, ok := callersite.instr.(*ssa.Go); ok { //case 1: this is a *ssa.GO without closure
-			fnkcs := a.createKCallSite(caller.callersite, callersite)
-			cgn = &cgnode{fn: fn, obj: obj, callersite: fnkcs}
-		} else { //use caller context
-			cgn = &cgnode{fn: fn, obj: obj, callersite: caller.callersite}
-		}
-	} else if a.config.CallSiteSensitive { //bz: for kcfa
-		if callersite == nil { //fn is make closure
-			special := &callsite{targets: obj} //create one with only target, make closure is not ssa.CallInstruction
-			fnkcs := a.createKCallSite(caller.callersite, special)
-			cgn = &cgnode{fn: fn, obj: obj, callersite: fnkcs}
-		} else if caller.callersite[0] == nil { //no caller context
-			single := a.createSingleCallSite(callersite)
-			cgn = &cgnode{fn: fn, obj: obj, callersite: single}
+	if a.config.Mains[0].Func("main") == fn { //bz: give the main method a context, instead of using shared contour
+		single := a.createSingleCallSite(callersite)
+		cgn = &cgnode{fn: fn, obj: obj, callersite: single}
+	} else { // other functions
+		if a.config.Origin { //bz: for origin-sensitive
+			if strings.Contains(fn.String(), "command-line-arguments.Producer") {
+				fmt.Println()
+			}
+			if callersite == nil { //we only create new context for make cloure and go instruction
+				special := &callsite{targets: obj} //case 2: create one with only target, make closure is not ssa.CallInstruction
+				fnkcs := a.createKCallSite(caller.callersite, special)
+				cgn = &cgnode{fn: fn, obj: obj, callersite: fnkcs}
+			} else if _, ok := callersite.instr.(*ssa.Go); ok { //case 1: this is a *ssa.GO without closure
+				fnkcs := a.createKCallSite(caller.callersite, callersite)
+				cgn = &cgnode{fn: fn, obj: obj, callersite: fnkcs}
+			} else { //use caller context
+				cgn = &cgnode{fn: fn, obj: obj, callersite: caller.callersite}
+			}
+		} else if a.config.CallSiteSensitive { //bz: for kcfa
+			if callersite == nil { //fn is make closure
+				special := &callsite{targets: obj} //create one with only target, make closure is not ssa.CallInstruction
+				fnkcs := a.createKCallSite(caller.callersite, special)
+				cgn = &cgnode{fn: fn, obj: obj, callersite: fnkcs}
+			} else if caller.callersite[0] == nil { //no caller context
+				single := a.createSingleCallSite(callersite)
+				cgn = &cgnode{fn: fn, obj: obj, callersite: single}
+			} else {
+				fnkcs := a.createKCallSite(caller.callersite, callersite)
+				cgn = &cgnode{fn: fn, obj: obj, callersite: fnkcs}
+			}
 		} else {
-			fnkcs := a.createKCallSite(caller.callersite, callersite)
-			cgn = &cgnode{fn: fn, obj: obj, callersite: fnkcs}
+			panic("NO SELECTED MY CONTEXT IN a.config. GO SELECT ONE.")
 		}
-	} else {
-		panic("NO SELECTED MY CONTEXT IN a.config. GO SELECT ONE.")
 	}
 
 	fn.IsFromApp = true //if it reaches here, must be kcfa/origin, mark it
@@ -366,7 +408,7 @@ func (a *analysis) createSingleCallSite(callersite *callsite) []*callsite {
 //bz: create a kcallsite array with a mix of caller and callee call sites
 func (a *analysis) createKCallSite(caller2sites []*callsite, callersite *callsite) []*callsite {
 	k := a.config.K
-	if len(caller2sites) == 0 || k == 1 {
+	if k == 1 { //len(caller2sites) == 0 ||
 		return a.createSingleCallSite(callersite)
 	}
 	//possible k call sites
@@ -1252,9 +1294,11 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 				//v should not be make closure, we handle it in a different function, panic
 				//TODO: can here be *ssa.GO?
 				isClosure := a.isFromMakeClosure(v)
-				if isClosure && a.considerMyContext(v.String()) {
-					panic("WRONG PATH @objectNode() FOR MAKE CLOSURE: " + v.String())
-				} else { //normal case
+				if a.considerMyContext(v.String()) {
+					if isClosure {
+						panic("WRONG PATH @objectNode() FOR MAKE CLOSURE: " + v.String())
+					}
+				}else { //normal case
 					obj = a.makeFunctionObject(v, nil)
 				}
 
@@ -1498,7 +1542,7 @@ func (a *analysis) genInstr(cgn *cgnode, instr ssa.Instruction) {
 		}
 		// Free variables are treated like global variables.
 		for i, b := range instr.Bindings {
-			a.copy(a.valueNode(fn.FreeVars[i]), a.valueNode(b), a.sizeof(b.Type()))
+			a.copy(a.valueNode(fn.FreeVars[i]), a.valueNode(b), a.sizeof(b.Type())) //bz: attention !!! freevar !!!
 		}
 
 	case *ssa.RunDefers:
@@ -1600,7 +1644,11 @@ func (a *analysis) genRootCalls() *cgnode {
 			if a.log != nil {
 				fmt.Fprintf(a.log, "\troot call to %s:\n", fn)
 			}
-			a.copy(targets, a.valueNode(fn), 1)
+			if a.considerMyContext(fn.String()) { //bz: give the main method a context, instead of using shared contour
+				a.copy(targets, a.valueNodeInvoke(root, site, fn), 1)
+			}else {
+				a.copy(targets, a.valueNode(fn), 1)
+			}
 		}
 	}
 
@@ -1614,9 +1662,7 @@ func (a *analysis) genFunc(cgn *cgnode) {
 	impl := a.findIntrinsic(fn)
 
 	if a.log != nil {
-		if a.withinScope(fn.String()) { //bz: too much info, focus on package ones
-			fmt.Fprintf(a.log, "\n\n==== Generating constraints for %s, %s\n", cgn, cgn.contour(a.config.CallSiteSensitive))
-		}
+		fmt.Fprintf(a.log, "\n\n==== Generating constraints for %s, %s\n", cgn, cgn.contour(a.config.CallSiteSensitive))
 
 		// Hack: don't display body if intrinsic.
 		if impl != nil {

@@ -10,6 +10,7 @@ import (
 	"golang.org/x/tools/go/ssa/ssautil"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -37,7 +38,7 @@ func findMainPackages(pkgs []*ssa.Package) ([]*ssa.Package, error) {
 //
 //CURRENT:
 // cmd/callgraph/testdata/src/pkg/pkg.go
-// ../go2/race_checker/pointe_analysis_test/main.go
+// ../go2/race_checker/pointe_analysis_test/main.go  --> bz: cannot identify ParallelizeUntil() holds the closure, too much assignments... + no program counter ...
 func main() {
 	flag.Bool("ptrAnalysis", false, "Prints pointer analysis results. ")
 	flag.Parse()
@@ -82,23 +83,23 @@ func main() {
 	//create my log file
 	var logName string
 	logName = "gologfile"
-	logfile, err := os.OpenFile(logName, os.O_WRONLY|os.O_CREATE, 0600) //os.O_APPEND|
+	logfile, err := os.Create(logName) //bz: i do not want messed up log, create/overwrite one each time
 	log.SetFormatter(&log.TextFormatter{
 		FullTimestamp: true,
 	})
 
 	// Configure pointer analysis to build call-graph
 	ptaConfig := &pointer.Config{
-		Mains:             mains, //bz: NOW assume onlfy one main
+		Mains:             mains, //bz: NOW assume only one main
 		Reflection:        false,
 		BuildCallGraph:    true,
 		Log:               logfile,
 		//kcfa
-		CallSiteSensitive: true,
+		//CallSiteSensitive: true,
 		//origin
-		//Origin:            true,
+		Origin:            true,
 		//shared config
-		K:                 2,
+		K:                 1,
 		LimitScope:        true, //bz: only consider app methods now
 		DEBUG:             true, //bz: rm all printed out info in console
 	}
@@ -113,6 +114,30 @@ func main() {
 	}
 	defer logfile.Close()
 	log.SetOutput(logfile)
-	fmt.Println("Done  -- PTA/CG Build; Using " + elapsed.String() + ". \nGo check gologfile for detail. ")
-	fmt.Println("#CGNode: " + strconv.Itoa(len(result.CallGraph.Nodes)))
+	fmt.Println("\nDone  -- PTA/CG Build; Using " + elapsed.String() + ". \nGo check gologfile for detail. ")
+
+	if ptaConfig.DEBUG {
+		fmt.Println("\nWe are going to print out call graph. If not desired, turn off DEBUG.")
+		cgns := result.CallGraph.Nodes
+		fmt.Println("#CGNode: " + strconv.Itoa(len(cgns)))
+		for _, cgn := range cgns {
+			if !strings.Contains(cgn.Func.String(), "command-line-arguments.") { continue } //we only want the app call edges
+			fmt.Println(cgn.String())
+			outs := cgn.Out
+			for _, out := range outs {
+				fmt.Println( "  -> " + out.Callee.String())
+			}
+		}
+
+		fmt.Println("\nWe are going to print out queries. If not desired, turn off DEBUG.")
+		queries := result.Queries
+		inQueries := result.IndirectQueries
+		fmt.Println("#Queries: " + strconv.Itoa(len(queries)) + "\n#Indirect Queries: " + strconv.Itoa(len(inQueries)))
+		for v, query := range queries {
+			fmt.Println(query.String() + " (SSA:" + v.String() + "): {" + query.PointsTo().String() + "}")
+		}
+		for v, inQuery := range inQueries {
+			fmt.Println(inQuery.String() + " (SSA:" + v.String() + "): {" + inQuery.PointsTo().String() + "}")
+		}
+	}
 }

@@ -51,6 +51,10 @@ func (n *cgnode) contourkFull() string {
 			s = s  + strconv.Itoa(idx) + ":" + cs.instr.String() + "@" + cs.instr.Parent().String() + "; "
 			continue
 		}
+		if cs.targets == 2 { //bz: the ctx is "called to synthetic/intrinsic func@n2"; which is root node calling to main.main
+			s = s + strconv.Itoa(idx) + ":root call to command-line-arguments.main"
+			continue
+		}
 		s = s + strconv.Itoa(idx) + ":" + "called to synthetic/intrinsic func@" + cs.targets.String() + "; "
 	}
 	s = s + "]"
@@ -58,7 +62,7 @@ func (n *cgnode) contourkFull() string {
 }
 
 func (n *cgnode) String() string {
-	return fmt.Sprintf("cg%d:%s", n.obj, n.fn)
+	return fmt.Sprintf("cg%d:%s%s", n.obj, n.fn, n.contourkFull())
 }
 
 // A callsite represents a single call site within a cgnode;
