@@ -93,22 +93,23 @@ func (a *analysis) renumber() {
 	// Now renumber all existing nodeids to use the new node permutation.
 	// It is critical that all reachable nodeids are accounted for!
 
-	// Renumber nodeids in queried Pointers.
-	for v, ptr := range a.result.Queries {
-		ptr.n = renumbering[ptr.n]
-		a.result.Queries[v] = ptr
-	}
-	for v, ptr := range a.result.IndirectQueries {
-		ptr.n = renumbering[ptr.n]
-		a.result.IndirectQueries[v] = ptr
-	}
-	for _, queries := range a.config.extendedQueries {
-		for _, query := range queries {
-			if query.ptr != nil {
-				query.ptr.n = renumbering[query.ptr.n]
-			}
-		}
-	}
+	//bz: we are not using this, comment off
+	//// Renumber nodeids in queried Pointers.
+	//for v, ptr := range a.result.Queries {
+	//	ptr.n = renumbering[ptr.n]
+	//	a.result.Queries[v] = ptr
+	//}
+	//for v, ptr := range a.result.IndirectQueries {
+	//	ptr.n = renumbering[ptr.n]
+	//	a.result.IndirectQueries[v] = ptr
+	//}
+	//for _, queries := range a.config.extendedQueries {
+	//	for _, query := range queries {
+	//		if query.ptr != nil {
+	//			query.ptr.n = renumbering[query.ptr.n]
+	//		}
+	//	}
+	//}
 
 	// Renumber nodeids in global objects.
 	for v, id := range a.globalobj {

@@ -129,7 +129,7 @@ type analysis struct {
 	atFuncs     map[*ssa.Function]bool      // address-taken functions (for presolver)
 	mapValues   []nodeid                    // values of makemap objects (indirect in HVN)
 	work        nodeset                     // solver's worklist
-	result      *Result                     // results of the analysis
+	//result      *Result                     // results of the analysis
 	track       track                       // pointerlike types whose aliasing we track
 	deltaSpace  []int                       // working space for iterating over PTS deltas
 
@@ -149,7 +149,7 @@ type analysis struct {
 	// NOW also used for static and invoke calls
 	// TODO: may be should use nodeid not int (idx) ?
 	closures            map[*ssa.Function]*Ctx2nodeid //bz: solution for makeclosure
-
+    result              *ResultWCtx //bz: our result, dump all
 }
 
 // enclosingObj returns the first node of the addressable memory
@@ -227,7 +227,7 @@ func (a *analysis) computeTrackBits() {
 // Pointer analysis of a transitively closed well-typed program should
 // always succeed.  An error can occur only due to an internal bug.
 //
-func Analyze(config *Config) (result *Result, err error) {
+func Analyze(config *Config) (result *ResultWCtx, err error) { //Result
 	if config.Mains == nil {
 		return nil, fmt.Errorf("no main/test packages to analyze (check $GOROOT/$GOPATH)")
 	}
@@ -250,9 +250,13 @@ func Analyze(config *Config) (result *Result, err error) {
 		atFuncs:     make(map[*ssa.Function]bool),
 		hasher:      typeutil.MakeHasher(),
 		intrinsics:  make(map[*ssa.Function]intrinsic),
-		result: &Result{
-			Queries:         make(map[ssa.Value]Pointer),
-			IndirectQueries: make(map[ssa.Value]Pointer),
+		//result: &Result{
+		//	Queries:         make(map[ssa.Value]Pointer),
+		//	IndirectQueries: make(map[ssa.Value]Pointer),
+		//},
+		result: &ResultWCtx{
+			Queries:         make(map[ssa.Value][]Pointer),
+			IndirectQueries: make(map[ssa.Value][]Pointer),
 		},
 		deltaSpace: make([]int, 0, 100),
 		//bz: i did not clear these after offline TODO: do I ?

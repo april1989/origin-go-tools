@@ -96,9 +96,9 @@ func main() {
 		BuildCallGraph:    true,
 		Log:               logfile,
 		//kcfa
-		//CallSiteSensitive: true,
+		CallSiteSensitive: true,
 		//origin
-		Origin:            true,
+		//Origin:            true,
 		//shared config
 		K:                 2,
 		LimitScope:        true, //bz: only consider app methods now
@@ -134,11 +134,17 @@ func main() {
 		queries := result.Queries
 		inQueries := result.IndirectQueries
 		fmt.Println("#Queries: " + strconv.Itoa(len(queries)) + "\n#Indirect Queries: " + strconv.Itoa(len(inQueries)))
-		for v, query := range queries {
-			fmt.Println(query.String() + " (SSA:" + v.String() + "): {" + query.PointsTo().String() + "}")
+		fmt.Println("Queries Detail: ")
+		for v, ps := range queries {
+			for _, p := range ps {
+				fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
+			}
 		}
-		for v, inQuery := range inQueries {
-			fmt.Println(inQuery.String() + " (SSA:" + v.String() + "): {" + inQuery.PointsTo().String() + "}")
+		fmt.Println("\nIndirect Queries Detail: ")
+		for v, ps := range inQueries {
+			for _, p := range ps {
+				fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
+			}
 		}
 	}
 }

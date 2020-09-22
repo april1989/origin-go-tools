@@ -96,28 +96,31 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 		t := v.Type()
 		if a.config.DEBUG {
 			fmt.Println("query " + t.String())
-			if strings.Contains(v.String(), "toProcess") {
-			   fmt.Println(v.String() + " " + cgn.contourkFull())
-			}
 		}
 		if CanPoint(t) { //queries
-			ptr, ok := a.result.Queries[v]
+			ptr := Pointer{a, a.addNodes(t, "query")}
+			ptrs, ok := a.result.Queries[v]
 			if !ok {
 				// First time?  Create the canonical query node.
-				ptr = Pointer{a, a.addNodes(t, "query")}
-				a.result.Queries[v] = ptr
+				ptrs = make([]Pointer, 1)
+				ptrs[0] = ptr
+			}else{
+				ptrs = append(ptrs, ptr)
 			}
-			a.result.Queries[v] = ptr
+			a.result.Queries[v] = ptrs
 			a.copy(ptr.n, id, a.sizeof(t))
 		}
-		if underType, ok := v.Type().Underlying().(*types.Pointer); ok && CanPoint(underType.Elem()) {
-			//copied from go2: indirect queries
-			ptr, ok := a.result.IndirectQueries[v]
+		if underType, ok := v.Type().Underlying().(*types.Pointer); ok && CanPoint(underType.Elem()) { //copied from go2: indirect queries
+			ptr := Pointer{a, a.addNodes(v.Type(), "query.indirect")}
+			ptrs, ok := a.result.IndirectQueries[v]
 			if !ok {
 				// First time? Create the canonical indirect query node.
-				ptr = Pointer{a, a.addNodes(v.Type(), "query.indirect")}
-				a.result.IndirectQueries[v] = ptr
+				ptrs = make([]Pointer, 1)
+				ptrs[0] = ptr
+			}else{
+				ptrs = append(ptrs, ptr)
 			}
+			a.result.IndirectQueries[v] = ptrs
 			a.genLoad(cgn, ptr.n, v, 0, a.sizeof(t))
 		}
 	}
