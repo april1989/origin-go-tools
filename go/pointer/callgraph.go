@@ -14,6 +14,8 @@ import (
 	"golang.org/x/tools/go/ssa"
 )
 
+var mainID nodeid //bz: record the target of root call to main method ID
+
 //bz: this is the cgnode created by pointer analysis -> we force to use k callersite
 type cgnode struct {
 	fn         *ssa.Function
@@ -51,11 +53,16 @@ func (n *cgnode) contourkFull() string {
 			s = s  + strconv.Itoa(idx) + ":" + cs.instr.String() + "@" + cs.instr.Parent().String() + "; "
 			continue
 		}
-		if cs.targets == 2 { //bz: the ctx is "called to synthetic/intrinsic func@n2"; which is root node calling to main.main
+		if n.fn.String() == "command-line-arguments.main" { //bz: the ctx is "called to synthetic/intrinsic func@n2"; which is root node calling to main.main
+			s = s + strconv.Itoa(idx) + ":root call to command-line-arguments.main"
+			mainID = cs.targets
+			continue
+		}
+		if cs.targets == mainID { //bz: same as above
 			s = s + strconv.Itoa(idx) + ":root call to command-line-arguments.main"
 			continue
 		}
-		s = s + strconv.Itoa(idx) + ":" + "called to synthetic/intrinsic func@" + cs.targets.String() + "; "
+		s = s + strconv.Itoa(idx) + ":" + "called to synthetic/intrinsic func@" + cs.targets.String() + "; " //func id + cgnode id
 	}
 	s = s + "]"
 	return s

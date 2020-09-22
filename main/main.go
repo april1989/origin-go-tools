@@ -39,6 +39,7 @@ func findMainPackages(pkgs []*ssa.Package) ([]*ssa.Package, error) {
 //CURRENT:
 // cmd/callgraph/testdata/src/pkg/pkg.go
 // ../go2/race_checker/pointe_analysis_test/main.go  --> bz: cannot identify ParallelizeUntil() holds the closure, too much assignments... + no program counter ...
+//bz: attention !!! freevar !!!
 func main() {
 	flag.Bool("ptrAnalysis", false, "Prints pointer analysis results. ")
 	flag.Parse()
@@ -99,7 +100,7 @@ func main() {
 		//origin
 		Origin:            true,
 		//shared config
-		K:                 1,
+		K:                 2,
 		LimitScope:        true, //bz: only consider app methods now
 		DEBUG:             true, //bz: rm all printed out info in console
 	}

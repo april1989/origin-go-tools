@@ -317,11 +317,12 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 	if a.config.Mains[0].Func("main") == fn { //bz: give the main method a context, instead of using shared contour
 		single := a.createSingleCallSite(callersite)
 		cgn = &cgnode{fn: fn, obj: obj, callersite: single}
+
 	} else { // other functions
 		if a.config.Origin { //bz: for origin-sensitive
-			if strings.Contains(fn.String(), "command-line-arguments.Producer") {
-				fmt.Println()
-			}
+			//if strings.Contains(fn.String(), "command-line-arguments.Producer") {
+			//	fmt.Println()
+			//}
 			if callersite == nil { //we only create new context for make cloure and go instruction
 				special := &callsite{targets: obj} //case 2: create one with only target, make closure is not ssa.CallInstruction
 				fnkcs := a.createKCallSite(caller.callersite, special)
@@ -1542,7 +1543,7 @@ func (a *analysis) genInstr(cgn *cgnode, instr ssa.Instruction) {
 		}
 		// Free variables are treated like global variables.
 		for i, b := range instr.Bindings {
-			a.copy(a.valueNode(fn.FreeVars[i]), a.valueNode(b), a.sizeof(b.Type())) //bz: attention !!! freevar !!!
+			a.copy(a.valueNode(fn.FreeVars[i]), a.valueNode(b), a.sizeof(b.Type()))
 		}
 
 	case *ssa.RunDefers:
