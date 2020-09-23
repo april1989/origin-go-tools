@@ -4,9 +4,12 @@ Git clone from https://github.com/golang/tools
 
 Start from commit 146a0deefdd11b942db7520f68c117335329271a
 
-## Current Problems
-1. api.Result.Queries: seems like we cannot query after the pointer analysis, it requires the input before running pointer analysis, not useful -> dump all result out
-2. callgraph.Graph: Node does not contain context info, not useful -> add it on
+For any panic, please submit an issue with copy/paste crash stack. Thanks.
+
+## How to Use?
+Go to https://github.tamu.edu/April1989/go_pointeranlaysis/blob/master/main/main.go (line 121), check how to use the current callgraph and queries. 
+
+*REMIND*: for the statement traversal in race detection, to obtain the callee target(s), it is safe to follow the callgraph instead of querying the points-to set of the receiver variable. 
 
 ## kCFA
 Stable version: ```v3```
