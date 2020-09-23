@@ -180,10 +180,17 @@ type Result struct {
 //bz: same as above, but we want contexts
 type ResultWCtx struct {
 	CallGraph       *callgraph.Graph      // discovered call graph
-	Queries         map[ssa.Value][]PointerWCtx // pts(v) for each v in Config.Queries.
-	IndirectQueries map[ssa.Value][]PointerWCtx // pts(*v) for each v in Config.IndirectQueries.
+	Queries         map[ssa.Value][]PointerWCtx // pts(v) for each v in setValueNode().
+	IndirectQueries map[ssa.Value][]PointerWCtx // pts(*v) for each v in setValueNode().
 	Warnings        []Warning             // warnings of unsoundness
+	cgnodes         []*cgnode             // bz: for user API, BUT do not expose to user
 }
+
+//bz: user API: get cgn with its function (*ssa.Function) and context ([]*callsite)
+func (r *ResultWCtx) GetCGNode(idx int) *cgnode {
+	return r.cgnodes[idx]
+}
+
 
 // A Pointer is an equivalence class of pointer-like values.
 //
@@ -315,7 +322,7 @@ func (p PointerWCtx) Parent() *cgnode {
 }
 
 func (p PointerWCtx) String() string {
-	return fmt.Sprintf("n%d@%s", p.n, p.cgn.contourkFull())
+	return fmt.Sprintf("n%d&%s", p.n, p.cgn.contourkFull())
 }
 
 // PointsTo returns the points-to set of this pointer.

@@ -74,10 +74,31 @@ func (g *Graph) CreateNode(fn *ssa.Function) *Node {
 	return n
 }
 
+// bz: New returns a new Graph with the specified root node.
+func NewWCtx(root *ssa.Function, idx int) *Graph {
+	g := &Graph{Nodes: make(map[*ssa.Function]*Node)}
+	g.Root = g.CreateNodeWCtx(root, idx)
+	return g
+}
+
+// bz: CreateNode returns the Node for fn, creating it if not present.
+func (g *Graph) CreateNodeWCtx(fn *ssa.Function, idx int) *Node {
+	n, ok := g.Nodes[fn]
+	if !ok {
+		n = &Node{Func: fn, Idx: idx, ID: len(g.Nodes)}
+		g.Nodes[fn] = n
+	}
+	return n
+}
+
 // A Node represents a node in a call graph.
+// bz: add uint32 type here (copied from analysis.go.nodeid type, since cannot share),
+// use this for context-sensitive to retrieve cgn
+// also updated the related functions in this file, skip their comments
 type Node struct {
 	Func *ssa.Function // the function this node represents
-	ID   int           // 0-based sequence number
+	Idx  int           // == index in a.cgnodes[] in analysis
+	ID   int           // 0-based sequence number  ----> bz: useful ??
 	In   []*Edge       // unordered set of incoming call edges (n.In[*].Callee == n)
 	Out  []*Edge       // unordered set of outgoing call edges (n.Out[*].Caller == n)
 }

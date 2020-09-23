@@ -90,13 +90,14 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 	// BUT we want to directly query after running pointer analysis, not run after each query...
 	// from the code@https://github.tamu.edu/jeffhuang/go2/blob/master/race_checker/pointerAnalysis.go
 	// seems like we only query pointers, so CURRENTLY only record for pointers in app methods
-	// go to commit@acb4db0349f131f8d10ddbec6d4fb686258becca to check original code
-	if cgn == nil {
-		if a.config.DEBUG {
-			fmt.Println("nil cgn in setValueNode(): v:" + v.String())
-		}
+	// -> go to commit@acb4db0349f131f8d10ddbec6d4fb686258becca (or comment out below for now)
+	// to check original code
+	if cgn == nil {  //bz: this might be the root cgn, might not ...
+		//if a.config.DEBUG {
+		//	fmt.Println("nil cgn in setValueNode(): v:" + v.String())
+		//}
 		return
-	} //bz: root cgn
+	}
 	if a.withinScope(cgn.fn.String()) {
 		t := v.Type()
 		if a.config.DEBUG {
@@ -254,7 +255,7 @@ func (a *analysis) makeFunctionObjectWithContext(caller *cgnode, fn *ssa.Functio
 		//origin: case 2: fn is make closure -> we checked before calling this, now needs to create it
 		// and will update the a.closures[] outside
 		// !! for origin, this is the only place triggering context switch !!
-		obj := a.makeCGNodeAndRelated(fn, caller, callersite)
+		obj, _ := a.makeCGNodeAndRelated(fn, caller, callersite)
 		return obj, true
 	}
 
@@ -266,10 +267,9 @@ func (a *analysis) makeFunctionObjectWithContext(caller *cgnode, fn *ssa.Functio
 
 	//create a callee for THIS caller context if available, not every caller context
 	var newFnIdx = make([]int, 1)
-	obj := a.makeCGNodeAndRelated(fn, caller, callersite)
+	obj, fnIdx := a.makeCGNodeAndRelated(fn, caller, callersite)
 
 	//update
-	fnIdx := len(a.cgnodes) - 1 // last element of a.cgnodes
 	newFnIdx[0] = fnIdx
 
 	//update fn2cgnodeIdx
@@ -317,7 +317,7 @@ func (a *analysis) equalContext(existCSs []*callsite, cur *callsite, curCallerCS
 }
 
 //bz: continue with makeFunctionObjectWithContext (kcfa), create cgnode for one caller context as well as its param/result
-func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, callersite *callsite) nodeid {
+func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, callersite *callsite) (nodeid, int) {
 	// obj is the function object (identity, params, results).
 	obj := a.nextNode()
 	//doing task of makeCGNode()
@@ -368,13 +368,15 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 	}
 
 	a.cgnodes = append(a.cgnodes, cgn)
+	fnIdx := len(a.cgnodes) - 1 // last element of a.cgnodes
+	cgn.idx = fnIdx //initialize -> only here
 
 	//make param and result nodes
 	a.makeParamResultNodes(fn, obj, cgn)
 
 	// Queue it up for constraint processing.
 	a.genq = append(a.genq, cgn)
-	return obj
+	return obj, fnIdx
 }
 
 //bz: continue with makeFunctionObjectWithContext (kcfa), update a.fn2cgnodeIdx for fn
@@ -1625,6 +1627,8 @@ func (a *analysis) makeCGNode(fn *ssa.Function, obj nodeid, callersite *callsite
 	singlecs := a.createSingleCallSite(callersite)
 	cgn := &cgnode{fn: fn, obj: obj, callersite: singlecs}
 	a.cgnodes = append(a.cgnodes, cgn)
+	fnIdx := len(a.cgnodes) - 1 // last element of a.cgnodes
+	cgn.idx = fnIdx //initialize --> only here
 	return cgn
 }
 
@@ -1803,7 +1807,7 @@ func (a *analysis) generate() {
 	root := a.genRootCalls()
 
 	if a.config.BuildCallGraph {
-		a.result.CallGraph = callgraph.New(root.fn)
+		a.result.CallGraph = callgraph.NewWCtx(root.fn, root.idx) //bz: cast
 	}
 
 	// Create nodes and constraints for all methods of all types

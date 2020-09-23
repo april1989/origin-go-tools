@@ -115,7 +115,7 @@ type analysis struct {
 	prog        *ssa.Program                // the program being analyzed
 	log         io.Writer                   // log stream; nil to disable
 	panicNode   nodeid                      // sink for panic, source for recover
-	nodes       []*node                     // indexed by nodeid --> bz: pointer/reference/var
+	nodes       []*node                     // indexed by nodeid --> bz: pointer/reference/var/func/cgn
 	flattenMemo map[types.Type][]*fieldInfo // memoization of flatten()
 	trackTypes  map[types.Type]bool         // memoization of shouldTrack()
 	constraints []constraint                // set of constraints
@@ -220,6 +220,7 @@ func (a *analysis) computeTrackBits() {
 		}
 	}
 }
+
 
 // Analyze runs the pointer analysis with the scope and options
 // specified by config, and returns the (synthetic) root of the callgraph.
@@ -370,7 +371,7 @@ func Analyze(config *Config) (result *ResultWCtx, err error) { //Result
 	// Create callgraph.Nodes in deterministic order.
 	if cg := a.result.CallGraph; cg != nil {
 		for _, caller := range a.cgnodes {
-			cg.CreateNode(caller.fn)
+			cg.CreateNodeWCtx(caller.fn, caller.idx) //bz: changed
 		}
 	}
 
@@ -382,6 +383,180 @@ func Analyze(config *Config) (result *ResultWCtx, err error) { //Result
 				a.callEdge(caller, site, nodeid(callee))
 			}
 		}
+	}
+
+	return a.result, nil
+}
+
+// bz: lazy way
+// AnalyzeWCtx runs the pointer analysis with the scope and options
+// specified by config, and returns the (synthetic) root of the callgraph.
+//
+// Pointer analysis of a transitively closed well-typed program should
+// always succeed.  An error can occur only due to an internal bug.
+//
+func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
+	if config.Mains == nil {
+		return nil, fmt.Errorf("no main/test packages to analyze (check $GOROOT/$GOPATH)")
+	}
+	defer func() {
+		if p := recover(); p != nil {
+			err = fmt.Errorf("internal error in pointer analysis: %v (please report this bug)", p)
+			fmt.Fprintln(os.Stderr, "Internal panic in pointer analysis:")
+			debug.PrintStack()
+		}
+	}()
+
+	a := &analysis{
+		config:      config,
+		log:         config.Log,
+		prog:        config.prog(),
+		globalval:   make(map[ssa.Value]nodeid),
+		globalobj:   make(map[ssa.Value]nodeid),
+		flattenMemo: make(map[types.Type][]*fieldInfo),
+		trackTypes:  make(map[types.Type]bool),
+		atFuncs:     make(map[*ssa.Function]bool),
+		hasher:      typeutil.MakeHasher(),
+		intrinsics:  make(map[*ssa.Function]intrinsic),
+		//result: &Result{
+		//	Queries:         make(map[ssa.Value]Pointer),
+		//	IndirectQueries: make(map[ssa.Value]Pointer),
+		//},
+		result: &ResultWCtx{
+			Queries:         make(map[ssa.Value][]PointerWCtx),
+			IndirectQueries: make(map[ssa.Value][]PointerWCtx),
+		},
+		deltaSpace: make([]int, 0, 100),
+		//bz: i did not clear the following two after offline TODO: do I ?
+		fn2cgnodeIdx: make(map[*ssa.Function][]int),
+		closures:     make(map[*ssa.Function]*Ctx2nodeid),
+	}
+
+	if false {
+		a.log = os.Stderr // for debugging crashes; extremely verbose
+	}
+
+	var mode string //which pta is running
+	if a.config.Origin {
+		mode = strconv.Itoa(a.config.K) + "-ORIGIN-SENSITIVE"
+	} else if a.config.CallSiteSensitive {
+		mode = strconv.Itoa(a.config.K) + "-CFA"
+	} else {
+		mode = "CONTEXT-INSENSITIVE"
+	}
+
+	if a.log != nil {
+		fmt.Fprintln(a.log, "==== Starting analysis: " + mode)
+	}
+	fmt.Println(" *** MODE: " + mode + " *** ")
+
+	// Pointer analysis requires a complete program for soundness.
+	// Check to prevent accidental misconfiguration.
+	for _, pkg := range a.prog.AllPackages() {
+		// (This only checks that the package scope is complete,
+		// not that func bodies exist, but it's a good signal.)
+		if !pkg.Pkg.Complete() {
+			return nil, fmt.Errorf(`pointer analysis requires a complete program yet package %q was incomplete`, pkg.Pkg.Path())
+		}
+	}
+
+	if reflect := a.prog.ImportedPackage("reflect"); reflect != nil {
+		rV := reflect.Pkg.Scope().Lookup("Value")
+		a.reflectValueObj = rV
+		a.reflectValueCall = a.prog.LookupMethod(rV.Type(), nil, "Call")
+		a.reflectType = reflect.Pkg.Scope().Lookup("Type").Type().(*types.Named)
+		a.reflectRtypeObj = reflect.Pkg.Scope().Lookup("rtype")
+		a.reflectRtypePtr = types.NewPointer(a.reflectRtypeObj.Type())
+
+		// Override flattening of reflect.Value, treating it like a basic type.
+		tReflectValue := a.reflectValueObj.Type()
+		a.flattenMemo[tReflectValue] = []*fieldInfo{{typ: tReflectValue}}
+
+		// Override shouldTrack of reflect.Value and *reflect.rtype.
+		// Always track pointers of these types.
+		a.trackTypes[tReflectValue] = true
+		a.trackTypes[a.reflectRtypePtr] = true
+
+		a.rtypes.SetHasher(a.hasher)
+		a.reflectZeros.SetHasher(a.hasher)
+	}
+	if runtime := a.prog.ImportedPackage("runtime"); runtime != nil {
+		a.runtimeSetFinalizer = runtime.Func("SetFinalizer")
+	}
+	a.computeTrackBits() //bz: use when there is input queries before running this analysis; we do not need this for now?
+
+	a.generate()   //bz: a preprocess for reflection/runtime/import libs
+	a.showCounts() //bz: print out size ...
+
+	if optRenumber {
+		a.renumber()
+	}
+
+	N := len(a.nodes) // excludes solver-created nodes
+
+	if optHVN { //bz: default true
+		if debugHVNCrossCheck { //default : false
+			// Cross-check: run the solver once without
+			// optimization, once with, and compare the
+			// solutions.
+			savedConstraints := a.constraints
+
+			a.solve()
+			a.dumpSolution("A.pts", N)
+
+			// Restore.
+			a.constraints = savedConstraints
+			for _, n := range a.nodes {
+				n.solve = new(solverState)
+			}
+			a.nodes = a.nodes[:N]
+
+			// rtypes is effectively part of the solver state.
+			a.rtypes = typeutil.Map{}
+			a.rtypes.SetHasher(a.hasher)
+		}
+
+		a.hvn()
+	}
+
+	if debugHVNCrossCheck {
+		runtime.GC()
+		runtime.GC()
+	}
+
+	a.solve() //bz: officially starts here
+
+	// Compare solutions.
+	if optHVN && debugHVNCrossCheck {
+		a.dumpSolution("B.pts", N)
+
+		if !diff("A.pts", "B.pts") {
+			return nil, fmt.Errorf("internal error: optimization changed solution")
+		}
+	}
+
+	// Create callgraph.Nodes in deterministic order.
+	if cg := a.result.CallGraph; cg != nil {
+		for _, caller := range a.cgnodes {
+			cg.CreateNodeWCtx(caller.fn, caller.idx) //bz: changed
+		}
+	}
+
+	// Add dynamic edges to call graph.
+	var space [100]int
+	for _, caller := range a.cgnodes {
+		for _, site := range caller.sites {
+			for _, callee := range a.nodes[site.targets].solve.pts.AppendTo(space[:0]) {
+				a.callEdge(caller, site, nodeid(callee))
+			}
+		}
+	}
+
+	//bz: finally update result for a.cgnodes[]  --> do hard copy, just in case user mess up the indexes
+	//BUT giving pointer of cgnode is also dangerous ...
+	a.result.cgnodes = make([]*cgnode, len(a.cgnodes))
+	for idx, cgn := range a.cgnodes {
+		a.result.cgnodes[idx] = cgn
 	}
 
 	return a.result, nil
@@ -401,7 +576,7 @@ func (a *analysis) callEdge(caller *cgnode, site *callsite, calleeid nodeid) {
 		// (to wrappers) to arise due to the elimination of
 		// context information, but I haven't observed any.
 		// Understand this better.
-		callgraph.AddEdge(cg.CreateNode(caller.fn), site.instr, cg.CreateNode(callee.fn))
+		callgraph.AddEdge(cg.CreateNodeWCtx(caller.fn, caller.idx), site.instr, cg.CreateNodeWCtx(callee.fn, callee.idx)) //bz: changed
 	}
 
 	if a.log != nil {

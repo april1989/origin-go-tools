@@ -107,7 +107,7 @@ func main() {
 
 	//*** compute pta here
 	start := time.Now() //performance
-	result, err := pointer.Analyze(ptaConfig) // conduct pointer analysis
+	result, err := pointer.AnalyzeWCtx(ptaConfig) // conduct pointer analysis
 	t := time.Now()
 	elapsed := t.Sub(start)
 	if err != nil {
@@ -118,15 +118,25 @@ func main() {
 	fmt.Println("\nDone  -- PTA/CG Build; Using " + elapsed.String() + ". \nGo check gologfile for detail. ")
 
 	if ptaConfig.DEBUG {
+		//bz: also a reference of how to use new APIs here
+		wantCtx := true //bz: if user want context not only function
 		fmt.Println("\nWe are going to print out call graph. If not desired, turn off DEBUG.")
-		cgns := result.CallGraph.Nodes
-		fmt.Println("#CGNode: " + strconv.Itoa(len(cgns)))
-		for _, cgn := range cgns {
-			if !strings.Contains(cgn.Func.String(), "command-line-arguments.") { continue } //we only want the app call edges
-			fmt.Println(cgn.String())
-			outs := cgn.Out
+		callers := result.CallGraph.Nodes
+		fmt.Println("#CGNode: " + strconv.Itoa(len(callers)))
+		for _, caller := range callers {
+			if !strings.Contains(caller.Func.String(), "command-line-arguments.") { continue } //we only want the app call edges
+			if wantCtx {
+				fmt.Println(result.GetCGNode(caller.Idx).String()) //bz: with context
+			}else {
+				fmt.Println(caller.String()) //bz: without context
+			}
+			outs := caller.Out
 			for _, out := range outs {
-				fmt.Println( "  -> " + out.Callee.String())
+				if wantCtx {
+					fmt.Println( "  -> " + result.GetCGNode(out.Callee.Idx).String()) //bz: with context
+				}else{
+					fmt.Println( "  -> " + out.Callee.String()) //bz: without context
+				}
 			}
 		}
 
@@ -136,13 +146,13 @@ func main() {
 		fmt.Println("#Queries: " + strconv.Itoa(len(queries)) + "\n#Indirect Queries: " + strconv.Itoa(len(inQueries)))
 		fmt.Println("Queries Detail: ")
 		for v, ps := range queries {
-			for _, p := range ps {
+			for _, p := range ps { //p -> types.Pointer: includes its context
 				fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
 			}
 		}
 		fmt.Println("\nIndirect Queries Detail: ")
 		for v, ps := range inQueries {
-			for _, p := range ps {
+			for _, p := range ps { //p -> types.Pointer: includes its context
 				fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
 			}
 		}

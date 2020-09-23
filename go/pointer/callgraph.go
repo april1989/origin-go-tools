@@ -22,6 +22,7 @@ type cgnode struct {
 	obj        nodeid      // start of this contour's object block
 	sites      []*callsite // ordered list of callsites within this function
 	callersite []*callsite   // where called from, if known; nil for shared contours ----> bz: k-caller site
+	idx        int         // the index of this in a.cgnodes[]
 }
 
 // contour returns a description of this node's contour.
@@ -69,7 +70,7 @@ func (n *cgnode) contourkFull() string {
 }
 
 func (n *cgnode) String() string {
-	return fmt.Sprintf("cg%d:%s%s", n.obj, n.fn, n.contourkFull())
+	return fmt.Sprintf("cg%d:%s@%s", n.obj, n.fn, n.contourkFull())
 }
 
 // A callsite represents a single call site within a cgnode;
