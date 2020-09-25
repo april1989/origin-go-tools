@@ -25,6 +25,16 @@ type cgnode struct {
 	idx        int         // the index of this in a.cgnodes[]
 }
 
+//bz: add API for users
+func (n *cgnode) GetFunc() *ssa.Function {
+	return n.fn
+}
+
+//bz: add API for users
+func (n *cgnode) GetContext() []*callsite {
+	return n.callersite
+}
+
 // contour returns a description of this node's contour.
 //bz: only used for log
 func (n *cgnode) contour(isKcfa bool) string {
@@ -99,7 +109,6 @@ func (c *callsite) equal(o *callsite) bool {
 	}
 }
 
-
 func (c *callsite) String() string {
 	if c.instr != nil {
 		//return c.instr.Common().Description() //bz: original code
@@ -115,7 +124,6 @@ func (c *callsite) pos() token.Pos {
 	}
 	return token.NoPos
 }
-
 
 //bz: to record the 1callsite from caller to nodeid for makeclosure, work together with a.closures[]
 //TODO: full callchain ??

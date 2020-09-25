@@ -130,8 +130,8 @@ func main() {
 			}else {
 				fmt.Println(caller.String()) //bz: without context
 			}
-			outs := caller.Out
-			for _, out := range outs {
+			outs := caller.Out // caller --> callee
+			for _, out := range outs { //callees
 				if wantCtx {
 					fmt.Println( "  -> " + result.GetCGNode(out.Callee.Idx).String()) //bz: with context
 				}else{

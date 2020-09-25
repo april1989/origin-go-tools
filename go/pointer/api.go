@@ -316,7 +316,7 @@ type PointerWCtx struct {
 	cgn *cgnode
 }
 
-//bz: return the context of cgn which calls setValueNode();
+//bz: return the context of cgn which calls setValueNode() to record this pointer;
 func (p PointerWCtx) GetMyContext() []*callsite {
 	return p.cgn.callersite
 }
