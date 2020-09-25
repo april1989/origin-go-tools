@@ -82,11 +82,11 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 		fmt.Fprintf(a.log, "\tval[%s] = n%d  (%T)\n", v.Name(), id, v)
 	}
 
-	// Due to context-sensitivity, we may encounter the same Value
+	// Default: Due to context-sensitivity, we may encounter the same Value
 	// in many contexts. We merge them to a canonical node, since
 	// that's what all clients want.
 	// Record the (v, id) relation if the client has queried pts(v).
-	// !!!! bz: this part is evil ... they may considered the performance issue,
+	// BZ: !!!! this part is evil ... they may considered the performance issue,
 	// BUT we want to directly query after running pointer analysis, not run after each query...
 	// from the code@https://github.tamu.edu/jeffhuang/go2/blob/master/race_checker/pointerAnalysis.go
 	// seems like we only query pointers, so CURRENTLY only record for pointers in app methods
