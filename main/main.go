@@ -34,6 +34,7 @@ func findMainPackages(pkgs []*ssa.Package) ([]*ssa.Package, error) {
 // godel2: mytest/dine3-chan-race.go, mytest/no-race-mut-bad.go, mytest/prod-cons-race.go
 // ../go2/race_checker/GoBench/Kubernetes/88331/main.go
 // ../go2/race_checker/GoBench/Grpc/3090/main.go
+// ../go2/race_checker/GoBench/Grpc/1748/main.go
 // ../go2/race_checker/GoBench/Istio/8967/main.go
 //
 //CURRENT:
@@ -96,9 +97,9 @@ func main() {
 		BuildCallGraph:    true,
 		Log:               logfile,
 		//kcfa
-		CallSiteSensitive: true,
+		//CallSiteSensitive: true,
 		//origin
-		//Origin:            true,
+		Origin:            true,
 		//shared config
 		K:                 2,
 		LimitScope:        true, //bz: only consider app methods now

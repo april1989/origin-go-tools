@@ -228,6 +228,7 @@ func (a *analysis) computeTrackBits() {
 // Pointer analysis of a transitively closed well-typed program should
 // always succeed.  An error can occur only due to an internal bug.
 //
+// bz: updated, works for context-sensitive but result does not include context-sensitive call graph
 func Analyze(config *Config) (result *ResultWCtx, err error) { //Result
 	if config.Mains == nil {
 		return nil, fmt.Errorf("no main/test packages to analyze (check $GOROOT/$GOPATH)")

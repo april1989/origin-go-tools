@@ -92,7 +92,7 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 	// seems like we only query pointers, so CURRENTLY only record for pointers in app methods
 	// -> go to commit@acb4db0349f131f8d10ddbec6d4fb686258becca (or comment out below for now)
 	// to check original code
-	if cgn == nil {  //bz: this might be the root cgn, might not ...
+	if cgn == nil { //bz: this might be the root cgn, might not ...
 		//if a.config.DEBUG {
 		//	fmt.Println("nil cgn in setValueNode(): v:" + v.String())
 		//}
@@ -110,7 +110,7 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 				// First time?  Create the canonical query node.
 				ptrs = make([]PointerWCtx, 1)
 				ptrs[0] = ptr
-			}else{
+			} else {
 				ptrs = append(ptrs, ptr)
 			}
 			a.result.Queries[v] = ptrs
@@ -124,7 +124,7 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 				// First time? Create the canonical indirect query node.
 				ptrs = make([]PointerWCtx, 1)
 				ptrs[0] = ptr
-			}else{
+			} else {
 				ptrs = append(ptrs, ptr)
 			}
 			a.result.IndirectQueries[v] = ptrs
@@ -132,6 +132,7 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 		}
 	}
 
+	////bz: original code:
 	//if _, ok := a.config.Queries[v]; ok {
 	//	t := v.Type()
 	//	ptr, ok := a.result.Queries[v]
@@ -327,7 +328,7 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 		single := a.createSingleCallSite(callersite)
 		cgn = &cgnode{fn: fn, obj: obj, callersite: single}
 
-	} else { // other functions
+	} else {                 // other functions
 		if a.config.Origin { //bz: for origin-sensitive
 			//if strings.Contains(fn.String(), "command-line-arguments.Producer") {
 			//	fmt.Println()
@@ -369,7 +370,7 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 
 	a.cgnodes = append(a.cgnodes, cgn)
 	fnIdx := len(a.cgnodes) - 1 // last element of a.cgnodes
-	cgn.idx = fnIdx //initialize -> only here
+	cgn.idx = fnIdx             //initialize -> only here
 
 	//make param and result nodes
 	a.makeParamResultNodes(fn, obj, cgn)
@@ -917,6 +918,7 @@ func (a *analysis) genStaticCall(caller *cgnode, site *callsite, call *ssa.CallC
 	//bz: for origin-sensitive, we have two cases:
 	//case 1: no closure, directly invoke static function: e.g., go Producer(t0, t1, t3), we create a new context for it
 	//case 2: has closure: make closure has been created earlier, here find the çreated obj and use its context
+	//case 3: no closure, but invoke virtual function: e.g., go (*ccBalancerWrapper).watcher(t0), we create a new context for it
 	if a.considerMyContext(fn.String()) {
 		//bz: simple brute force solution; start to be kcfa from main.main
 		if a.config.DEBUG {
@@ -926,15 +928,14 @@ func (a *analysis) genStaticCall(caller *cgnode, site *callsite, call *ssa.CallC
 		if ok { //detail check for different context-sensitivities
 			if a.config.DEBUG { //debug
 				if a.config.CallSiteSensitive {
-					fmt.Println("        BUT ssa.GO -- " + site.instr.String() + "   SKIP.")
-				} else if a.config.Origin {
 					fmt.Println("        BUT ssa.GO -- " + site.instr.String() + "   LET'S SEE.")
 				}
 			}
 			obj, ok, _ = a.existClosure(fn, caller.callersite[0])
 			if ok {
 				isNew = true //exist closure, add its constraints
-			} else if a.considerOrigin(fn.String()) { //bz: case 1: we need a new contour and a new context for origin
+			//} else if a.considerOrigin(fn.String()) { //bz: case 1: we need a new contour and a new context for origin
+			} else { //bz: case 1 and 3: we need a new contour and a new context for origin TODO: debug for origin
 				obj, isNew = a.makeFunctionObjectWithContext(caller, fn, site)
 			}
 		} else {
@@ -1310,7 +1311,7 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 					if isClosure {
 						panic("WRONG PATH @objectNode() FOR MAKE CLOSURE: " + v.String())
 					}
-				}else { //normal case
+				} else { //normal case
 					obj = a.makeFunctionObject(v, nil)
 				}
 
@@ -1628,7 +1629,7 @@ func (a *analysis) makeCGNode(fn *ssa.Function, obj nodeid, callersite *callsite
 	cgn := &cgnode{fn: fn, obj: obj, callersite: singlecs}
 	a.cgnodes = append(a.cgnodes, cgn)
 	fnIdx := len(a.cgnodes) - 1 // last element of a.cgnodes
-	cgn.idx = fnIdx //initialize --> only here
+	cgn.idx = fnIdx             //initialize --> only here
 	return cgn
 }
 
@@ -1660,7 +1661,7 @@ func (a *analysis) genRootCalls() *cgnode {
 			}
 			if a.considerMyContext(fn.String()) { //bz: give the main method a context, instead of using shared contour
 				a.copy(targets, a.valueNodeInvoke(root, site, fn), 1)
-			}else {
+			} else {
 				a.copy(targets, a.valueNode(fn), 1)
 			}
 		}

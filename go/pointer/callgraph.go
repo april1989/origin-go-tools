@@ -64,15 +64,17 @@ func (n *cgnode) contourkFull() string {
 			s = s  + strconv.Itoa(idx) + ":" + cs.instr.String() + "@" + cs.instr.Parent().String() + "; "
 			continue
 		}
-		if n.fn.String() == "command-line-arguments.main" { //bz: the ctx is "called to synthetic/intrinsic func@n2"; which is root node calling to main.main
-			s = s + strconv.Itoa(idx) + ":root call to command-line-arguments.main"
-			mainID = cs.targets
-			continue
-		}
-		if cs.targets == mainID { //bz: same as above
-			s = s + strconv.Itoa(idx) + ":root call to command-line-arguments.main"
-			continue
-		}
+		//if n.fn.String() == "command-line-arguments.main" { //bz: the ctx is "called to synthetic/intrinsic func@n?"; which is root node calling to main.main
+		//	s = s + strconv.Itoa(idx) + ":root call to command-line-arguments.main"
+		//	if mainID == 0 {
+		//		mainID = cs.targets //bz: mark it just once; this is no real use, just convenient for debug
+		//	}
+		//	continue
+		//}
+		//if cs.targets == mainID { //bz: same as above
+		//	s = s + strconv.Itoa(idx) + ":root call to command-line-arguments.main"
+		//	continue
+		//}
 		s = s + strconv.Itoa(idx) + ":" + "called to synthetic/intrinsic func@" + cs.targets.String() + "; " //func id + cgnode id
 	}
 	s = s + "]"
