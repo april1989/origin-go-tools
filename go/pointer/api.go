@@ -187,6 +187,11 @@ type ResultWCtx struct {
 	main            *cgnode               // bz: the cgnode for main method
 }
 
+//bz: user API: get *cgnode by *ssa.Function
+func (r *ResultWCtx) GetCGNodebyFunc(f *ssa.Function) *cgnode {
+	return r.cgnodes[r.CallGraph.Nodes[f].Idx]
+}
+
 //bz: user API: get main cgn
 func (r *ResultWCtx) GetMain() *cgnode {
 	return r.main
