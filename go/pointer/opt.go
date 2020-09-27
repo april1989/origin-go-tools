@@ -9,7 +9,9 @@ package pointer
 //
 // TODO(adonovan): rename file "renumber.go"
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // renumber permutes a.nodes so that all nodes within an addressable
 // object appear before all non-addressable nodes, maintaining the
@@ -93,16 +95,25 @@ func (a *analysis) renumber() {
 	// Now renumber all existing nodeids to use the new node permutation.
 	// It is critical that all reachable nodeids are accounted for!
 
-	//bz: we are not using this, comment off
-	//// Renumber nodeids in queried Pointers.
-	//for v, ptr := range a.result.Queries {
-	//	ptr.n = renumbering[ptr.n]
-	//	a.result.Queries[v] = ptr
-	//}
-	//for v, ptr := range a.result.IndirectQueries {
-	//	ptr.n = renumbering[ptr.n]
-	//	a.result.IndirectQueries[v] = ptr
-	//}
+	//bz: we are now using this, update for all recorded queries
+	// Renumber nodeids in queried Pointers.
+	for v, ptrs := range a.result.Queries {
+		tmp := make([]PointerWCtx, len(ptrs))
+		for i, ptr := range ptrs {
+			ptr.n = renumbering[ptr.n]
+			tmp[i] = ptr
+		}
+		a.result.Queries[v] = tmp
+	}
+	for v, ptrs := range a.result.IndirectQueries {
+		tmp := make([]PointerWCtx, len(ptrs))
+		for i, ptr := range ptrs {
+			ptr.n = renumbering[ptr.n]
+			tmp[i] = ptr
+		}
+		a.result.IndirectQueries[v] = tmp
+	}
+	//// bz: we are not using this, comment off
 	//for _, queries := range a.config.extendedQueries {
 	//	for _, query := range queries {
 	//		if query.ptr != nil {
@@ -124,6 +135,11 @@ func (a *analysis) renumber() {
 	// Renumber nodeids in the call graph.
 	for _, cgn := range a.cgnodes {
 		cgn.obj = renumbering[cgn.obj]
+		if a.config.Mains[0].Func("main") == cgn.fn {
+			// bz: it renumbered main cgn, we need to update mainID in pointer/callgraph.go
+			// should be only one callsite, which is also a fake one from root
+			UpdateMainID(cgn.callersite[0].targets)
+		}
 		for _, site := range cgn.sites {
 			site.targets = renumbering[site.targets]
 		}

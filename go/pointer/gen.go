@@ -840,7 +840,7 @@ func (a *analysis) shouldUseContext(fn *ssa.Function) bool {
 	return true
 }
 
-// bz: whehter this is a main method
+// bz: whehter this is a main method, but actually we only use Mains[0]...
 // TODO: do we also include init?
 //       too much library methods .... cannot do this for all library methods ...
 func (a *analysis) isMainMethod(method *ssa.Function) bool {
@@ -934,7 +934,6 @@ func (a *analysis) genStaticCall(caller *cgnode, site *callsite, call *ssa.CallC
 			obj, ok, _ = a.existClosure(fn, caller.callersite[0])
 			if ok {
 				isNew = true //exist closure, add its constraints
-			//} else if a.considerOrigin(fn.String()) { //bz: case 1: we need a new contour and a new context for origin
 			} else { //bz: case 1 and 3: we need a new contour and a new context for origin TODO: debug for origin
 				obj, isNew = a.makeFunctionObjectWithContext(caller, fn, site)
 			}

@@ -121,20 +121,23 @@ func main() {
 	if ptaConfig.DEBUG {
 		//bz: also a reference of how to use new APIs here
 		wantCtx := true //bz: if user want context not only function
+		main := result.GetMain()
+		fmt.Println("Main CGNode: " + main.String())
+
 		fmt.Println("\nWe are going to print out call graph. If not desired, turn off DEBUG.")
 		callers := result.CallGraph.Nodes
 		fmt.Println("#CGNode: " + strconv.Itoa(len(callers)))
 		for _, caller := range callers {
 			if !strings.Contains(caller.Func.String(), "command-line-arguments.") { continue } //we only want the app call edges
 			if wantCtx {
-				fmt.Println(result.GetCGNode(caller.Idx).String()) //bz: with context
+				fmt.Println(result.GetCGNode(caller).String()) //bz: with context
 			}else {
 				fmt.Println(caller.String()) //bz: without context
 			}
 			outs := caller.Out // caller --> callee
 			for _, out := range outs { //callees
 				if wantCtx {
-					fmt.Println( "  -> " + result.GetCGNode(out.Callee.Idx).String()) //bz: with context
+					fmt.Println( "  -> " + result.GetCGNode(out.Callee).String()) //bz: with context
 				}else{
 					fmt.Println( "  -> " + out.Callee.String()) //bz: without context
 				}

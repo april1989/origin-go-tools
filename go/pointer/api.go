@@ -184,13 +184,18 @@ type ResultWCtx struct {
 	IndirectQueries map[ssa.Value][]PointerWCtx // pts(*v) for each v in setValueNode().
 	Warnings        []Warning             // warnings of unsoundness
 	cgnodes         []*cgnode             // bz: for user API, BUT do not expose to user
+	main            *cgnode               // bz: the cgnode for main method
+}
+
+//bz: user API: get main cgn
+func (r *ResultWCtx) GetMain() *cgnode {
+	return r.main
 }
 
 //bz: user API: get cgn with its function (*ssa.Function) and context ([]*callsite)
-func (r *ResultWCtx) GetCGNode(idx int) *cgnode {
-	return r.cgnodes[idx]
+func (r *ResultWCtx) GetCGNode(node *callgraph.Node) *cgnode {
+	return r.cgnodes[node.Idx]
 }
-
 
 // A Pointer is an equivalence class of pointer-like values.
 //

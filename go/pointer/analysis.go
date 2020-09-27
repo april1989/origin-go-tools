@@ -558,6 +558,10 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 	a.result.cgnodes = make([]*cgnode, len(a.cgnodes))
 	for idx, cgn := range a.cgnodes {
 		a.result.cgnodes[idx] = cgn
+		if cgn.fn == a.config.Mains[0].Func("main") {
+			//this is the main methid in app
+			a.result.main = cgn
+		}
 	}
 
 	return a.result, nil

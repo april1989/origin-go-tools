@@ -16,6 +16,11 @@ import (
 
 var mainID nodeid //bz: record the target of root call to main method ID
 
+//bz: update mainID, since opt.go will renumbering everything and change this
+func UpdateMainID(newid nodeid) {
+	mainID = newid
+}
+
 //bz: this is the cgnode created by pointer analysis -> we force to use k callersite
 type cgnode struct {
 	fn         *ssa.Function
@@ -25,12 +30,12 @@ type cgnode struct {
 	idx        int         // the index of this in a.cgnodes[]
 }
 
-//bz: add API for users
+//bz: add API for users; get *ssa.Function
 func (n *cgnode) GetFunc() *ssa.Function {
 	return n.fn
 }
 
-//bz: add API for users
+//bz: add API for users; get contexts
 func (n *cgnode) GetContext() []*callsite {
 	return n.callersite
 }
@@ -64,17 +69,17 @@ func (n *cgnode) contourkFull() string {
 			s = s  + strconv.Itoa(idx) + ":" + cs.instr.String() + "@" + cs.instr.Parent().String() + "; "
 			continue
 		}
-		//if n.fn.String() == "command-line-arguments.main" { //bz: the ctx is "called to synthetic/intrinsic func@n?"; which is root node calling to main.main
-		//	s = s + strconv.Itoa(idx) + ":root call to command-line-arguments.main"
-		//	if mainID == 0 {
-		//		mainID = cs.targets //bz: mark it just once; this is no real use, just convenient for debug
-		//	}
-		//	continue
-		//}
-		//if cs.targets == mainID { //bz: same as above
-		//	s = s + strconv.Itoa(idx) + ":root call to command-line-arguments.main"
-		//	continue
-		//}
+		if n.fn.String() == "command-line-arguments.main" { //bz: the ctx is "called to synthetic/intrinsic func@n?"; which is root node calling to main.main
+			s = s + strconv.Itoa(idx) + ":root call to command-line-arguments.main"
+			if mainID == 0 { //bz: initial just once; this is no real use, just convenient for debug
+				mainID = cs.targets
+			}
+			continue
+		}
+		if cs.targets == mainID { //bz: same as above
+			s = s + strconv.Itoa(idx) + ":root call to command-line-arguments.main"
+			continue
+		}
 		s = s + strconv.Itoa(idx) + ":" + "called to synthetic/intrinsic func@" + cs.targets.String() + "; " //func id + cgnode id
 	}
 	s = s + "]"
