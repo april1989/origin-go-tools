@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 	"time"
 
 	"golang.org/x/tools/container/intsets"
@@ -186,6 +187,7 @@ func (a *analysis) sizeof(t types.Type) uint32 {
 
 // shouldTrack reports whether object type T contains (recursively)
 // any fields whose addresses should be tracked.
+// bz: NOW track all types DECLARED in the analyzed program, as long as itself is not a primitive/basic type
 func (a *analysis) shouldTrack(T types.Type) bool {
 	if a.track == trackAll {
 		return true // fast path
@@ -194,7 +196,7 @@ func (a *analysis) shouldTrack(T types.Type) bool {
 	if !ok {
 		a.trackTypes[T] = true // break cycles conservatively
 		// NB: reflect.Value, reflect.Type are pre-populated to true.
-		for _, fi := range a.flatten(T) {
+		for _, fi := range a.flatten(T) { // bz: see if track the fields of T
 			switch ft := fi.typ.Underlying().(type) {
 			case *types.Interface, *types.Signature:
 				track = true // needed for callgraph
@@ -218,10 +220,23 @@ func (a *analysis) shouldTrack(T types.Type) bool {
 				break
 			}
 		}
-		a.trackTypes[T] = track
-		if !track && a.log != nil {
-			fmt.Fprintf(a.log, "\ttype not tracked: %s\n", T)
+		// bz: here track == false --> this will topple the true assignment at the function beginning ...
+		// BUT we track all types declared in app
+		if !strings.Contains(T.String(), "command-line-arguments.") {
+			a.trackTypes[T] = track
+			if !track && a.log != nil {
+				fmt.Fprintf(a.log, "\ttype not tracked: %s\n", T)
+			}
+		}else { //bz: just log
+			if track && a.log != nil {
+				fmt.Fprintf(a.log, "\tforce type tracked: %s\n", T)
+			}
+			if a.config.DEBUG {
+				fmt.Println("force type tracked: " + T.String())
+			}
+			return true //bz: fake it to be true --> track it
 		}
+
 	}
 	return track
 }

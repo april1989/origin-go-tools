@@ -92,7 +92,7 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 	// seems like we only query pointers, so CURRENTLY only record for pointers in app methods
 	// -> go to commit@acb4db0349f131f8d10ddbec6d4fb686258becca (or comment out below for now)
 	// to check original code
-	if cgn == nil { //bz: this might be the root cgn, might not ...
+	if cgn == nil { //bz: this might be the root cgn, interface, etc.
 		//if a.config.DEBUG {
 		//	fmt.Println("nil cgn in setValueNode(): v:" + v.String())
 		//}
@@ -116,7 +116,7 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 			a.result.Queries[v] = ptrs
 			a.copy(ptr.n, id, a.sizeof(t))
 		}
-		//this condition is copied from go2: indirect queries
+		//bz: this condition is copied from go2: indirect queries
 		if underType, ok := v.Type().Underlying().(*types.Pointer); ok && CanPoint(underType.Elem()) {
 			ptr := PointerWCtx{a, a.addNodes(v.Type(), "query.indirect"), cgn}
 			ptrs, ok := a.result.IndirectQueries[v]

@@ -36,6 +36,7 @@ func findMainPackages(pkgs []*ssa.Package) ([]*ssa.Package, error) {
 // ../go2/race_checker/GoBench/Grpc/3090/main.go
 // ../go2/race_checker/GoBench/Grpc/1748/main.go
 // ../go2/race_checker/GoBench/Istio/8967/main.go
+// ../go2/race_checker/GoBench/Cockroach/27659/main.go
 //
 //CURRENT:
 // cmd/callgraph/testdata/src/pkg/pkg.go

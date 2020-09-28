@@ -190,7 +190,7 @@ func (a *analysis) warnf(pos token.Pos, format string, args ...interface{}) {
 func (a *analysis) computeTrackBits() {
 	if len(a.config.extendedQueries) != 0 {
 		// TODO(dh): only track the types necessary for the query.
-		a.track = trackAll //bz: we want this trackAll
+		a.track = trackAll //bz: we want this trackAll, but we do not set this
 		return
 	}
 	var queryTypes []types.Type
