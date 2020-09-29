@@ -18,7 +18,6 @@ import (
 	"sort"
 	"strconv"
 
-	"golang.org/x/tools/go/callgraph"
 	"golang.org/x/tools/go/ssa"
 	"golang.org/x/tools/go/types/typeutil"
 )
@@ -119,8 +118,8 @@ type analysis struct {
 	flattenMemo map[types.Type][]*fieldInfo // memoization of flatten()
 	trackTypes  map[types.Type]bool         // memoization of shouldTrack()
 	constraints []constraint                // set of constraints
-	cgnodes     []*cgnode                   // all cgnodes       --> bz: nodes in cg; will copy to callgraph.cg at the end
-	genq        []*cgnode                   // queue of functions to generate constraints for
+	cgnodes     []*cgnode        // all cgnodes       --> bz: nodes in cg; will copy to callgraph.cg at the end
+	genq        []*cgnode        // queue of functions to generate constraints for
 	intrinsics  map[*ssa.Function]intrinsic // non-nil values are summaries for intrinsic fns
 	globalval   map[ssa.Value]nodeid        // node for each global ssa.Value          ---> bz: localval/globalval: only used in valueNode() and setValueNode() for each function, will be nil.
 	localval    map[ssa.Value]nodeid        // node for each local ssa.Value           ---> bz: BUT the key will be replaced if multiple ctx exist
@@ -144,12 +143,11 @@ type analysis struct {
 	reflectZeros        typeutil.Map    // nodeid of canonical T-tagged object for zero value
 	runtimeSetFinalizer *ssa.Function   // runtime.SetFinalizer
 
-	//bz: record
+	//bz: my record
 	fn2cgnodeIdx        map[*ssa.Function][]int //bz: a map of fn with a set of its cgnodes represented by the indexes of cgnodes[]
-	// NOW also used for static and invoke calls
-	// TODO: may be should use nodeid not int (idx) ?
+	// NOW also used for static and invoke calls TODO: may be should use nodeid not int (idx) ?
 	closures            map[*ssa.Function]*Ctx2nodeid //bz: solution for makeclosure
-    result              *ResultWCtx //bz: our result, dump all
+    result              *ResultWCtx                   //bz: our result, dump all
 }
 
 // enclosingObj returns the first node of the addressable memory
@@ -372,7 +370,7 @@ func Analyze(config *Config) (result *ResultWCtx, err error) { //Result
 	// Create callgraph.Nodes in deterministic order.
 	if cg := a.result.CallGraph; cg != nil {
 		for _, caller := range a.cgnodes {
-			cg.CreateNodeWCtx(caller.fn, caller.idx) //bz: changed
+			cg.CreateNodeWCtx(caller) //bz: changed
 		}
 	}
 
@@ -536,12 +534,12 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 		}
 	}
 
-	// Create callgraph.Nodes in deterministic order.
-	if cg := a.result.CallGraph; cg != nil {
-		for _, caller := range a.cgnodes {
-			cg.CreateNodeWCtx(caller.fn, caller.idx) //bz: changed
-		}
-	}
+	//// Create callgraph.Nodes in deterministic order.
+	//if cg := a.result.CallGraph; cg != nil {
+	//	for _, caller := range a.cgnodes {
+	//		cg.CreateNodeWCtx(caller) //bz: changed
+	//	}
+	//}
 
 	// Add dynamic edges to call graph.
 	var space [100]int
@@ -553,11 +551,8 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 		}
 	}
 
-	//bz: finally update result for a.cgnodes[]  --> do hard copy, just in case user mess up the indexes
-	//BUT giving pointer of cgnode is also dangerous ...
-	a.result.cgnodes = make([]*cgnode, len(a.cgnodes))
-	for idx, cgn := range a.cgnodes {
-		a.result.cgnodes[idx] = cgn
+	//bz: just assign for the main method; not a good solution, will resolve later
+	for _, cgn := range a.cgnodes {
 		if cgn.fn == a.config.Mains[0].Func("main") {
 			//this is the main methid in app
 			a.result.main = cgn
@@ -581,7 +576,7 @@ func (a *analysis) callEdge(caller *cgnode, site *callsite, calleeid nodeid) {
 		// (to wrappers) to arise due to the elimination of
 		// context information, but I haven't observed any.
 		// Understand this better.
-		callgraph.AddEdge(cg.CreateNodeWCtx(caller.fn, caller.idx), site.instr, cg.CreateNodeWCtx(callee.fn, callee.idx)) //bz: changed
+		AddEdge(cg.CreateNodeWCtx(caller), site.instr, cg.CreateNodeWCtx(callee)) //bz: changed
 	}
 
 	if a.log != nil {

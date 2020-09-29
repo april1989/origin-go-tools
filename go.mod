@@ -3,7 +3,7 @@ module golang.org/x/tools
 go 1.11
 
 require (
-	github.com/llir/llvm v0.3.2 // indirect
+	github.com/llir/llvm v0.3.2
 	github.com/sirupsen/logrus v1.6.0
 	github.com/yuin/goldmark v1.2.1
 	golang.org/x/mod v0.3.0

@@ -36,9 +36,8 @@ func findMainPackages(pkgs []*ssa.Package) ([]*ssa.Package, error) {
 // ../go2/race_checker/GoBench/Grpc/3090/main.go
 // ../go2/race_checker/GoBench/Grpc/1748/main.go
 // ../go2/race_checker/GoBench/Istio/8967/main.go
-// ../go2/race_checker/GoBench/Cockroach/27659/main.go
+// ../go2/race_checker/GoBench/Cockroach/35501/main.go
 // ../go2/race_checker/GoBench/Etcd/9446/main.go
-
 //
 //CURRENT:
 // cmd/callgraph/testdata/src/pkg/pkg.go
@@ -131,16 +130,16 @@ func main() {
 		callers := result.CallGraph.Nodes
 		fmt.Println("#CGNode: " + strconv.Itoa(len(callers)))
 		for _, caller := range callers {
-			if !strings.Contains(caller.Func.String(), "command-line-arguments.") { continue } //we only want the app call edges
+			if !strings.Contains(caller.GetFunc().String(), "command-line-arguments.") { continue } //we only want the app call edges
 			if wantCtx {
-				fmt.Println(result.GetCGNode(caller).String()) //bz: with context
+				fmt.Println(caller.GetCGNode().String()) //bz: with context
 			}else {
 				fmt.Println(caller.String()) //bz: without context
 			}
 			outs := caller.Out // caller --> callee
 			for _, out := range outs { //callees
 				if wantCtx {
-					fmt.Println( "  -> " + result.GetCGNode(out.Callee).String()) //bz: with context
+					fmt.Println( "  -> " + caller.GetCGNode().String()) //bz: with context
 				}else{
 					fmt.Println( "  -> " + out.Callee.String()) //bz: without context
 				}
