@@ -37,6 +37,8 @@ func findMainPackages(pkgs []*ssa.Package) ([]*ssa.Package, error) {
 // ../go2/race_checker/GoBench/Grpc/1748/main.go
 // ../go2/race_checker/GoBench/Istio/8967/main.go
 // ../go2/race_checker/GoBench/Cockroach/27659/main.go
+// ../go2/race_checker/GoBench/Etcd/9446/main.go
+
 //
 //CURRENT:
 // cmd/callgraph/testdata/src/pkg/pkg.go
@@ -150,11 +152,27 @@ func main() {
 		inQueries := result.IndirectQueries
 		fmt.Println("#Queries: " + strconv.Itoa(len(queries)) + "\n#Indirect Queries: " + strconv.Itoa(len(inQueries)))
 		fmt.Println("Queries Detail: ")
+		var p1 pointer.PointerWCtx
+		var p2 pointer.PointerWCtx
+		done := false
 		for v, ps := range queries {
 			for _, p := range ps { //p -> types.Pointer: includes its context
 				fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
+				if strings.Contains(v.String(), "&rt.buf ") {
+					if !done {
+						p1 = p
+						done = true
+					}else {
+						p2 = p
+					}
+				}
 			}
 		}
+		yes := p1.PointsTo().Intersects(p2.PointsTo())
+		if yes {
+			fmt.Println("they intersect")
+		}
+
 		fmt.Println("\nIndirect Queries Detail: ")
 		for v, ps := range inQueries {
 			for _, p := range ps { //p -> types.Pointer: includes its context

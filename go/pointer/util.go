@@ -188,6 +188,7 @@ func (a *analysis) sizeof(t types.Type) uint32 {
 // shouldTrack reports whether object type T contains (recursively)
 // any fields whose addresses should be tracked.
 // bz: NOW track all types DECLARED in the analyzed program, as long as itself is not a primitive/basic type
+// TODO: seems like not enough, maybe also control from the caller to check whether cgn if in app
 func (a *analysis) shouldTrack(T types.Type) bool {
 	if a.track == trackAll {
 		return true // fast path
@@ -220,19 +221,22 @@ func (a *analysis) shouldTrack(T types.Type) bool {
 				break
 			}
 		}
+		if track { // bz: track == true here: if not return, the following code will toggle it again ...
+			return track
+		}
 		// bz: here track == false --> this will topple the true assignment at the function beginning ...
-		// BUT we track all types declared in app
+		// BUT we track all types declared in app, since we cannot pre-populated them
 		if !strings.Contains(T.String(), "command-line-arguments.") {
 			a.trackTypes[T] = track
 			if !track && a.log != nil {
 				fmt.Fprintf(a.log, "\ttype not tracked: %s\n", T)
 			}
-		}else { //bz: just log
+		} else { //bz: just log
 			if track && a.log != nil {
 				fmt.Fprintf(a.log, "\tforce type tracked: %s\n", T)
 			}
 			if a.config.DEBUG {
-				fmt.Println("force type tracked: " + T.String())
+				fmt.Println(" -- force type tracked: " + T.String())
 			}
 			return true //bz: fake it to be true --> track it
 		}

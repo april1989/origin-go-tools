@@ -336,6 +336,7 @@ func (p PointerWCtx) Parent() *cgnode {
 	return p.cgn
 }
 
+//bz: add ctx
 func (p PointerWCtx) String() string {
 	return fmt.Sprintf("n%d&%s", p.n, p.cgn.contourkFull())
 }

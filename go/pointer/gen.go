@@ -565,6 +565,7 @@ func (a *analysis) funcResults(id nodeid) nodeid {
 // copy creates a constraint of the form dst = src.
 // sizeof is the width (in logical fields) of the copied type.
 //
+// bz:
 func (a *analysis) copy(dst, src nodeid, sizeof uint32) {
 	if src == dst || sizeof == 0 {
 		return // trivial
@@ -877,6 +878,12 @@ func (a *analysis) withinScope(method string) bool {
 		return false
 	}
 	return true
+}
+
+//bz: to check whether a go routine is inside a loop; also record the result in *analysis
+func (a *analysis) isInLoop(inst *ssa.Instruction) bool {
+
+	return false
 }
 
 //  ------------- bz : the following several functions generate constraints for different method calls --------------
