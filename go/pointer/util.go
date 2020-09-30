@@ -277,6 +277,11 @@ type nodeset struct {
 	intsets.Sparse
 }
 
+//bz:
+func (ns *nodeset) IsEmpty() bool {
+	return ns.Len() == 0
+}
+
 func (ns *nodeset) String() string {
 	var buf bytes.Buffer
 	buf.WriteRune('{')

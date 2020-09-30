@@ -182,16 +182,17 @@ type ResultWCtx struct {
 	CallGraph       *GraphWCtx           // discovered call graph
 	Queries         map[ssa.Value][]PointerWCtx // pts(v) for each v in setValueNode().
 	IndirectQueries map[ssa.Value][]PointerWCtx // pts(*v) for each v in setValueNode().
+	GlobalQueries   map[ssa.Value][]PointerWCtx // rpts(v) for each v in setValueNode().
 	Warnings        []Warning                   // warnings of unsoundness
 	main            *cgnode          // bz: the cgnode for main method
 }
 
-//bz: user API: get *cgnode by *ssa.Function
+//bz: user API: return *cgnode by *ssa.Function
 func (r *ResultWCtx) GetCGNodebyFunc(fn *ssa.Function) []*cgnode {
 	return r.CallGraph.Fn2CGNode[fn]
 }
 
-//bz: user API: get main cgn
+//bz: user API: return the main cgn
 func (r *ResultWCtx) GetMain() *cgnode {
 	return r.main
 }
@@ -210,6 +211,11 @@ type Pointer struct {
 type PointsToSet struct {
 	a   *analysis // may be nil if pts is nil
 	pts *nodeset
+}
+
+//bz:
+func (s PointsToSet) getPTS() *nodeset {
+	return s.pts
 }
 
 func (s PointsToSet) String() string {
@@ -315,9 +321,17 @@ func (p Pointer) DynamicTypes() *typeutil.Map {
 
 // bz: a Pointer with context
 type PointerWCtx struct {
-	a *analysis
-	n nodeid
-	cgn *cgnode
+	a     *analysis
+	n     nodeid
+	cgn   *cgnode //bz: is nil for a.globalobj
+	rpts  nodeid //bz: to record special cases directly, e.g., global, only one element is possible
+}
+
+//bz: return the points-to set if p is a global obj,
+//e.g., *ssa.Value is *ssa.Global, *ssa.Const, *ssa.FreeVar
+func (p PointerWCtx) RootPointsTo() PointsToSet {
+	if p.rpts == 0 { return PointsToSet{} }
+	return PointsToSet{p.a, &p.a.nodes[p.rpts].solve.pts}
 }
 
 //bz: return the context of cgn which calls setValueNode() to record this pointer;
@@ -332,6 +346,9 @@ func (p PointerWCtx) Parent() *cgnode {
 
 //bz: add ctx
 func (p PointerWCtx) String() string {
+	if p.cgn == nil {
+		return fmt.Sprintf("n%d&Global", p.n)
+	}
 	return fmt.Sprintf("n%d&%s", p.n, p.cgn.contourkFull())
 }
 
@@ -345,8 +362,12 @@ func (p PointerWCtx) PointsTo() PointsToSet {
 
 // MayAlias reports whether the receiver pointer may alias
 // the argument pointer.
+//bz: updated. Maybe has a better solution to compare ?
 func (p PointerWCtx) MayAlias(q PointerWCtx) bool {
-	return p.PointsTo().Intersects(q.PointsTo())
+	return p.PointsTo().Intersects(q.PointsTo()) ||
+		p.PointsTo().Intersects(q.RootPointsTo()) ||
+		p.RootPointsTo().Intersects(q.PointsTo()) ||
+		p.RootPointsTo().Intersects(q.RootPointsTo())
 }
 
 // DynamicTypes returns p.PointsTo().DynamicTypes().

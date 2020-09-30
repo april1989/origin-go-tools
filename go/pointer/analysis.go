@@ -164,7 +164,7 @@ func (a *analysis) enclosingObj(id nodeid) nodeid {
 			return i
 		}
 	}
-	panic("node has no enclosing object")
+	panic("node has no enclosing object") //bz: this panics when including global, so ... do not panic?
 }
 
 // labelFor returns the Label for node id.
@@ -424,6 +424,7 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 		result: &ResultWCtx{
 			Queries:         make(map[ssa.Value][]PointerWCtx),
 			IndirectQueries: make(map[ssa.Value][]PointerWCtx),
+			GlobalQueries:   make(map[ssa.Value][]PointerWCtx),
 		},
 		deltaSpace: make([]int, 0, 100),
 		//bz: i did not clear the following two after offline TODO: do I ?

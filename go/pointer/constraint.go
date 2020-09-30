@@ -142,6 +142,7 @@ type invokeConstraint struct {
 	method *types.Func // the abstract method
 	iface  nodeid      // (ptr) the interface
 	params nodeid      // the start of the identity/params/results block
+
 	// bz: to genFunc() online; kcfa -> need both; origin -> need caller.callsites[]
 	site   *callsite
 	caller *cgnode

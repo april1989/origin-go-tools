@@ -91,19 +91,43 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 	// seems like we only query pointers, so CURRENTLY only record for pointers in app methods
 	// -> go to commit@acb4db0349f131f8d10ddbec6d4fb686258becca (or comment out below for now)
 	// to check original code
-	if cgn == nil { //bz: this might be the root cgn, interface, etc.
-		//if a.config.DEBUG {
-		//	fmt.Println("nil cgn in setValueNode(): v:" + v.String())
-		//}
-		return
-	}
-	if a.withinScope(cgn.fn.String()) {
-		t := v.Type()
-		if a.config.DEBUG {
-			fmt.Println("query " + t.String())
+	t := v.Type()
+	if cgn == nil {
+		//bz: this might be the root cgn, interface, from global, etc.
+		//NOW, put the a.globalobj[] also into query, since a lot of thing is stored there, e.g.,
+		//*ssa.Global, *ssa.Function, *ssa.Const, *ssa.FreeVar (but I PERSONALLY do not want *ssa.Function,
+		//exclude now)
+		if a.log != nil {
+			fmt.Fprintf(a.log, "nil cgn in setValueNode(): v:" + v.Type().String() + " " + v.String())
 		}
-		if CanPoint(t) { //queries
-			ptr := PointerWCtx{a, a.addNodes(t, "query"), cgn}
+		switch v.(type) {
+		case *ssa.Global, *ssa.Const, *ssa.FreeVar: //not include *ssa.Function,
+			//bz: obj is its points-to heap
+			// Global object. But are they unique mapping/replaced when put into a.globalval[]?
+			// a.globalobj[v] = n0  --> nothing stored
+			// id is the points-to const value
+			ptr := PointerWCtx{a, a.addNodes(t, "query global"), nil, id}
+			ptrs, ok := a.result.GlobalQueries[v]
+			if !ok {
+				// First time?  Create the canonical query node.
+				ptrs = make([]PointerWCtx, 1)
+				ptrs[0] = ptr
+			} else {
+				ptrs = append(ptrs, ptr)
+			}
+			a.result.GlobalQueries[v] = ptrs
+		}
+		return //nothing to record
+	}
+	//if a.config.DEBUG {
+	//	fmt.Println("query (out): " + v.Type().String())
+	//}
+	if a.withinScope(cgn.fn.String()) { //record queries
+		//if a.config.DEBUG {
+		//	fmt.Println("query (in): " + t.String())
+		//}
+		if CanPoint(t) {
+			ptr := PointerWCtx{a, a.addNodes(t, "query"), cgn, 0}
 			ptrs, ok := a.result.Queries[v]
 			if !ok {
 				// First time?  Create the canonical query node.
@@ -117,7 +141,7 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 		}
 		//bz: this condition is copied from go2: indirect queries
 		if underType, ok := v.Type().Underlying().(*types.Pointer); ok && CanPoint(underType.Elem()) {
-			ptr := PointerWCtx{a, a.addNodes(v.Type(), "query.indirect"), cgn}
+			ptr := PointerWCtx{a, a.addNodes(v.Type(), "query.indirect"), cgn, 0}
 			ptrs, ok := a.result.IndirectQueries[v]
 			if !ok {
 				// First time? Create the canonical indirect query node.
@@ -186,7 +210,7 @@ func (a *analysis) endObject(obj nodeid, cgn *cgnode, data interface{}) *object 
 		cgn:  cgn,
 		data: data,
 	}
-	objNode.obj = o
+	objNode.obj = o //bz: points-to heap ?
 
 	return o
 }
@@ -949,7 +973,7 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 	//case 2: has closure: make closure has been created earlier, here find the çreated obj and use its context
 	//case 3: no closure, but invoke virtual function: e.g., go (*ccBalancerWrapper).watcher(t0), we create a new context for it
 	if a.considerMyContext(fn.String()) {
-		//bz: simple brute force solution; start to be kcfa from main.main
+		//bz: simple brute force solution; start to be kcfa from main.main.go
 		if a.config.DEBUG {
 			fmt.Println("CAUGHT APP METHOD -- " + fn.String()) //debug
 		}
@@ -963,12 +987,12 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 		}
 
 		ids, ok, _ := a.existClosure(fn, caller.callersite[0])
-		if ok {  //bz: the cgnode for fn is created already when its previous stmt is make closure; we only want call edges/constraints here
+		if ok { //bz: the cgnode for fn is created already when its previous stmt is make closure; we only want call edges/constraints here
 			if len(ids) > 1 || len(ids) == 0 {
-				panic("WHY > 1? in fn2closure: a.closure")
+				panic("SHOULD BE == 1? in fn2closure: a.closure")
 			}
 			obj = ids[0]
-		}else{ //normal cases
+		} else { //normal cases
 			//for kcfa: we need a new contour
 			//for origin: whatever left, we use caller context
 			obj, isNew = a.makeFunctionObjectWithContext(caller, fn, site, nil, -1)
@@ -1066,7 +1090,7 @@ func (a *analysis) genDynamicCall(caller *cgnode, site *callsite, call *ssa.Call
 	}
 }
 
-//bz: online iteratively doing genFunc <-> genInstr
+//bz: online iteratively doing genFunc <-> genInstr iteratively
 func (a *analysis) genOnline(caller *cgnode, site *callsite, fn *ssa.Function) nodeid {
 	//reinitilaize TODO: do we need to save these somewhere and copy them back here ???
 	if a.globalval == nil {
@@ -1383,8 +1407,7 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 
 			case *ssa.Function:
 				//bz: this has NO ssa.CallInstruction as callsite;
-				//v should not be make closure, we handle it in a different function, panic
-				//TODO: can here be *ssa.GO?
+				//v should not be make closure, we handle it in a different function for both kcfa and origin, panic!
 				isClosure := a.isFromMakeClosure(v)
 				if a.considerMyContext(v.String()) {
 					if isClosure {
