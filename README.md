@@ -31,14 +31,18 @@ For origin-sensitive in Go, we have two cases (the following are IR instructions
 
 ```go Producer(t0, t1, t3)```
 
+create a new context for it.
+
 - Case 2: a go routine requires a ```make closure```: e.g., 
 
 ```t37 = make closure (*B).RunParallel$1 [t35, t29, t6, t0, t1] ```
 
 ```go t37() ``` 
 
+the make closure has been treated with origin-sensitive and its origin context has been created earlier, here we find the çreated obj and use its context to use here.
+
 - Case 3: no ```make closure```, Go directly invokes a virtual function: e.g., 
 
 ```go (*ccBalancerWrapper).watcher(t0)```
 
-the make closure has been treated with origin-sensitive and its origin context has been created earlier, here we find the çreated obj and use its context to use here.
+same as Case 1.
