@@ -24,6 +24,8 @@ var (
 	tEface     = types.NewInterfaceType(nil, nil).Complete()
 	tInvalid   = types.Typ[types.Invalid]
 	tUnsafePtr = types.Typ[types.UnsafePointer]
+
+	withinScope = false //bz: whether the current genInstr() is working on a method within our scope
 )
 
 // ---------- Node creation ----------
@@ -93,32 +95,40 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 	// to check original code
 	t := v.Type()
 	if cgn == nil {
-		//bz: this might be the root cgn, interface, from global, etc.
-		//NOW, put the a.globalobj[] also into query, since a lot of thing is stored there, e.g.,
-		//*ssa.Global, *ssa.Function, *ssa.Const, *ssa.FreeVar (but I PERSONALLY do not want *ssa.Function,
-		//exclude now)
-		if a.log != nil {
-			fmt.Fprintf(a.log, "nil cgn in setValueNode(): v:" + v.Type().String() + " " + v.String())
-		}
-		switch v.(type) {
-		case *ssa.Global, *ssa.Const, *ssa.FreeVar: //not include *ssa.Function,
-			//bz: obj is its points-to heap
-			// Global object. But are they unique mapping/replaced when put into a.globalval[]?
-			// a.globalobj[v] = n0  --> nothing stored
-			// id is the points-to const value
-			ptr := PointerWCtx{a, a.addNodes(t, "query global"), nil, id}
-			ptrs, ok := a.result.GlobalQueries[v]
-			if !ok {
-				// First time?  Create the canonical query node.
-				ptrs = make([]PointerWCtx, 1)
-				ptrs[0] = ptr
-			} else {
-				ptrs = append(ptrs, ptr)
-			}
-			a.result.GlobalQueries[v] = ptrs
-		}
-		return //nothing to record
+		return
 	}
+	//if cgn == nil {
+	//	if !withinScope {
+	//		return // not interested
+	//	}
+	//	//bz: this might be the root cgn, interface, from global, etc.
+	//	//NOW, put the a.globalobj[] also into query, since a lot of thing is stored there, e.g.,
+	//	//*ssa.Global, *ssa.Function, *ssa.Const, *ssa.FreeVar (but I PERSONALLY do not want *ssa.Function,
+	//	//exclude now)
+	//	if a.log != nil {
+	//		fmt.Fprintf(a.log, "nil cgn in setValueNode(): v:" + v.Type().String() + " " + v.String())
+	//	}
+	//	switch v.(type) {
+	//	case *ssa.Global, *ssa.Const, *ssa.FreeVar: //not include *ssa.Function,
+	//		//bz: obj is its points-to heap
+	//		// Global object. But are they unique mapping/replaced when put into a.globalval[]?
+	//		// a.globalobj[v] = n0  --> nothing stored
+	//		// id is the points-to const value
+	//		rpts := &RootPointsToSet{ a: a, rpts: id}
+	//		ptr := PointerWCtx{a, a.addNodes(t, "query global"), nil, rpts}
+	//		ptrs, ok := a.result.GlobalQueries[v]
+	//		if !ok {
+	//			// First time?  Create the canonical query node.
+	//			ptrs = make([]PointerWCtx, 1)
+	//			ptrs[0] = ptr
+	//		} else {
+	//			ptrs = append(ptrs, ptr)
+	//		}
+	//		a.result.GlobalQueries[v] = ptrs
+	//		a.copy(ptr.n, id, a.sizeof(t))
+	//	}
+	//	return //nothing to record
+	//}
 	//if a.config.DEBUG {
 	//	fmt.Println("query (out): " + v.Type().String())
 	//}
@@ -127,7 +137,7 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 		//	fmt.Println("query (in): " + t.String())
 		//}
 		if CanPoint(t) {
-			ptr := PointerWCtx{a, a.addNodes(t, "query"), cgn, 0}
+			ptr := PointerWCtx{a, a.addNodes(t, "query"), cgn}
 			ptrs, ok := a.result.Queries[v]
 			if !ok {
 				// First time?  Create the canonical query node.
@@ -141,7 +151,7 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 		}
 		//bz: this condition is copied from go2: indirect queries
 		if underType, ok := v.Type().Underlying().(*types.Pointer); ok && CanPoint(underType.Elem()) {
-			ptr := PointerWCtx{a, a.addNodes(v.Type(), "query.indirect"), cgn, 0}
+			ptr := PointerWCtx{a, a.addNodes(v.Type(), "query.indirect"), cgn}
 			ptrs, ok := a.result.IndirectQueries[v]
 			if !ok {
 				// First time? Create the canonical indirect query node.
@@ -620,7 +630,7 @@ func (a *analysis) addressOf(T types.Type, id, obj nodeid) {
 	if obj == 0 {
 		panic("addressOf: zero obj")
 	}
-	if a.shouldTrack(T) {
+	if withinScope || a.shouldTrack(T) {
 		a.addConstraint(&addrConstraint{id, obj})
 	}
 }
@@ -672,7 +682,7 @@ func (a *analysis) store(dst, src nodeid, offset uint32, sizeof uint32) {
 // T is the type of the address.
 //
 func (a *analysis) offsetAddr(T types.Type, dst, src nodeid, offset uint32) {
-	if !a.shouldTrack(T) {
+	if !withinScope && !a.shouldTrack(T) {
 		return
 	}
 	if offset == 0 {
@@ -1894,6 +1904,8 @@ func (a *analysis) genFunc(cgn *cgnode) {
 		}
 	}
 
+	//bz: we only want to track global values used in the app methods
+	withinScope = a.considerMyContext(fn.String())
 	// Generate constraints for instructions.
 	for _, b := range fn.Blocks {
 		for _, instr := range b.Instrs {

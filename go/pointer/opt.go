@@ -113,14 +113,14 @@ func (a *analysis) renumber() {
 		}
 		a.result.IndirectQueries[v] = tmp
 	}
-	for v, ptrs := range a.result.GlobalQueries {
-		tmp := make([]PointerWCtx, len(ptrs))
-		for i, ptr := range ptrs {
-			ptr.n = renumbering[ptr.n]
-			tmp[i] = ptr
-		}
-		a.result.GlobalQueries[v] = tmp
-	}
+	//for v, ptrs := range a.result.GlobalQueries {
+	//	tmp := make([]PointerWCtx, len(ptrs))
+	//	for i, ptr := range ptrs {
+	//		ptr.n = renumbering[ptr.n]
+	//		tmp[i] = ptr
+	//	}
+	//	a.result.GlobalQueries[v] = tmp
+	//}
 	//// bz: we are not using this, comment off
 	//for _, queries := range a.config.extendedQueries {
 	//	for _, query := range queries {

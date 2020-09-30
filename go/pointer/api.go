@@ -182,7 +182,7 @@ type ResultWCtx struct {
 	CallGraph       *GraphWCtx           // discovered call graph
 	Queries         map[ssa.Value][]PointerWCtx // pts(v) for each v in setValueNode().
 	IndirectQueries map[ssa.Value][]PointerWCtx // pts(*v) for each v in setValueNode().
-	GlobalQueries   map[ssa.Value][]PointerWCtx // rpts(v) for each v in setValueNode().
+	//GlobalQueries   map[ssa.Value][]PointerWCtx // rpts(v) for each v in setValueNode().
 	Warnings        []Warning                   // warnings of unsoundness
 	main            *cgnode          // bz: the cgnode for main method
 }
@@ -211,11 +211,6 @@ type Pointer struct {
 type PointsToSet struct {
 	a   *analysis // may be nil if pts is nil
 	pts *nodeset
-}
-
-//bz:
-func (s PointsToSet) getPTS() *nodeset {
-	return s.pts
 }
 
 func (s PointsToSet) String() string {
@@ -324,17 +319,27 @@ type PointerWCtx struct {
 	a     *analysis
 	n     nodeid
 	cgn   *cgnode //bz: is nil for a.globalobj
-	rpts  nodeid //bz: to record special cases directly, e.g., global, only one element is possible
+	//rpts  *RootPointsToSet //bz: to record special cases directly, e.g., global, only one element is possible
 }
 
-//bz: return the points-to set if p is a global obj,
-//e.g., *ssa.Value is *ssa.Global, *ssa.Const, *ssa.FreeVar
-//these kind of points-to set is different from PointsTo(), its points-to objects is not object allocated, just a marker.
-//each string should be their v.Name()
-func (p PointerWCtx) RootPointsTo() PointsToSet {
-	if p.rpts == 0 { return PointsToSet{} }
-	return PointsToSet{p.a, &p.a.nodes[p.rpts].solve.pts}
-}
+//// bz: A RootPointsToSet is a set of labels (for global vars/objs).
+//type RootPointsToSet struct {
+//	a     *analysis // may be nil if pts is nil
+//	rpts  nodeid
+//}
+//
+////bz: nodeid + type
+//func (r *RootPointsToSet) String() string {
+//	return r.rpts.String() + ":" + r.a.nodes[r.rpts].typ.String()
+//}
+
+////bz: return the points-to set (with type nodeid) if p is a global obj,
+////e.g., *ssa.Value is *ssa.Global, *ssa.Const, *ssa.FreeVar
+////these kind of points-to set is different from PointsTo(), its points-to objects is not object allocated, just a marker.
+////each string should be their v.Name()
+//func (p PointerWCtx) RootPointsTo() *RootPointsToSet {
+//	return p.rpts
+//}
 
 //bz: return the context of cgn which calls setValueNode() to record this pointer;
 func (p PointerWCtx) GetMyContext() []*callsite {
@@ -364,12 +369,10 @@ func (p PointerWCtx) PointsTo() PointsToSet {
 
 // MayAlias reports whether the receiver pointer may alias
 // the argument pointer.
-//bz: updated. Maybe has a better solution to compare ?
+// bz: updated.
 func (p PointerWCtx) MayAlias(q PointerWCtx) bool {
-	return p.PointsTo().Intersects(q.PointsTo()) ||
-		p.PointsTo().Intersects(q.RootPointsTo()) ||
-		p.RootPointsTo().Intersects(q.PointsTo()) ||
-		p.RootPointsTo().Intersects(q.RootPointsTo())
+	return p.PointsTo().Intersects(q.PointsTo())
+	//|| p.RootPointsTo() == q.RootPointsTo() //these are the only possibilities for comparison
 }
 
 // DynamicTypes returns p.PointsTo().DynamicTypes().

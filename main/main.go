@@ -38,7 +38,7 @@ func findMainPackages(pkgs []*ssa.Package) ([]*ssa.Package, error) {
 // ../go2/race_checker/GoBench/Etcd/9446/main.go
 // ../go2/race_checker/pointer_analysis_test/main.go
 //TODO:
-// ../go2/race_checker/GoBench/Grpc/1862/main.go --> bool
+// ../go2/race_checker/tests/GoBench/Grpc/1862/main.go --> bool
 // ../go2/race_checker/GoBench/Istio/8144/main.go --> int
 // ../go2/race_checker/GoBench/Istio/8967/main.go --> make(chan struct{})
 //TODO: attention !!! freevar !!! program counter ???
@@ -141,7 +141,7 @@ func main() {
 		fmt.Println("\nWe are going to print out queries. If not desired, turn off DEBUG.")
 		queries := result.Queries
 		inQueries := result.IndirectQueries
-		globalQueries := result.GlobalQueries
+		//globalQueries := result.GlobalQueries
 		fmt.Println("#Queries: " + strconv.Itoa(len(queries)) + "\n#Indirect Queries: " + strconv.Itoa(len(inQueries)))
 		fmt.Println("Queries Detail: ")
 		//var p1 pointer.PointerWCtx
@@ -172,11 +172,11 @@ func main() {
 			}
 		}
 
-		fmt.Println("\nGlobal Queries Detail: ")
-		for v, ps := range globalQueries {
-			for _, p := range ps { //p -> types.Pointer: includes its context
-				fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.RootPointsTo().String() + "}")
-			}
-		}
+		//fmt.Println("\nGlobal Queries Detail: ")
+		//for v, ps := range globalQueries {
+		//	for _, p := range ps { //p -> types.Pointer: includes its context
+		//		fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.RootPointsTo().String() + "}")
+		//	}
+		//}
 	}
 }
