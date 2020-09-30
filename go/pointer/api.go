@@ -329,6 +329,8 @@ type PointerWCtx struct {
 
 //bz: return the points-to set if p is a global obj,
 //e.g., *ssa.Value is *ssa.Global, *ssa.Const, *ssa.FreeVar
+//these kind of points-to set is different from PointsTo(), its points-to objects is not object allocated, just a marker.
+//each string should be their v.Name()
 func (p PointerWCtx) RootPointsTo() PointsToSet {
 	if p.rpts == 0 { return PointsToSet{} }
 	return PointsToSet{p.a, &p.a.nodes[p.rpts].solve.pts}
