@@ -158,11 +158,15 @@ type Ctx2nodeid struct {
 	ctx2nodeid map[*callsite][]nodeid
 }
 
+
+
+
+//////////////////////////////// call graph to users ////////////////////////////////
+
 //bz: for user
 type GraphWCtx struct {
 	Root      *Node                       // the distinguished root node
 	Nodes     map[*cgnode]*Node           // all nodes by cgnode
-	Edges     map[int]*Edge               // all edges
 	Fn2CGNode map[*ssa.Function][]*cgnode // a map
 }
 
@@ -259,7 +263,7 @@ func (e Edge) Pos() token.Pos {
 // AddEdge adds the edge (caller, site, callee) to the call graph.
 // Elimination of duplicate edges is the caller's responsibility.
 func AddEdge(caller *Node, site ssa.CallInstruction, callee *Node) {
-	fmt.Println(" ** " + caller.String() + " --> " + callee.String())
+	//fmt.Println (" ** " + caller.String() + " --> " + callee.String())
 	e := &Edge{caller, site, callee}
 	callee.In = append(callee.In, e)
 	caller.Out = append(caller.Out, e)

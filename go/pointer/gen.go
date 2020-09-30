@@ -331,7 +331,7 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 		if a.config.Origin { //bz: for origin-sensitive
 			if callersite == nil { //we only create new context for make cloure and go instruction
 				special := &callsite{targets: obj} //case 2: create one with only target, make closure is not ssa.CallInstruction
-				if loopID != -1 {                             //handle loop TODO: will this affect exist checking?
+				if loopID != -1 {                  //handle loop TODO: will this affect exist checking?
 					special = &callsite{targets: obj, loopID: loopID}
 				}
 				fnkcs := a.createKCallSite(caller.callersite, special)
@@ -937,6 +937,7 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 
 	// Ascertain the context (contour/cgnode) for a particular call.
 	var obj nodeid //bz: only used in some cases below
+	var isNew bool //bz: whether obj is a new cgnode
 
 	//bz: for origin-sensitive, we have two cases:
 	//case 1: no closure, directly invoke static function: e.g., go Producer(t0, t1, t3), we create a new context for it
@@ -958,8 +959,8 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 
 		//for kcfa: we need a new contour
 		//for origin: whatever left, we use caller context
-		obj, _ = a.makeFunctionObjectWithContext(caller, fn, site, -1)
-		if obj != 0 {
+		obj, isNew = a.makeFunctionObjectWithContext(caller, fn, site, -1)
+		if !isNew {
 			return //all constraints should be added already
 		}
 	} else {
@@ -1231,7 +1232,7 @@ func (a *analysis) valueNodeClosure(cgn *cgnode, closure *ssa.MakeClosure, v ssa
 	fn, _ := v.(*ssa.Function)
 	callersite := cgn.callersite[0]
 	ids, ok, _ := a.existClosure(fn, callersite) //checked
-	if !ok {  //not exist
+	if !ok {                                     //not exist
 		var comment string
 		if a.log != nil {
 			comment = v.String()
@@ -1608,17 +1609,24 @@ func (a *analysis) genInstr(cgn *cgnode, instr ssa.Instruction) {
 			a.copy(a.valueNode(instr), a.valueNode(e), sz)
 		}
 
-	case *ssa.MakeClosure: // bz: we have loop problem here for origin
-		fn := instr.Fn.(*ssa.Function)     //bz: fn should not be nil, because we are closuring on a static go routine
-		if a.considerOrigin(fn.String()) { //bz: should only handle this in origin
+	case *ssa.MakeClosure:
+		fn := instr.Fn.(*ssa.Function)  //bz: fn should not be nil, because we are closuring on a static go routine
+		if a.considerOrigin(fn.String()) {
 			if a.config.DEBUG {
 				fmt.Println("CAUGHT APP (MakeClosure) METHOD -- " + fn.String()) //debug
 			}
-			cs := a.valueNodeClosure(cgn, instr, fn)
+
+			var cs []nodeid
+			if a.isGoNext(instr) {
+				//bz: should only handle this in the origin-sensitive way when the next stmt is go invoke
+				cs = a.valueNodeClosure(cgn, instr, fn)
+			}else { //user caller context
+				cs = a.valueNodeClosure(cgn, instr, fn)
+			}
 			for _, c := range cs { // bz: updated for []nodeid
 				a.copy(a.valueNode(instr), c, 1)
 			}
-		} else {
+		} else { //context-insensitive
 			a.copy(a.valueNode(instr), a.valueNode(fn), 1)
 		}
 		// Free variables are treated like global variables.
@@ -1687,6 +1695,22 @@ func (a *analysis) genInstr(cgn *cgnode, instr ssa.Instruction) {
 	default:
 		panic(fmt.Sprintf("unimplemented: %T", instr))
 	}
+}
+
+// bz: check whether the stmt after make closure is go: they must be in the same basic block
+func (a *analysis) isGoNext(instr *ssa.MakeClosure) bool {
+	stmts := instr.Block().Instrs
+	for i, stmt := range stmts {
+		if stmt == instr {
+			_, ok := stmts[i+1].(*ssa.Go) //next is the go if available
+			if ok {
+				return true
+			}else {
+				return false
+			}
+		}
+	}
+	return false
 }
 
 //bz: adjust for data structure changes
@@ -1876,7 +1900,7 @@ func (a *analysis) generate() {
 	root := a.genRootCalls()
 
 	if a.config.BuildCallGraph {
-		a.result.CallGraph = NewWCtx(root) //bz: cast
+		a.result.CallGraph = NewWCtx(root)
 	}
 
 	// Create nodes and constraints for all methods of all types

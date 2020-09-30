@@ -534,12 +534,12 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 		}
 	}
 
-	//// Create callgraph.Nodes in deterministic order.
-	//if cg := a.result.CallGraph; cg != nil {
-	//	for _, caller := range a.cgnodes {
-	//		cg.CreateNodeWCtx(caller) //bz: changed
-	//	}
-	//}
+	// Create callgraph.Nodes in deterministic order.
+	if cg := a.result.CallGraph; cg != nil {
+		for _, caller := range a.cgnodes {
+			cg.CreateNodeWCtx(caller) //bz: create if absent
+		}
+	}
 
 	// Add dynamic edges to call graph.
 	var space [100]int
@@ -558,6 +558,8 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 			a.result.main = cgn
 		}
 	}
+
+	a.result.CallGraph.computeFn2CGNode() //bz: update Fn2CGNode
 
 	return a.result, nil
 }

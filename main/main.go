@@ -14,7 +14,6 @@ import (
 	"time"
 )
 
-
 // mainPackages returns the main packages to analyze.
 // Each resulting package is named "main" and has a main function.
 func findMainPackages(pkgs []*ssa.Package) ([]*ssa.Package, error) {
@@ -94,22 +93,22 @@ func main() {
 
 	// Configure pointer analysis to build call-graph
 	ptaConfig := &pointer.Config{
-		Mains:             mains, //bz: NOW assume only one main
-		Reflection:        false,
-		BuildCallGraph:    true,
-		Log:               logfile,
+		Mains:          mains, //bz: NOW assume only one main
+		Reflection:     false,
+		BuildCallGraph: true,
+		Log:            logfile,
 		//kcfa
 		//CallSiteSensitive: true,
 		//origin
-		Origin:            true,
+		Origin: true,
 		//shared config
-		K:                 2,
-		LimitScope:        true, //bz: only consider app methods now
-		DEBUG:             true, //bz: rm all printed out info in console
+		K:          2,
+		LimitScope: true, //bz: only consider app methods now
+		DEBUG:      true, //bz: rm all printed out info in console
 	}
 
 	//*** compute pta here
-	start := time.Now() //performance
+	start := time.Now()                           //performance
 	result, err := pointer.AnalyzeWCtx(ptaConfig) // conduct pointer analysis
 	t := time.Now()
 	elapsed := t.Sub(start)
@@ -122,7 +121,6 @@ func main() {
 
 	if ptaConfig.DEBUG {
 		//bz: also a reference of how to use new APIs here
-		wantCtx := true //bz: if user want context not only function
 		main := result.GetMain()
 		fmt.Println("Main CGNode: " + main.String())
 
@@ -130,19 +128,13 @@ func main() {
 		callers := result.CallGraph.Nodes
 		fmt.Println("#CGNode: " + strconv.Itoa(len(callers)))
 		for _, caller := range callers {
-			if !strings.Contains(caller.GetFunc().String(), "command-line-arguments.") { continue } //we only want the app call edges
-			if wantCtx {
-				fmt.Println(caller.GetCGNode().String()) //bz: with context
-			}else {
-				fmt.Println(caller.String()) //bz: without context
+			if !strings.Contains(caller.GetFunc().String(), "command-line-arguments.") {
+				continue //we only want the app call edges
 			}
-			outs := caller.Out // caller --> callee
-			for _, out := range outs { //callees
-				if wantCtx {
-					fmt.Println( "  -> " + caller.GetCGNode().String()) //bz: with context
-				}else{
-					fmt.Println( "  -> " + out.Callee.String()) //bz: without context
-				}
+			fmt.Println(caller.String()) //bz: with context
+			outs := caller.Out     // caller --> callee
+			for _, out := range outs {    //callees
+				fmt.Println("  -> " + out.Callee.String()) //bz: with context
 			}
 		}
 
@@ -161,7 +153,7 @@ func main() {
 					if !done {
 						p1 = p
 						done = true
-					}else {
+					} else {
 						p2 = p
 					}
 				}
