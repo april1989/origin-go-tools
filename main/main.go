@@ -98,9 +98,9 @@ func main() {
 		BuildCallGraph: true,
 		Log:            logfile,
 		//kcfa
-		//CallSiteSensitive: true,
+		CallSiteSensitive: true,
 		//origin
-		Origin: true,
+		//Origin: true,
 		//shared config
 		K:          2,
 		LimitScope: true, //bz: only consider app methods now
