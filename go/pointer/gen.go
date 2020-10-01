@@ -72,9 +72,8 @@ func (a *analysis) addOneNode(typ types.Type, comment string, subelement *fieldI
 
 // setValueNode associates node id with the value v.
 // cgn identifies the context iff v is a local variable.
-// bz: will be nullify at the end of genFunc()
 func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
-	if cgn != nil {
+	if cgn != nil {// bz: both a.localval and a.globalval; will be nullify at the end of genFunc()
 		a.localval[v] = id
 	} else {
 		a.globalval[v] = id
@@ -87,7 +86,7 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 	// in many contexts. We merge them to a canonical node, since
 	// that's what all clients want.
 	// Record the (v, id) relation if the client has queried pts(v).
-	// BZ: !!!! this part is evil ... they may considered the performance issue,
+	//!!!! bz : this part is evil ... they may considered the performance issue,
 	// BUT we want to directly query after running pointer analysis, not run after each query...
 	// from the code@https://github.tamu.edu/jeffhuang/go2/blob/master/race_checker/pointerAnalysis.go
 	// seems like we only query pointers, so CURRENTLY only record for pointers in app methods
@@ -95,40 +94,24 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 	// to check original code
 	t := v.Type()
 	if cgn == nil {
-		return
+		if !withinScope {
+			return // not interested
+		}
+		//bz: this might be the root cgn, interface, from global, etc.
+		//NOW, put the a.globalobj[] also into query, since a lot of thing is stored there, e.g.,
+		//*ssa.FreeVar (but I PERSONALLY do not want *ssa.Function, *ssa.Global, *ssa.Function, *ssa.Const,
+		//exclude now)
+		if a.log != nil {
+			fmt.Fprintf(a.log, "nil cgn in setValueNode(): v:" + v.Type().String() + " " + v.String() + "\n")
+		}
+		switch v.(type) {
+		case *ssa.FreeVar:
+			//bz: Global object. But are they unique mapping/replaced when put into a.globalval[]?
+			// a.globalobj[v] = n0  --> nothing stored, do not use this
+			a.recordGlobalQueries(t, cgn, v, id)
+		}
+		return //nothing to record
 	}
-	//if cgn == nil {
-	//	if !withinScope {
-	//		return // not interested
-	//	}
-	//	//bz: this might be the root cgn, interface, from global, etc.
-	//	//NOW, put the a.globalobj[] also into query, since a lot of thing is stored there, e.g.,
-	//	//*ssa.Global, *ssa.Function, *ssa.Const, *ssa.FreeVar (but I PERSONALLY do not want *ssa.Function,
-	//	//exclude now)
-	//	if a.log != nil {
-	//		fmt.Fprintf(a.log, "nil cgn in setValueNode(): v:" + v.Type().String() + " " + v.String())
-	//	}
-	//	switch v.(type) {
-	//	case *ssa.Global, *ssa.Const, *ssa.FreeVar: //not include *ssa.Function,
-	//		//bz: obj is its points-to heap
-	//		// Global object. But are they unique mapping/replaced when put into a.globalval[]?
-	//		// a.globalobj[v] = n0  --> nothing stored
-	//		// id is the points-to const value
-	//		rpts := &RootPointsToSet{ a: a, rpts: id}
-	//		ptr := PointerWCtx{a, a.addNodes(t, "query global"), nil, rpts}
-	//		ptrs, ok := a.result.GlobalQueries[v]
-	//		if !ok {
-	//			// First time?  Create the canonical query node.
-	//			ptrs = make([]PointerWCtx, 1)
-	//			ptrs[0] = ptr
-	//		} else {
-	//			ptrs = append(ptrs, ptr)
-	//		}
-	//		a.result.GlobalQueries[v] = ptrs
-	//		a.copy(ptr.n, id, a.sizeof(t))
-	//	}
-	//	return //nothing to record
-	//}
 	//if a.config.DEBUG {
 	//	fmt.Println("query (out): " + v.Type().String())
 	//}
@@ -137,69 +120,60 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 		//	fmt.Println("query (in): " + t.String())
 		//}
 		if CanPoint(t) {
-			ptr := PointerWCtx{a, a.addNodes(t, "query"), cgn}
-			ptrs, ok := a.result.Queries[v]
-			if !ok {
-				// First time?  Create the canonical query node.
-				ptrs = make([]PointerWCtx, 1)
-				ptrs[0] = ptr
-			} else {
-				ptrs = append(ptrs, ptr)
-			}
-			a.result.Queries[v] = ptrs
-			a.copy(ptr.n, id, a.sizeof(t))
+			a.recordQueries(t, cgn, v, id)
 		}
 		//bz: this condition is copied from go2: indirect queries
 		if underType, ok := v.Type().Underlying().(*types.Pointer); ok && CanPoint(underType.Elem()) {
-			ptr := PointerWCtx{a, a.addNodes(v.Type(), "query.indirect"), cgn}
-			ptrs, ok := a.result.IndirectQueries[v]
-			if !ok {
-				// First time? Create the canonical indirect query node.
-				ptrs = make([]PointerWCtx, 1)
-				ptrs[0] = ptr
-			} else {
-				ptrs = append(ptrs, ptr)
-			}
-			a.result.IndirectQueries[v] = ptrs
-			a.genLoad(cgn, ptr.n, v, 0, a.sizeof(t))
+			a.recordIndirectQueries(t, cgn, v)
 		}
 	}
-
-	////bz: original code:
-	//if _, ok := a.config.Queries[v]; ok {
-	//	t := v.Type()
-	//	ptr, ok := a.result.Queries[v]
-	//	if !ok {
-	//		// First time?  Create the canonical query node.
-	//		ptr = Pointer{a, a.addNodes(t, "query")}
-	//		a.result.Queries[v] = ptr
-	//	}
-	//	a.result.Queries[v] = ptr
-	//	a.copy(ptr.n, id, a.sizeof(t))
-	//}
-	//
-	//// Record the (*v, id) relation if the client has queried pts(*v).
-	//if _, ok := a.config.IndirectQueries[v]; ok {
-	//	t := v.Type()
-	//	ptr, ok := a.result.IndirectQueries[v]
-	//	if !ok {
-	//		// First time? Create the canonical indirect query node.
-	//		ptr = Pointer{a, a.addNodes(v.Type(), "query.indirect")}
-	//		a.result.IndirectQueries[v] = ptr
-	//	}
-	//	a.genLoad(cgn, ptr.n, v, 0, a.sizeof(t))
-	//}
-	//
-	//for _, query := range a.config.extendedQueries[v] { //bz: from AddExtendedQuery(), not used
-	//	t, nid := a.evalExtendedQuery(v.Type().Underlying(), id, query.ops)
-	//
-	//	if query.ptr.a == nil {
-	//		query.ptr.a = a
-	//		query.ptr.n = a.addNodes(t, "query.extended")
-	//	}
-	//	a.copy(query.ptr.n, nid, a.sizeof(t))
-	//}
 }
+
+//bz: utility func to record global queries
+func (a *analysis) recordGlobalQueries(t types.Type, cgn *cgnode, v ssa.Value, id nodeid) {
+	ptr := PointerWCtx{a, a.addNodes(t, "query global"), nil}
+	ptrs, ok := a.result.GlobalQueries[v]
+	if !ok {
+		// First time?  Create the canonical query node.
+		ptrs = make([]PointerWCtx, 1)
+		ptrs[0] = ptr
+	} else {
+		ptrs = append(ptrs, ptr)
+	}
+	a.result.GlobalQueries[v] = ptrs
+	a.copy(ptr.n, id, a.sizeof(t))
+}
+
+//bz: utility func to record indirect queries
+func (a *analysis) recordIndirectQueries(t types.Type, cgn *cgnode, v ssa.Value) {
+	ptr := PointerWCtx{a, a.addNodes(v.Type(), "query.indirect"), cgn}
+	ptrs, ok := a.result.IndirectQueries[v]
+	if !ok {
+		// First time? Create the canonical indirect query node.
+		ptrs = make([]PointerWCtx, 1)
+		ptrs[0] = ptr
+	} else {
+		ptrs = append(ptrs, ptr)
+	}
+	a.result.IndirectQueries[v] = ptrs
+	a.genLoad(cgn, ptr.n, v, 0, a.sizeof(t))
+}
+
+//bz: utility func to record queries
+func (a *analysis) recordQueries(t types.Type, cgn *cgnode, v ssa.Value, id nodeid) {
+	ptr := PointerWCtx{a, a.addNodes(t, "query"), cgn}
+	ptrs, ok := a.result.Queries[v]
+	if !ok {
+		// First time?  Create the canonical query node.
+		ptrs = make([]PointerWCtx, 1)
+		ptrs[0] = ptr
+	} else {
+		ptrs = append(ptrs, ptr)
+	}
+	a.result.Queries[v] = ptrs
+	a.copy(ptr.n, id, a.sizeof(t))
+}
+
 
 // endObject marks the end of a sequence of calls to addNodes denoting
 // a single object allocation.
@@ -1031,12 +1005,14 @@ func (a *analysis) genStaticCallForGoCall(caller *cgnode, instr ssa.CallInstruct
 	if ok { //exist closure, add its new context, but no constraints
 	} else { //bz: case 1 and 3: we need a new contour and a new context for origin
 		if a.config.Origin && a.isInLoop(fn, instr) {
+			objs = make([]nodeid, 2)
 			//bz: loop problem -> two origin contexts here
 			obj1, _ := a.makeFunctionObjectWithContext(caller, fn, site, nil, 1)
 			objs[0] = obj1
 			obj2, _ := a.makeFunctionObjectWithContext(caller, fn, site, nil, 2)
 			objs[1] = obj2
-		} else { //kcfa and origin with no loop
+		} else { //kcfa (no loop handling); and origin with no loop
+			objs = make([]nodeid, 1)
 			obj, _ := a.makeFunctionObjectWithContext(caller, fn, site, nil, -1)
 			objs[0] = obj
 		}

@@ -34,14 +34,15 @@ func findMainPackages(pkgs []*ssa.Package) ([]*ssa.Package, error) {
 // godel2: mytest/dine3-chan-race.go, mytest/no-race-mut-bad.go, mytest/prod-cons-race.go
 // ../go2/race_checker/GoBench/Kubernetes/88331/main.go
 // ../go2/race_checker/GoBench/Grpc/3090/main.go
+// ../go2/race_checker/pointer_analysis_test/main.go
+
 // ../go2/race_checker/GoBench/Cockroach/35501/main.go
 // ../go2/race_checker/GoBench/Etcd/9446/main.go
-// ../go2/race_checker/pointer_analysis_test/main.go
-//TODO:
-// ../go2/race_checker/tests/GoBench/Grpc/1862/main.go --> bool
-// ../go2/race_checker/GoBench/Istio/8144/main.go --> int
-// ../go2/race_checker/GoBench/Istio/8967/main.go --> make(chan struct{})
-//TODO: attention !!! freevar !!! program counter ???
+// ../go2/race_checker/tests/GoBench/Grpc/1862/main.go
+// ../go2/race_checker/GoBench/Istio/8144/main.go
+// ../go2/race_checker/GoBench/Istio/8967/main.go
+
+//TODO: program counter ???
 func main() {
 	flag.Bool("ptrAnalysis", false, "Prints pointer analysis results. ")
 	flag.Parse()
@@ -132,8 +133,8 @@ func main() {
 				continue //we only want the app call edges
 			}
 			fmt.Println(caller.String()) //bz: with context
-			outs := caller.Out     // caller --> callee
-			for _, out := range outs {    //callees
+			outs := caller.Out           // caller --> callee
+			for _, out := range outs {   //callees
 				fmt.Println("  -> " + out.Callee.String()) //bz: with context
 			}
 		}
@@ -141,42 +142,67 @@ func main() {
 		fmt.Println("\nWe are going to print out queries. If not desired, turn off DEBUG.")
 		queries := result.Queries
 		inQueries := result.IndirectQueries
-		//globalQueries := result.GlobalQueries
-		fmt.Println("#Queries: " + strconv.Itoa(len(queries)) + "\n#Indirect Queries: " + strconv.Itoa(len(inQueries)))
-		fmt.Println("Queries Detail: ")
+		globalQueries := result.GlobalQueries
+		fmt.Println("#Queries: " + strconv.Itoa(len(queries)) + "  #Indirect Queries: " + strconv.Itoa(len(inQueries)) +
+			"  #Global Queries: " + strconv.Itoa(len(globalQueries)))
+		////testing only
 		//var p1 pointer.PointerWCtx
 		//var p2 pointer.PointerWCtx
 		//done := false
+
+		testAPI := false //bz: check for testing new api
+		fmt.Println("Queries Detail: ")
 		for v, ps := range queries {
 			for _, p := range ps { //p -> types.Pointer: includes its context
+				//SSA here is your *ssa.Value
 				fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
-				//if strings.Contains(v.String(), "&rt.buf ") {
-				//	if !done {
-				//		p1 = p
-				//		done = true
-				//	} else {
-				//		p2 = p
-				//	}
+				//if strings.Contains(v.String(), "new bool (abort)") {
+				//	p1 = p
+				//}
+				//if strings.Contains(v.String(), "abort : *bool") {
+				//	p2 = p
 				//}
 			}
+			if testAPI {
+				check := result.PointsTo(v)
+				for _, p := range check { //p -> types.Pointer: includes its context
+					fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
+				}
+			}
 		}
-		//yes := p1.PointsTo().Intersects(p2.PointsTo())
-		//if yes {
-		//	fmt.Println("they intersect")
-		//}
 
 		fmt.Println("\nIndirect Queries Detail: ")
 		for v, ps := range inQueries {
 			for _, p := range ps { //p -> types.Pointer: includes its context
 				fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
 			}
+			if testAPI {
+				check := result.PointsTo(v)
+				for _, p := range check { //p -> types.Pointer: includes its context
+					fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
+				}
+			}
 		}
 
-		//fmt.Println("\nGlobal Queries Detail: ")
-		//for v, ps := range globalQueries {
-		//	for _, p := range ps { //p -> types.Pointer: includes its context
-		//		fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.RootPointsTo().String() + "}")
-		//	}
+		fmt.Println("\nGlobal Queries Detail: ")
+		for v, ps := range globalQueries {
+			for _, p := range ps { //p -> types.Pointer: includes its context
+				fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
+				//if strings.Contains(v.String(), "abort : *bool") {
+				//	p2 = p
+				//}
+			}
+			if testAPI {
+				check := result.PointsTo(v)
+				for _, p := range check { //p -> types.Pointer: includes its context
+					fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
+				}
+			}
+		}
+		////testing only
+		//yes := p1.PointsTo().Intersects(p2.PointsTo())
+		//if yes {
+		//	fmt.Println(" @@@@ they intersect @@@@ ")
 		//}
 	}
 }
