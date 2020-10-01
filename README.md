@@ -7,12 +7,20 @@ Start from commit 146a0deefdd11b942db7520f68c117335329271a
 For any panic, please submit an issue with copy/paste crash stack. Thanks.
 
 ## How to Use?
-Go to https://github.tamu.edu/April1989/go_pointeranlaysis/blob/master/main/main.go (line 121), check how to use the current callgraph and queries. 
+Go to https://github.tamu.edu/April1989/go_pointeranlaysis/blob/master/main/main.go, check how to use the current callgraph and queries. 
 
 *REMIND*: for the statement traversal in race detection, to obtain the callee target(s), it is safe to follow the callgraph instead of querying the points-to set of the receiver variable. 
 
+## User APIs (for detector) 
+```go
+ResultWCtx:
+GetMain() //return the main *cgnode
+GetCGNodebyFunc(fn *ssa.Function) //return []*cgnode by *ssa.Function
+PointsTo(v ssa.Value) //return the corresponding []PointerWCtx for ssa.Value, user does not need to distinguish different queries anymore
+```
+
 ## kCFA
-Stable version: ```v3```
+Stable version: checkout the newest commit 
 
 ### Main Changes
 - Create k-callsite-sensitive contexts for static/invoke calls
@@ -20,7 +28,7 @@ Stable version: ```v3```
 - Currently, skip the creation of reflection and dynamic calls due to the huge number
 
 ## Origin-sensitive
-Stable version: ```v4```
+Stable version: checkout the newest commit 
 
 ### What is Origin? 
 We treat a go routine instruction as an origin entry point, and all variables/function calls inside this go rountine share the same context as their belonging go routine.
