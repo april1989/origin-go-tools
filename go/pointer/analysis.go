@@ -560,7 +560,7 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 		}
 	}
 
-	a.result.CallGraph.computeFn2CGNode() //bz: update Fn2CGNode
+	a.result.CallGraph.computeFn2CGNode() //bz: update Fn2CGNode for user API
 
 	return a.result, nil
 }

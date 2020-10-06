@@ -192,9 +192,9 @@ func (r *ResultWCtx) GetCGNodebyFunc(fn *ssa.Function) []*cgnode {
 	return r.CallGraph.Fn2CGNode[fn]
 }
 
-//bz: user API: return the main cgn
-func (r *ResultWCtx) GetMain() *cgnode {
-	return r.main
+//bz: user API: return the main method with type *Node
+func (r *ResultWCtx) GetMain() *Node {
+	return r.CallGraph.Nodes[r.main]
 }
 
 //bz: user API: return []PointerWCtx for a ssa.Value, user does not need to distinguish different queries anymore

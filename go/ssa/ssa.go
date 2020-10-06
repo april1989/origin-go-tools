@@ -673,11 +673,6 @@ type MakeInterface struct {
 	X Value
 }
 
-//bz: want this ..
-func (iface *MakeInterface) RegisterType() types.Type {
-	return iface.register.typ
-}
-
 // The MakeClosure instruction yields a closure value whose code is
 // Fn and whose free variables' values are supplied by Bindings.
 //
