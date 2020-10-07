@@ -182,7 +182,7 @@ type ResultWCtx struct {
 	CallGraph       *GraphWCtx           // discovered call graph
 	Queries         map[ssa.Value][]PointerWCtx // pts(v) for each v in setValueNode().
 	IndirectQueries map[ssa.Value][]PointerWCtx // pts(*v) for each v in setValueNode().
-	GlobalQueries   map[ssa.Value][]PointerWCtx // rpts(v) for each v in setValueNode().
+	GlobalQueries   map[ssa.Value][]PointerWCtx // pts(v) for each freevar in setValueNode().
 	Warnings        []Warning                   // warnings of unsoundness
 	main            *cgnode          // bz: the cgnode for main method
 }
@@ -197,7 +197,8 @@ func (r *ResultWCtx) GetMain() *Node {
 	return r.CallGraph.Nodes[r.main]
 }
 
-//bz: user API: return []PointerWCtx for a ssa.Value, user does not need to distinguish different queries anymore
+//bz: user API: return []PointerWCtx for a ssa.Value,
+//user does not need to distinguish different queries anymore
 //input: ssa.Value;
 //output: PointerWCtx
 //panic: if no record for such input

@@ -7,3 +7,6 @@ mytest/*
 .DS_Store
 golog
 gologfile\ copy
+
+main/main
+
