@@ -3,7 +3,7 @@
 // licence that can be found in the LICENSE file.
 
 // This file contains the implementation of the 'gomvpkg' command
-// whose main function is in golang.org/x/tools/cmd/gomvpkg.
+// whose main function is in github.com/o2lab/go-tools/cmd/gomvpkg.
 
 package rename
 
@@ -29,9 +29,9 @@ import (
 	"strings"
 	"text/template"
 
-	"golang.org/x/tools/go/buildutil"
-	"golang.org/x/tools/go/loader"
-	"golang.org/x/tools/refactor/importgraph"
+	"github.com/o2lab/go-tools/go/buildutil"
+	"github.com/o2lab/go-tools/go/loader"
+	"github.com/o2lab/go-tools/refactor/importgraph"
 )
 
 // Move, given a package path and a destination package path, will try

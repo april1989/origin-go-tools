@@ -7,9 +7,9 @@ package lsp
 import (
 	"context"
 
-	"golang.org/x/tools/internal/lsp/protocol"
-	"golang.org/x/tools/internal/lsp/source"
-	"golang.org/x/tools/internal/span"
+	"github.com/o2lab/go-tools/internal/lsp/protocol"
+	"github.com/o2lab/go-tools/internal/lsp/source"
+	"github.com/o2lab/go-tools/internal/span"
 	errors "golang.org/x/xerrors"
 )
 

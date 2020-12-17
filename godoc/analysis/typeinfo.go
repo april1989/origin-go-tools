@@ -25,8 +25,8 @@ import (
 	"strconv"
 	"strings"
 
-	"golang.org/x/tools/go/loader"
-	"golang.org/x/tools/go/types/typeutil"
+	"github.com/o2lab/go-tools/go/loader"
+	"github.com/o2lab/go-tools/go/types/typeutil"
 )
 
 // TODO(adonovan): audit to make sure it's safe on ill-typed packages.

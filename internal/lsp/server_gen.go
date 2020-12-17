@@ -5,7 +5,7 @@ package lsp
 import (
 	"context"
 
-	"golang.org/x/tools/internal/lsp/protocol"
+	"github.com/o2lab/go-tools/internal/lsp/protocol"
 )
 
 func (s *Server) CodeAction(ctx context.Context, params *protocol.CodeActionParams) ([]protocol.CodeAction, error) {

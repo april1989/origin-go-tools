@@ -21,11 +21,11 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/tools/go/buildutil"
-	"golang.org/x/tools/go/loader"
-	"golang.org/x/tools/go/ssa"
-	"golang.org/x/tools/go/ssa/ssautil"
-	"golang.org/x/tools/internal/testenv"
+	"github.com/o2lab/go-tools/go/buildutil"
+	"github.com/o2lab/go-tools/go/loader"
+	"github.com/o2lab/go-tools/go/ssa"
+	"github.com/o2lab/go-tools/go/ssa/ssautil"
+	"github.com/o2lab/go-tools/internal/testenv"
 )
 
 func bytesAllocated() uint64 {

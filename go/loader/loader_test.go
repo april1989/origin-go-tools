@@ -22,9 +22,9 @@ import (
 	"sync"
 	"testing"
 
-	"golang.org/x/tools/go/buildutil"
-	"golang.org/x/tools/go/loader"
-	"golang.org/x/tools/internal/testenv"
+	"github.com/o2lab/go-tools/go/buildutil"
+	"github.com/o2lab/go-tools/go/loader"
+	"github.com/o2lab/go-tools/internal/testenv"
 )
 
 func TestMain(m *testing.M) {

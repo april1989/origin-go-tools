@@ -14,12 +14,12 @@ import (
 	"sync"
 
 	"golang.org/x/sync/errgroup"
-	"golang.org/x/tools/go/analysis"
-	"golang.org/x/tools/internal/analysisinternal"
-	"golang.org/x/tools/internal/event"
-	"golang.org/x/tools/internal/lsp/debug/tag"
-	"golang.org/x/tools/internal/lsp/source"
-	"golang.org/x/tools/internal/memoize"
+	"github.com/o2lab/go-tools/go/analysis"
+	"github.com/o2lab/go-tools/internal/analysisinternal"
+	"github.com/o2lab/go-tools/internal/event"
+	"github.com/o2lab/go-tools/internal/lsp/debug/tag"
+	"github.com/o2lab/go-tools/internal/lsp/source"
+	"github.com/o2lab/go-tools/internal/memoize"
 	errors "golang.org/x/xerrors"
 )
 

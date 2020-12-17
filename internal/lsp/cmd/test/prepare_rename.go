@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"testing"
 
-	"golang.org/x/tools/internal/lsp/cmd"
-	"golang.org/x/tools/internal/lsp/protocol"
-	"golang.org/x/tools/internal/lsp/source"
-	"golang.org/x/tools/internal/span"
+	"github.com/o2lab/go-tools/internal/lsp/cmd"
+	"github.com/o2lab/go-tools/internal/lsp/protocol"
+	"github.com/o2lab/go-tools/internal/lsp/source"
+	"github.com/o2lab/go-tools/internal/span"
 )
 
 func (r *runner) PrepareRename(t *testing.T, src span.Span, want *source.PrepareItem) {

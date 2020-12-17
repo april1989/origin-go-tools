@@ -21,4 +21,4 @@ For usage information, please see:
 	go help testflag
 	go tool cover -help
 */
-package main // import "golang.org/x/tools/cmd/cover"
+package main // import "github.com/o2lab/go-tools/cmd/cover"

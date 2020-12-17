@@ -1,3 +1,3 @@
 package unimported
 
-var TestExport int //@item(testexport, "TestExport", "(from \"golang.org/x/tools/internal/lsp/unimported\")", "var")
+var TestExport int //@item(testexport, "TestExport", "(from \"github.com/o2lab/go-tools/internal/lsp/unimported\")", "var")

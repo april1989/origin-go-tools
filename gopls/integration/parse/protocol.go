@@ -7,7 +7,7 @@ package parse
 import (
 	"log"
 
-	p "golang.org/x/tools/internal/lsp/protocol"
+	p "github.com/o2lab/go-tools/internal/lsp/protocol"
 )
 
 // Requests and notifications are fixed types

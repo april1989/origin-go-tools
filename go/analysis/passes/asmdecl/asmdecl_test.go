@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"golang.org/x/tools/go/analysis/analysistest"
-	"golang.org/x/tools/go/analysis/passes/asmdecl"
+	"github.com/o2lab/go-tools/go/analysis/analysistest"
+	"github.com/o2lab/go-tools/go/analysis/passes/asmdecl"
 )
 
 var goosarches = []string{

@@ -19,12 +19,12 @@ import (
 	"time"
 	"unicode"
 
-	"golang.org/x/tools/go/ast/astutil"
-	"golang.org/x/tools/internal/event"
-	"golang.org/x/tools/internal/imports"
-	"golang.org/x/tools/internal/lsp/fuzzy"
-	"golang.org/x/tools/internal/lsp/protocol"
-	"golang.org/x/tools/internal/lsp/snippet"
+	"github.com/o2lab/go-tools/go/ast/astutil"
+	"github.com/o2lab/go-tools/internal/event"
+	"github.com/o2lab/go-tools/internal/imports"
+	"github.com/o2lab/go-tools/internal/lsp/fuzzy"
+	"github.com/o2lab/go-tools/internal/lsp/protocol"
+	"github.com/o2lab/go-tools/internal/lsp/snippet"
 	errors "golang.org/x/xerrors"
 )
 

@@ -3,7 +3,7 @@ package source
 import (
 	"go/ast"
 
-	"golang.org/x/tools/internal/lsp/protocol"
+	"github.com/o2lab/go-tools/internal/lsp/protocol"
 )
 
 const (

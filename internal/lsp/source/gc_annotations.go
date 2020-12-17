@@ -14,8 +14,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"golang.org/x/tools/internal/lsp/protocol"
-	"golang.org/x/tools/internal/span"
+	"github.com/o2lab/go-tools/internal/lsp/protocol"
+	"github.com/o2lab/go-tools/internal/span"
 )
 
 func GCOptimizationDetails(ctx context.Context, snapshot Snapshot, pkgDir span.URI) (map[VersionedFileIdentity][]*Diagnostic, error) {

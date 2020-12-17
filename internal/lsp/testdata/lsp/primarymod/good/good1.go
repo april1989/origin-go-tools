@@ -2,7 +2,7 @@ package good //@diag("package", "no_diagnostics", "", "error")
 
 import (
 	_ "go/ast"                              //@prepare("go/ast", "_", "_")
-	"golang.org/x/tools/internal/lsp/types" //@item(types_import, "types", "\"golang.org/x/tools/internal/lsp/types\"", "package")
+	"github.com/o2lab/go-tools/internal/lsp/types" //@item(types_import, "types", "\"github.com/o2lab/go-tools/internal/lsp/types\"", "package")
 )
 
 func random() int { //@item(good_random, "random", "func() int", "func")

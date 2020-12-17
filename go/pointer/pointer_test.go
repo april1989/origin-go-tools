@@ -25,12 +25,12 @@ import (
 	"strings"
 	"testing"
 
-	"golang.org/x/tools/go/callgraph"
-	"golang.org/x/tools/go/loader"
-	"golang.org/x/tools/go/pointer"
-	"golang.org/x/tools/go/ssa"
-	"golang.org/x/tools/go/ssa/ssautil"
-	"golang.org/x/tools/go/types/typeutil"
+	"github.com/o2lab/go-tools/go/callgraph"
+	"github.com/o2lab/go-tools/go/loader"
+	"github.com/o2lab/go-tools/go/pointer"
+	"github.com/o2lab/go-tools/go/ssa"
+	"github.com/o2lab/go-tools/go/ssa/ssautil"
+	"github.com/o2lab/go-tools/go/types/typeutil"
 )
 
 var inputs = []string{

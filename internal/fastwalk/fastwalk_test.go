@@ -18,7 +18,7 @@ import (
 	"sync"
 	"testing"
 
-	"golang.org/x/tools/internal/fastwalk"
+	"github.com/o2lab/go-tools/internal/fastwalk"
 )
 
 func formatFileModes(m map[string]os.FileMode) string {

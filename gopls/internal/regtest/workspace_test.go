@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"testing"
 
-	"golang.org/x/tools/internal/lsp"
+	"github.com/o2lab/go-tools/internal/lsp"
 )
 
 const workspaceProxy = `

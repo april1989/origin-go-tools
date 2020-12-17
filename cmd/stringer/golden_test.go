@@ -16,7 +16,7 @@ import (
 	"strings"
 	"testing"
 
-	"golang.org/x/tools/internal/testenv"
+	"github.com/o2lab/go-tools/internal/testenv"
 )
 
 // Golden represents a test case.

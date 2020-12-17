@@ -7,8 +7,8 @@ package shift_test
 import (
 	"testing"
 
-	"golang.org/x/tools/go/analysis/analysistest"
-	"golang.org/x/tools/go/analysis/passes/shift"
+	"github.com/o2lab/go-tools/go/analysis/analysistest"
+	"github.com/o2lab/go-tools/go/analysis/passes/shift"
 )
 
 func Test(t *testing.T) {

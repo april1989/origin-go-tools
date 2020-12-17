@@ -1,7 +1,7 @@
 // The eg command performs example-based refactoring.
 // For documentation, run the command, or see Help in
-// golang.org/x/tools/refactor/eg.
-package main // import "golang.org/x/tools/cmd/eg"
+// github.com/o2lab/go-tools/refactor/eg.
+package main // import "github.com/o2lab/go-tools/cmd/eg"
 
 import (
 	"flag"
@@ -14,9 +14,9 @@ import (
 	"os/exec"
 	"strings"
 
-	"golang.org/x/tools/go/buildutil"
-	"golang.org/x/tools/go/loader"
-	"golang.org/x/tools/refactor/eg"
+	"github.com/o2lab/go-tools/go/buildutil"
+	"github.com/o2lab/go-tools/go/loader"
+	"github.com/o2lab/go-tools/refactor/eg"
 )
 
 var (

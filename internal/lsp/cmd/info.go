@@ -13,8 +13,8 @@ import (
 	"os"
 	"strings"
 
-	"golang.org/x/tools/internal/lsp/browser"
-	"golang.org/x/tools/internal/lsp/debug"
+	"github.com/o2lab/go-tools/internal/lsp/browser"
+	"github.com/o2lab/go-tools/internal/lsp/debug"
 )
 
 // version implements the version command.

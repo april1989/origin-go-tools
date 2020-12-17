@@ -17,10 +17,10 @@ import (
 	"strconv"
 	"strings"
 
-	"golang.org/x/tools/gopls/integration/parse"
-	"golang.org/x/tools/internal/fakenet"
-	"golang.org/x/tools/internal/jsonrpc2"
-	p "golang.org/x/tools/internal/lsp/protocol"
+	"github.com/o2lab/go-tools/gopls/integration/parse"
+	"github.com/o2lab/go-tools/internal/fakenet"
+	"github.com/o2lab/go-tools/internal/jsonrpc2"
+	p "github.com/o2lab/go-tools/internal/lsp/protocol"
 )
 
 var (

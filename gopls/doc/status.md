@@ -2,7 +2,7 @@
 
 gopls is currently in **alpha**, so it is **not stable**.
 
-gopls is currently under active development by the Go team. The code is in the [x/tools] repository, in [golang.org/x/tools/internal/lsp] and [golang.org/x/tools/gopls].
+gopls is currently under active development by the Go team. The code is in the [x/tools] repository, in [github.com/o2lab/go-tools/internal/lsp] and [github.com/o2lab/go-tools/gopls].
 
 ## Supported features
 
@@ -27,8 +27,8 @@ missing features
 1. Find references and rename only work in a single package: [#32877]
 
 [x/tools]: https://github.com/golang/tools
-[golang.org/x/tools/gopls]: https://github.com/golang/tools/tree/master/gopls
-[golang.org/x/tools/internal/lsp]: https://github.com/golang/tools/tree/master/internal/lsp
+[github.com/o2lab/go-tools/gopls]: https://github.com/golang/tools/tree/master/gopls
+[github.com/o2lab/go-tools/internal/lsp]: https://github.com/golang/tools/tree/master/internal/lsp
 
 
 [#32394]: https://github.com/golang/go/issues/32394

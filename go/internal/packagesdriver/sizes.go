@@ -14,7 +14,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"golang.org/x/tools/internal/gocommand"
+	"github.com/o2lab/go-tools/internal/gocommand"
 )
 
 var debug = false

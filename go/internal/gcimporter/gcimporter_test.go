@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/tools/internal/testenv"
+	"github.com/o2lab/go-tools/internal/testenv"
 )
 
 func TestMain(m *testing.M) {

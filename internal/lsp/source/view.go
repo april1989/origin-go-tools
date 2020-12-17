@@ -14,11 +14,11 @@ import (
 	"io"
 
 	"golang.org/x/mod/modfile"
-	"golang.org/x/tools/go/analysis"
-	"golang.org/x/tools/go/packages"
-	"golang.org/x/tools/internal/imports"
-	"golang.org/x/tools/internal/lsp/protocol"
-	"golang.org/x/tools/internal/span"
+	"github.com/o2lab/go-tools/go/analysis"
+	"github.com/o2lab/go-tools/go/packages"
+	"github.com/o2lab/go-tools/internal/imports"
+	"github.com/o2lab/go-tools/internal/lsp/protocol"
+	"github.com/o2lab/go-tools/internal/span"
 	errors "golang.org/x/xerrors"
 )
 

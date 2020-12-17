@@ -7,7 +7,7 @@ package source
 import (
 	"go/ast"
 
-	"golang.org/x/tools/internal/lsp/snippet"
+	"github.com/o2lab/go-tools/internal/lsp/snippet"
 )
 
 // structFieldSnippets calculates the snippet for struct literal field names.

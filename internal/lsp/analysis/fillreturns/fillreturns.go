@@ -17,9 +17,9 @@ import (
 	"strconv"
 	"strings"
 
-	"golang.org/x/tools/go/analysis"
-	"golang.org/x/tools/go/ast/astutil"
-	"golang.org/x/tools/internal/analysisinternal"
+	"github.com/o2lab/go-tools/go/analysis"
+	"github.com/o2lab/go-tools/go/ast/astutil"
+	"github.com/o2lab/go-tools/internal/analysisinternal"
 )
 
 const Doc = `suggested fixes for "wrong number of return values (want %d, got %d)"

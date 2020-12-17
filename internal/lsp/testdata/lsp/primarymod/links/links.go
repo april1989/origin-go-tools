@@ -3,7 +3,7 @@ package links
 import (
 	"fmt" //@link(`fmt`,"https://pkg.go.dev/fmt")
 
-	"golang.org/x/tools/internal/lsp/foo" //@link(`golang.org/x/tools/internal/lsp/foo`,`https://pkg.go.dev/golang.org/x/tools/internal/lsp/foo`)
+	"github.com/o2lab/go-tools/internal/lsp/foo" //@link(`github.com/o2lab/go-tools/internal/lsp/foo`,`https://pkg.go.dev/github.com/o2lab/go-tools/internal/lsp/foo`)
 
 	_ "database/sql" //@link(`database/sql`, `https://pkg.go.dev/database/sql`)
 

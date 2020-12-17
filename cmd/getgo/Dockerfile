@@ -4,10 +4,10 @@ ENV SHELL /bin/bash
 ENV HOME /root
 WORKDIR $HOME
 
-COPY . /go/src/golang.org/x/tools/cmd/getgo
+COPY . /go/src/github.com/o2lab/go-tools/cmd/getgo
 
 RUN ( \
-		cd /go/src/golang.org/x/tools/cmd/getgo \
+		cd /go/src/github.com/o2lab/go-tools/cmd/getgo \
 		&& go build \
 		&& mv getgo /usr/local/bin/getgo \
 	)

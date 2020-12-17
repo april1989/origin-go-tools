@@ -8,7 +8,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"golang.org/x/tools/internal/lsp/fillstruct/data"
+	"github.com/o2lab/go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {

@@ -13,8 +13,8 @@ import (
 	"go/types"
 	"strings"
 
-	"golang.org/x/tools/go/ast/astutil"
-	"golang.org/x/tools/internal/lsp/fuzzy"
+	"github.com/o2lab/go-tools/go/ast/astutil"
+	"github.com/o2lab/go-tools/internal/lsp/fuzzy"
 )
 
 var (

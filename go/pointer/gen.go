@@ -14,7 +14,7 @@ import (
 	"fmt"
 	"go/token"
 	"go/types"
-	"golang.org/x/tools/go/ssa"
+	"github.com/o2lab/go-tools/go/ssa"
 	"math"
 	"strconv"
 	"strings"

@@ -8,7 +8,7 @@
 // later use.
 //
 // Deprecated: This is an older API and does not have support
-// for modules. Use golang.org/x/tools/go/packages instead.
+// for modules. Use github.com/o2lab/go-tools/go/packages instead.
 //
 // The package defines two primary types: Config, which specifies a
 // set of initial packages to load and various other options; and

@@ -20,10 +20,10 @@ import (
 	"strings"
 	"testing"
 
-	"golang.org/x/tools/go/callgraph"
-	"golang.org/x/tools/go/callgraph/cha"
-	"golang.org/x/tools/go/loader"
-	"golang.org/x/tools/go/ssa/ssautil"
+	"github.com/o2lab/go-tools/go/callgraph"
+	"github.com/o2lab/go-tools/go/callgraph/cha"
+	"github.com/o2lab/go-tools/go/loader"
+	"github.com/o2lab/go-tools/go/ssa/ssautil"
 )
 
 var inputs = []string{

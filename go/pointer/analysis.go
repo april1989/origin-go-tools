@@ -18,8 +18,8 @@ import (
 	"sort"
 	"strconv"
 
-	"golang.org/x/tools/go/ssa"
-	"golang.org/x/tools/go/types/typeutil"
+	"github.com/o2lab/go-tools/go/ssa"
+	"github.com/o2lab/go-tools/go/types/typeutil"
 )
 
 const (

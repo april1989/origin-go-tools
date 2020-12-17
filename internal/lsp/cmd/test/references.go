@@ -9,7 +9,7 @@ import (
 	"sort"
 	"testing"
 
-	"golang.org/x/tools/internal/span"
+	"github.com/o2lab/go-tools/internal/span"
 )
 
 func (r *runner) References(t *testing.T, spn span.Span, itemList []span.Span) {

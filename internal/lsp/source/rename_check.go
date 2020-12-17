@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 //
-// Taken from golang.org/x/tools/refactor/rename.
+// Taken from github.com/o2lab/go-tools/refactor/rename.
 
 package source
 
@@ -16,8 +16,8 @@ import (
 	"strings"
 	"unicode"
 
-	"golang.org/x/tools/go/ast/astutil"
-	"golang.org/x/tools/refactor/satisfy"
+	"github.com/o2lab/go-tools/go/ast/astutil"
+	"github.com/o2lab/go-tools/refactor/satisfy"
 )
 
 // errorf reports an error (e.g. conflict) and prevents file modification.

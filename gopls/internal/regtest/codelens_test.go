@@ -7,11 +7,11 @@ package regtest
 import (
 	"testing"
 
-	"golang.org/x/tools/internal/lsp/fake"
-	"golang.org/x/tools/internal/lsp/protocol"
-	"golang.org/x/tools/internal/lsp/source"
-	"golang.org/x/tools/internal/lsp/tests"
-	"golang.org/x/tools/internal/testenv"
+	"github.com/o2lab/go-tools/internal/lsp/fake"
+	"github.com/o2lab/go-tools/internal/lsp/protocol"
+	"github.com/o2lab/go-tools/internal/lsp/source"
+	"github.com/o2lab/go-tools/internal/lsp/tests"
+	"github.com/o2lab/go-tools/internal/testenv"
 )
 
 func TestDisablingCodeLens(t *testing.T) {

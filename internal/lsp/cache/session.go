@@ -12,12 +12,12 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"golang.org/x/tools/internal/event"
-	"golang.org/x/tools/internal/gocommand"
-	"golang.org/x/tools/internal/imports"
-	"golang.org/x/tools/internal/lsp/source"
-	"golang.org/x/tools/internal/span"
-	"golang.org/x/tools/internal/xcontext"
+	"github.com/o2lab/go-tools/internal/event"
+	"github.com/o2lab/go-tools/internal/gocommand"
+	"github.com/o2lab/go-tools/internal/imports"
+	"github.com/o2lab/go-tools/internal/lsp/source"
+	"github.com/o2lab/go-tools/internal/span"
+	"github.com/o2lab/go-tools/internal/xcontext"
 	errors "golang.org/x/xerrors"
 )
 

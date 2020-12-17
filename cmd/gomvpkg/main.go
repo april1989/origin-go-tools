@@ -12,8 +12,8 @@ import (
 	"go/build"
 	"os"
 
-	"golang.org/x/tools/go/buildutil"
-	"golang.org/x/tools/refactor/rename"
+	"github.com/o2lab/go-tools/go/buildutil"
+	"github.com/o2lab/go-tools/refactor/rename"
 )
 
 var (

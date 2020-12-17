@@ -1,6 +1,6 @@
 package implementation
 
-import "golang.org/x/tools/internal/lsp/implementation/other"
+import "github.com/o2lab/go-tools/internal/lsp/implementation/other"
 
 type ImpP struct{} //@ImpP,implementations("ImpP", Laugher, OtherLaugher)
 

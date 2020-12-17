@@ -23,7 +23,7 @@ For the most part, you should not need to install or update `gopls`. Your editor
 If you do want to get the latest stable version of `gopls`, change to any directory that is both outside of your `GOPATH` and outside of a module (a temp directory is fine), and run
 
 ```sh
-go get golang.org/x/tools/gopls@latest
+go get github.com/o2lab/go-tools/gopls@latest
 ```
 
 **Do not** use the `-u` flag, as it will update your dependencies to incompatible versions.
@@ -32,7 +32,7 @@ To get a specific version of `gopls` (for example, to test a prerelease
 version), run:
 
 ```sh
-go get golang.org/x/tools/gopls@vX.Y.Z
+go get github.com/o2lab/go-tools/gopls@vX.Y.Z
 ```
 
 Where `vX.Y.Z` is the desired version.
@@ -40,12 +40,12 @@ Where `vX.Y.Z` is the desired version.
 If you see this error:
 
 ```sh
-$ go get golang.org/x/tools/gopls@latest
+$ go get github.com/o2lab/go-tools/gopls@latest
 go: cannot use path@version syntax in GOPATH mode
 ```
 then run
 ```sh
-GO111MODULE=on go get golang.org/x/tools/gopls@latest
+GO111MODULE=on go get github.com/o2lab/go-tools/gopls@latest
 ```
 
 ### Unstable versions
@@ -56,7 +56,7 @@ with `@master` could fail.  To actually update your `gopls` to the
 latest **unstable** version, use:
 
 ```sh
-$ go get golang.org/x/tools/gopls@master golang.org/x/tools@master
+$ go get github.com/o2lab/go-tools/gopls@master github.com/o2lab/go-tools@master
 ```
 
 In general, you should use `@latest` instead, to prevent frequent

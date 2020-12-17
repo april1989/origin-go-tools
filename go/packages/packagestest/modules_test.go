@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"golang.org/x/tools/go/packages/packagestest"
-	"golang.org/x/tools/internal/testenv"
+	"github.com/o2lab/go-tools/go/packages/packagestest"
+	"github.com/o2lab/go-tools/internal/testenv"
 )
 
 func TestModulesExport(t *testing.T) {

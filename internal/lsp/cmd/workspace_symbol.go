@@ -9,9 +9,9 @@ import (
 	"flag"
 	"fmt"
 
-	"golang.org/x/tools/internal/lsp/protocol"
-	"golang.org/x/tools/internal/lsp/source"
-	"golang.org/x/tools/internal/tool"
+	"github.com/o2lab/go-tools/internal/lsp/protocol"
+	"github.com/o2lab/go-tools/internal/lsp/source"
+	"github.com/o2lab/go-tools/internal/tool"
 )
 
 // workspaceSymbol implements the workspace_symbol verb for gopls.

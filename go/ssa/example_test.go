@@ -14,9 +14,9 @@ import (
 	"log"
 	"os"
 
-	"golang.org/x/tools/go/packages"
-	"golang.org/x/tools/go/ssa"
-	"golang.org/x/tools/go/ssa/ssautil"
+	"github.com/o2lab/go-tools/go/packages"
+	"github.com/o2lab/go-tools/go/ssa"
+	"github.com/o2lab/go-tools/go/ssa/ssautil"
 )
 
 const hello = `
@@ -34,7 +34,7 @@ func main() {
 // This program demonstrates how to run the SSA builder on a single
 // package of one or more already-parsed files.  Its dependencies are
 // loaded from compiler export data.  This is what you'd typically use
-// for a compiler; it does not depend on golang.org/x/tools/go/loader.
+// for a compiler; it does not depend on github.com/o2lab/go-tools/go/loader.
 //
 // It shows the printed representation of packages, functions, and
 // instructions.  Within the function listing, the name of each
@@ -47,7 +47,7 @@ func main() {
 //
 // Build and run the ssadump.go program if you want a standalone tool
 // with similar functionality. It is located at
-// golang.org/x/tools/cmd/ssadump.
+// github.com/o2lab/go-tools/cmd/ssadump.
 //
 func Example_buildPackage() {
 	// Parse the source files.

@@ -7,9 +7,9 @@ package regtest
 import (
 	"testing"
 
-	"golang.org/x/tools/internal/lsp"
-	"golang.org/x/tools/internal/lsp/protocol"
-	"golang.org/x/tools/internal/lsp/tests"
+	"github.com/o2lab/go-tools/internal/lsp"
+	"github.com/o2lab/go-tools/internal/lsp/protocol"
+	"github.com/o2lab/go-tools/internal/lsp/tests"
 )
 
 // A basic test for fillstruct, now that it uses a command.

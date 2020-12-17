@@ -7,10 +7,10 @@ package testinggoroutine
 import (
 	"go/ast"
 
-	"golang.org/x/tools/go/analysis"
-	"golang.org/x/tools/go/analysis/passes/inspect"
-	"golang.org/x/tools/go/analysis/passes/internal/analysisutil"
-	"golang.org/x/tools/go/ast/inspector"
+	"github.com/o2lab/go-tools/go/analysis"
+	"github.com/o2lab/go-tools/go/analysis/passes/inspect"
+	"github.com/o2lab/go-tools/go/analysis/passes/internal/analysisutil"
+	"github.com/o2lab/go-tools/go/ast/inspector"
 )
 
 const Doc = `report calls to (*golibexec_testing.T).Fatal from goroutines started by a test.
