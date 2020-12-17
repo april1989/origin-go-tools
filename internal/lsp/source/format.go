@@ -15,10 +15,10 @@ import (
 	"go/token"
 	"strings"
 
-	"github.com/o2lab/go-tools/internal/event"
-	"github.com/o2lab/go-tools/internal/imports"
-	"github.com/o2lab/go-tools/internal/lsp/diff"
-	"github.com/o2lab/go-tools/internal/lsp/protocol"
+	"github.tamu.edu/April1989/go_tools/internal/event"
+	"github.tamu.edu/April1989/go_tools/internal/imports"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/diff"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
 )
 
 // Format formats a file with a given range.

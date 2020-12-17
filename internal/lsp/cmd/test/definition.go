@@ -10,10 +10,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/o2lab/go-tools/internal/lsp/diff"
-	"github.com/o2lab/go-tools/internal/lsp/diff/myers"
-	"github.com/o2lab/go-tools/internal/lsp/tests"
-	"github.com/o2lab/go-tools/internal/span"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/diff"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/diff/myers"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/tests"
+	"github.tamu.edu/April1989/go_tools/internal/span"
 )
 
 type godefMode int

@@ -11,10 +11,10 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/o2lab/go-tools/go/callgraph"
-	"github.com/o2lab/go-tools/go/callgraph/static"
-	"github.com/o2lab/go-tools/go/loader"
-	"github.com/o2lab/go-tools/go/ssa/ssautil"
+	"github.tamu.edu/April1989/go_tools/go/callgraph"
+	"github.tamu.edu/April1989/go_tools/go/callgraph/static"
+	"github.tamu.edu/April1989/go_tools/go/loader"
+	"github.tamu.edu/April1989/go_tools/go/ssa/ssautil"
 )
 
 const input = `package P

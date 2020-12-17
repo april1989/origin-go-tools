@@ -4,10 +4,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/o2lab/go-tools/internal/lsp/protocol"
-	"github.com/o2lab/go-tools/internal/lsp/source"
-	"github.com/o2lab/go-tools/internal/lsp/tests"
-	"github.com/o2lab/go-tools/internal/span"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/source"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/tests"
+	"github.tamu.edu/April1989/go_tools/internal/span"
 )
 
 func (r *runner) Completion(t *testing.T, src span.Span, test tests.Completion, items tests.CompletionItems) {

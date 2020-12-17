@@ -3,7 +3,7 @@
 package selector
 
 import (
-	"github.com/o2lab/go-tools/internal/lsp/bar"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/bar"
 )
 
 type S struct {

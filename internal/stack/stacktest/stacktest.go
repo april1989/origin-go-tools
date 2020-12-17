@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/o2lab/go-tools/internal/stack"
+	"github.tamu.edu/April1989/go_tools/internal/stack"
 )
 
 //this is only needed to support pre 1.14 when golibexec_testing.TB did not have Cleanup

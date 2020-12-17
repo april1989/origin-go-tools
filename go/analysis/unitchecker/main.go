@@ -1,7 +1,7 @@
 // +build ignore
 
 // This file provides an example command for static checkers
-// conforming to the github.com/o2lab/go-tools/go/analysis API.
+// conforming to the github.tamu.edu/April1989/go_tools/go/analysis API.
 // It serves as a model for the behavior of the cmd/vet tool in $GOROOT.
 // Being based on the unitchecker driver, it must be run by go vet:
 //
@@ -12,30 +12,30 @@
 package main
 
 import (
-	"github.com/o2lab/go-tools/go/analysis/unitchecker"
+	"github.tamu.edu/April1989/go_tools/go/analysis/unitchecker"
 
-	"github.com/o2lab/go-tools/go/analysis/passes/asmdecl"
-	"github.com/o2lab/go-tools/go/analysis/passes/assign"
-	"github.com/o2lab/go-tools/go/analysis/passes/atomic"
-	"github.com/o2lab/go-tools/go/analysis/passes/bools"
-	"github.com/o2lab/go-tools/go/analysis/passes/buildtag"
-	"github.com/o2lab/go-tools/go/analysis/passes/cgocall"
-	"github.com/o2lab/go-tools/go/analysis/passes/composite"
-	"github.com/o2lab/go-tools/go/analysis/passes/copylock"
-	"github.com/o2lab/go-tools/go/analysis/passes/errorsas"
-	"github.com/o2lab/go-tools/go/analysis/passes/httpresponse"
-	"github.com/o2lab/go-tools/go/analysis/passes/loopclosure"
-	"github.com/o2lab/go-tools/go/analysis/passes/lostcancel"
-	"github.com/o2lab/go-tools/go/analysis/passes/nilfunc"
-	"github.com/o2lab/go-tools/go/analysis/passes/printf"
-	"github.com/o2lab/go-tools/go/analysis/passes/shift"
-	"github.com/o2lab/go-tools/go/analysis/passes/stdmethods"
-	"github.com/o2lab/go-tools/go/analysis/passes/structtag"
-	"github.com/o2lab/go-tools/go/analysis/passes/tests"
-	"github.com/o2lab/go-tools/go/analysis/passes/unmarshal"
-	"github.com/o2lab/go-tools/go/analysis/passes/unreachable"
-	"github.com/o2lab/go-tools/go/analysis/passes/unsafeptr"
-	"github.com/o2lab/go-tools/go/analysis/passes/unusedresult"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/asmdecl"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/assign"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/atomic"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/bools"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/buildtag"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/cgocall"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/composite"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/copylock"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/errorsas"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/httpresponse"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/loopclosure"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/lostcancel"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/nilfunc"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/printf"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/shift"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/stdmethods"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/structtag"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/tests"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/unmarshal"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/unreachable"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/unsafeptr"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/unusedresult"
 )
 
 func main() {

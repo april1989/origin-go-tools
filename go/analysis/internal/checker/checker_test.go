@@ -7,12 +7,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/o2lab/go-tools/go/analysis"
-	"github.com/o2lab/go-tools/go/analysis/analysistest"
-	"github.com/o2lab/go-tools/go/analysis/internal/checker"
-	"github.com/o2lab/go-tools/go/analysis/passes/inspect"
-	"github.com/o2lab/go-tools/go/ast/inspector"
-	"github.com/o2lab/go-tools/internal/testenv"
+	"github.tamu.edu/April1989/go_tools/go/analysis"
+	"github.tamu.edu/April1989/go_tools/go/analysis/analysistest"
+	"github.tamu.edu/April1989/go_tools/go/analysis/internal/checker"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/inspect"
+	"github.tamu.edu/April1989/go_tools/go/ast/inspector"
+	"github.tamu.edu/April1989/go_tools/internal/testenv"
 )
 
 var from, to string

@@ -15,8 +15,8 @@ import (
 	"go/types"
 	"reflect"
 
-	"github.com/o2lab/go-tools/go/analysis"
-	"github.com/o2lab/go-tools/go/ssa"
+	"github.tamu.edu/April1989/go_tools/go/analysis"
+	"github.tamu.edu/April1989/go_tools/go/ssa"
 )
 
 var Analyzer = &analysis.Analyzer{

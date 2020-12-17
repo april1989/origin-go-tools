@@ -12,7 +12,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/o2lab/go-tools/internal/event"
+	"github.tamu.edu/April1989/go_tools/internal/event"
 	errors "golang.org/x/xerrors"
 )
 

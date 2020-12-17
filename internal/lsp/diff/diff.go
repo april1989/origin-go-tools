@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/o2lab/go-tools/internal/span"
+	"github.tamu.edu/April1989/go_tools/internal/span"
 )
 
 // TextEdit represents a change to a section of a document.

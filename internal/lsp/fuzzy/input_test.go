@@ -9,7 +9,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/o2lab/go-tools/internal/lsp/fuzzy"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/fuzzy"
 )
 
 var rolesTests = []struct {

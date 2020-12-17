@@ -9,11 +9,11 @@ import (
 	"go/token"
 	"go/types"
 
-	"github.com/o2lab/go-tools/cmd/guru/serial"
-	"github.com/o2lab/go-tools/go/callgraph"
-	"github.com/o2lab/go-tools/go/loader"
-	"github.com/o2lab/go-tools/go/ssa"
-	"github.com/o2lab/go-tools/go/ssa/ssautil"
+	"github.tamu.edu/April1989/go_tools/cmd/guru/serial"
+	"github.tamu.edu/April1989/go_tools/go/callgraph"
+	"github.tamu.edu/April1989/go_tools/go/loader"
+	"github.tamu.edu/April1989/go_tools/go/ssa"
+	"github.tamu.edu/April1989/go_tools/go/ssa/ssautil"
 )
 
 // The callers function reports the possible callers of the function

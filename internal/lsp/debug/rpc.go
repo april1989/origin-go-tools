@@ -13,11 +13,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/o2lab/go-tools/internal/event"
-	"github.com/o2lab/go-tools/internal/event/core"
-	"github.com/o2lab/go-tools/internal/event/export"
-	"github.com/o2lab/go-tools/internal/event/label"
-	"github.com/o2lab/go-tools/internal/lsp/debug/tag"
+	"github.tamu.edu/April1989/go_tools/internal/event"
+	"github.tamu.edu/April1989/go_tools/internal/event/core"
+	"github.tamu.edu/April1989/go_tools/internal/event/export"
+	"github.tamu.edu/April1989/go_tools/internal/event/label"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/debug/tag"
 )
 
 var rpcTmpl = template.Must(template.Must(baseTemplate.Clone()).Parse(`

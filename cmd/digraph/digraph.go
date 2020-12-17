@@ -69,13 +69,13 @@ Using digraph with existing Go tools:
 	$ go list -m all | digraph nodes # Operate on the Go package graph.
 
 Show the transitive closure of imports of the digraph tool itself:
-	$ go list -f '{{.ImportPath}} {{join .Imports " "}}' ... | digraph forward github.com/o2lab/go-tools/cmd/digraph
+	$ go list -f '{{.ImportPath}} {{join .Imports " "}}' ... | digraph forward github.tamu.edu/April1989/go_tools/cmd/digraph
 
 Show which clothes (see above) must be donned before a jacket:
 	$ digraph reverse jacket
 
 */
-package main // import "github.com/o2lab/go-tools/cmd/digraph"
+package main // import "github.tamu.edu/April1989/go_tools/cmd/digraph"
 
 // TODO(adonovan):
 // - support input files other than stdin

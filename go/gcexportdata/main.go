@@ -16,8 +16,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/o2lab/go-tools/go/gcexportdata"
-	"github.com/o2lab/go-tools/go/types/typeutil"
+	"github.tamu.edu/April1989/go_tools/go/gcexportdata"
+	"github.tamu.edu/April1989/go_tools/go/types/typeutil"
 )
 
 var packageFlag = flag.String("package", "", "alternative package to print")

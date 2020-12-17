@@ -47,8 +47,8 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/o2lab/go-tools/go/analysis"
-	"github.com/o2lab/go-tools/go/types/objectpath"
+	"github.tamu.edu/April1989/go_tools/go/analysis"
+	"github.tamu.edu/April1989/go_tools/go/types/objectpath"
 )
 
 const debug = false

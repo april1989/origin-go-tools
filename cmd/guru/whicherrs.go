@@ -11,12 +11,12 @@ import (
 	"go/types"
 	"sort"
 
-	"github.com/o2lab/go-tools/cmd/guru/serial"
-	"github.com/o2lab/go-tools/go/ast/astutil"
-	"github.com/o2lab/go-tools/go/loader"
-	"github.com/o2lab/go-tools/go/pointer"
-	"github.com/o2lab/go-tools/go/ssa"
-	"github.com/o2lab/go-tools/go/ssa/ssautil"
+	"github.tamu.edu/April1989/go_tools/cmd/guru/serial"
+	"github.tamu.edu/April1989/go_tools/go/ast/astutil"
+	"github.tamu.edu/April1989/go_tools/go/loader"
+	"github.tamu.edu/April1989/go_tools/go/pointer"
+	"github.tamu.edu/April1989/go_tools/go/ssa"
+	"github.tamu.edu/April1989/go_tools/go/ssa/ssautil"
 )
 
 var builtinErrorType = types.Universe.Lookup("error").Type()

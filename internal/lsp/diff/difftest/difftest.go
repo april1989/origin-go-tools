@@ -4,15 +4,15 @@
 
 // Package difftest supplies a set of tests that will operate on any
 // implementation of a diff algorithm as exposed by
-// "github.com/o2lab/go-tools/internal/lsp/diff"
+// "github.tamu.edu/April1989/go_tools/internal/lsp/diff"
 package difftest
 
 import (
 	"fmt"
 	"testing"
 
-	"github.com/o2lab/go-tools/internal/lsp/diff"
-	"github.com/o2lab/go-tools/internal/span"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/diff"
+	"github.tamu.edu/April1989/go_tools/internal/span"
 )
 
 const (

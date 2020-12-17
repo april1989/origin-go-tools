@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/o2lab/go-tools/internal/stack"
+	"github.tamu.edu/April1989/go_tools/internal/stack"
 )
 
 func main() {

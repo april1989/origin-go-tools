@@ -1,15 +1,15 @@
 package importedcomplit
 
 import (
-	"github.com/o2lab/go-tools/internal/lsp/foo"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/foo"
 
 	// import completions
 	"fm" //@complete("\" //", fmtImport)
 	"go/pars" //@complete("\" //", parserImport)
-	"github.com/o2lab/go-tools/internal/lsp/signa" //@complete("na\" //", signatureImport)
+	"github.tamu.edu/April1989/go_tools/internal/lsp/signa" //@complete("na\" //", signatureImport)
 	"golang.org/x/too" //@complete("\" //", toolsImport)
 	"crypto/elli" //@complete("\" //", cryptoImport)
-	"github.com/o2lab/go-tools/internal/lsp/sign" //@complete("\" //", signatureImport)
+	"github.tamu.edu/April1989/go_tools/internal/lsp/sign" //@complete("\" //", signatureImport)
 	namedParser "go/pars" //@complete("\" //", parserImport)
 )
 
@@ -36,6 +36,6 @@ func _() {
 
 /* "fmt" */ //@item(fmtImport, "\"fmt\"", "\"fmt\"", "package")
 /* "go/parser" */ //@item(parserImport, "\"go/parser\"", "\"go/parser\"", "package")
-/* "github.com/o2lab/go-tools/internal/lsp/signature" */ //@item(signatureImport, "\"github.com/o2lab/go-tools/internal/lsp/signature\"", "\"github.com/o2lab/go-tools/internal/lsp/signature\"", "package")
-/* "github.com/o2lab/go-tools/" */ //@item(toolsImport, "\"github.com/o2lab/go-tools/\"", "\"github.com/o2lab/go-tools/\"", "package")
+/* "github.tamu.edu/April1989/go_tools/internal/lsp/signature" */ //@item(signatureImport, "\"github.tamu.edu/April1989/go_tools/internal/lsp/signature\"", "\"github.tamu.edu/April1989/go_tools/internal/lsp/signature\"", "package")
+/* "github.tamu.edu/April1989/go_tools/" */ //@item(toolsImport, "\"github.tamu.edu/April1989/go_tools/\"", "\"github.tamu.edu/April1989/go_tools/\"", "package")
 /* "crypto/elliptic" */ //@item(cryptoImport, "\"crypto/elliptic\"", "\"crypto/elliptic\"", "package")

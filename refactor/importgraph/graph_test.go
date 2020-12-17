@@ -14,17 +14,17 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/o2lab/go-tools/go/packages/packagestest"
-	"github.com/o2lab/go-tools/refactor/importgraph"
+	"github.tamu.edu/April1989/go_tools/go/packages/packagestest"
+	"github.tamu.edu/April1989/go_tools/refactor/importgraph"
 
 	_ "crypto/hmac" // just for test, below
 )
 
-const this = "github.com/o2lab/go-tools/refactor/importgraph"
+const this = "github.tamu.edu/April1989/go_tools/refactor/importgraph"
 
 func TestBuild(t *testing.T) {
 	exported := packagestest.Export(t, packagestest.GOPATH, []packagestest.Module{
-		{Name: "github.com/o2lab/go-tools/refactor/importgraph", Files: packagestest.MustCopyFileTree(".")}})
+		{Name: "github.tamu.edu/April1989/go_tools/refactor/importgraph", Files: packagestest.MustCopyFileTree(".")}})
 	defer exported.Cleanup()
 
 	var gopath string

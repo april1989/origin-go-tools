@@ -17,9 +17,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/o2lab/go-tools/go/buildutil"
-	"github.com/o2lab/go-tools/go/internal/gcimporter"
-	"github.com/o2lab/go-tools/go/loader"
+	"github.tamu.edu/April1989/go_tools/go/buildutil"
+	"github.tamu.edu/April1989/go_tools/go/internal/gcimporter"
+	"github.tamu.edu/April1989/go_tools/go/loader"
 )
 
 var isRace = false

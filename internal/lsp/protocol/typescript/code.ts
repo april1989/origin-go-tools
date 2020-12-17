@@ -1079,7 +1079,7 @@ function output(side: side) {
           "context"
           "encoding/json"
 
-          "github.com/o2lab/go-tools/internal/jsonrpc2"
+          "github.tamu.edu/April1989/go_tools/internal/jsonrpc2"
           errors "golang.org/x/xerrors"
         )
         `);

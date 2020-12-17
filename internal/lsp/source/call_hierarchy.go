@@ -12,11 +12,11 @@ import (
 	"go/types"
 	"path/filepath"
 
-	"github.com/o2lab/go-tools/go/ast/astutil"
-	"github.com/o2lab/go-tools/internal/event"
-	"github.com/o2lab/go-tools/internal/lsp/debug/tag"
-	"github.com/o2lab/go-tools/internal/lsp/protocol"
-	"github.com/o2lab/go-tools/internal/span"
+	"github.tamu.edu/April1989/go_tools/go/ast/astutil"
+	"github.tamu.edu/April1989/go_tools/internal/event"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/debug/tag"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
+	"github.tamu.edu/April1989/go_tools/internal/span"
 	errors "golang.org/x/xerrors"
 )
 

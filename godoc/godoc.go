@@ -7,7 +7,7 @@
 //
 // This package comment will evolve over time as this package splits
 // into smaller pieces.
-package godoc // import "github.com/o2lab/go-tools/godoc"
+package godoc // import "github.tamu.edu/April1989/go_tools/godoc"
 
 import (
 	"bufio"

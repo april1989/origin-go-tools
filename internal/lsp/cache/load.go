@@ -11,12 +11,12 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/o2lab/go-tools/go/packages"
-	"github.com/o2lab/go-tools/internal/event"
-	"github.com/o2lab/go-tools/internal/lsp/debug/tag"
-	"github.com/o2lab/go-tools/internal/lsp/source"
-	"github.com/o2lab/go-tools/internal/packagesinternal"
-	"github.com/o2lab/go-tools/internal/span"
+	"github.tamu.edu/April1989/go_tools/go/packages"
+	"github.tamu.edu/April1989/go_tools/internal/event"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/debug/tag"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/source"
+	"github.tamu.edu/April1989/go_tools/internal/packagesinternal"
+	"github.tamu.edu/April1989/go_tools/internal/span"
 	errors "golang.org/x/xerrors"
 )
 

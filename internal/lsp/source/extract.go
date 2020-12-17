@@ -15,10 +15,10 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/o2lab/go-tools/go/analysis"
-	"github.com/o2lab/go-tools/go/ast/astutil"
-	"github.com/o2lab/go-tools/internal/analysisinternal"
-	"github.com/o2lab/go-tools/internal/span"
+	"github.tamu.edu/April1989/go_tools/go/analysis"
+	"github.tamu.edu/April1989/go_tools/go/ast/astutil"
+	"github.tamu.edu/April1989/go_tools/internal/analysisinternal"
+	"github.tamu.edu/April1989/go_tools/internal/span"
 )
 
 func extractVariable(fset *token.FileSet, rng span.Range, src []byte, file *ast.File, pkg *types.Package, info *types.Info) (*analysis.SuggestedFix, error) {

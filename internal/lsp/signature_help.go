@@ -7,10 +7,10 @@ package lsp
 import (
 	"context"
 
-	"github.com/o2lab/go-tools/internal/event"
-	"github.com/o2lab/go-tools/internal/lsp/debug/tag"
-	"github.com/o2lab/go-tools/internal/lsp/protocol"
-	"github.com/o2lab/go-tools/internal/lsp/source"
+	"github.tamu.edu/April1989/go_tools/internal/event"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/debug/tag"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/source"
 )
 
 func (s *Server) signatureHelp(ctx context.Context, params *protocol.SignatureHelpParams) (*protocol.SignatureHelp, error) {

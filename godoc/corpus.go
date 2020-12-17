@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/o2lab/go-tools/godoc/analysis"
-	"github.com/o2lab/go-tools/godoc/util"
-	"github.com/o2lab/go-tools/godoc/vfs"
+	"github.tamu.edu/April1989/go_tools/godoc/analysis"
+	"github.tamu.edu/April1989/go_tools/godoc/util"
+	"github.tamu.edu/April1989/go_tools/godoc/vfs"
 )
 
 // A Corpus holds all the state related to serving and indexing a

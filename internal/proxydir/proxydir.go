@@ -16,7 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/o2lab/go-tools/internal/testenv"
+	"github.tamu.edu/April1989/go_tools/internal/testenv"
 )
 
 // WriteModuleVersion creates a directory in the proxy dir for a module.

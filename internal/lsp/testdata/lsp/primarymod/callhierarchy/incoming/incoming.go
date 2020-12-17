@@ -4,7 +4,7 @@
 
 package incoming
 
-import "github.com/o2lab/go-tools/internal/lsp/callhierarchy"
+import "github.tamu.edu/April1989/go_tools/internal/lsp/callhierarchy"
 
 // A is exported to test incoming calls across packages
 func A() { //@mark(incomingA, "A")

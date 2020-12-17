@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/o2lab/go-tools/go/analysis"
-	"github.com/o2lab/go-tools/go/analysis/internal/analysisflags"
+	"github.tamu.edu/April1989/go_tools/go/analysis"
+	"github.tamu.edu/April1989/go_tools/go/analysis/internal/analysisflags"
 )
 
 func main() {

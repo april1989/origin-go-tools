@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/o2lab/go-tools/internal/lsp/diff"
-	"github.com/o2lab/go-tools/internal/lsp/diff/myers"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/diff"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/diff/myers"
 )
 
 func TestImportPrefix(t *testing.T) {

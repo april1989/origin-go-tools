@@ -14,11 +14,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/o2lab/go-tools/internal/lsp/diff"
-	"github.com/o2lab/go-tools/internal/lsp/diff/myers"
-	"github.com/o2lab/go-tools/internal/lsp/protocol"
-	"github.com/o2lab/go-tools/internal/lsp/source"
-	"github.com/o2lab/go-tools/internal/span"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/diff"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/diff/myers"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/source"
+	"github.tamu.edu/April1989/go_tools/internal/span"
 )
 
 // DiffLinks takes the links we got and checks if they are located within the source or a Note.

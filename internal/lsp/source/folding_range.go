@@ -6,7 +6,7 @@ import (
 	"go/token"
 	"sort"
 
-	"github.com/o2lab/go-tools/internal/lsp/protocol"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
 )
 
 // FoldingRangeInfo holds range and kind info of folding for an ast.Node

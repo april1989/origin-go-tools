@@ -15,10 +15,10 @@ import (
 	"go/constant"
 	"go/token"
 
-	"github.com/o2lab/go-tools/go/analysis"
-	"github.com/o2lab/go-tools/go/analysis/passes/inspect"
-	"github.com/o2lab/go-tools/go/analysis/passes/internal/analysisutil"
-	"github.com/o2lab/go-tools/go/ast/inspector"
+	"github.tamu.edu/April1989/go_tools/go/analysis"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/inspect"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/internal/analysisutil"
+	"github.tamu.edu/April1989/go_tools/go/ast/inspector"
 )
 
 const Doc = "check for shifts that equal or exceed the width of the integer"

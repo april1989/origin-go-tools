@@ -22,8 +22,8 @@ import (
 	"sync"
 	"unicode"
 
-	"github.com/o2lab/go-tools/go/internal/packagesdriver"
-	"github.com/o2lab/go-tools/internal/gocommand"
+	"github.tamu.edu/April1989/go_tools/go/internal/packagesdriver"
+	"github.tamu.edu/April1989/go_tools/internal/gocommand"
 	"golang.org/x/xerrors"
 )
 

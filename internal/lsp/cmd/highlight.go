@@ -10,9 +10,9 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/o2lab/go-tools/internal/lsp/protocol"
-	"github.com/o2lab/go-tools/internal/span"
-	"github.com/o2lab/go-tools/internal/tool"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
+	"github.tamu.edu/April1989/go_tools/internal/span"
+	"github.tamu.edu/April1989/go_tools/internal/tool"
 )
 
 // highlight implements the highlight verb for gopls.

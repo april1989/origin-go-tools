@@ -10,7 +10,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/o2lab/go-tools/go/expect"
+	"github.tamu.edu/April1989/go_tools/go/expect"
 )
 
 func TestMarker(t *testing.T) {

@@ -10,8 +10,8 @@ import (
 	"go/token"
 	"go/types"
 
-	"github.com/o2lab/go-tools/internal/lsp/protocol"
-	"github.com/o2lab/go-tools/internal/lsp/snippet"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/snippet"
 )
 
 // addStatementCandidates adds full statement completion candidates

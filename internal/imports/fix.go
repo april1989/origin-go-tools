@@ -25,9 +25,9 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/o2lab/go-tools/go/ast/astutil"
-	"github.com/o2lab/go-tools/internal/gocommand"
-	"github.com/o2lab/go-tools/internal/gopathwalk"
+	"github.tamu.edu/April1989/go_tools/go/ast/astutil"
+	"github.tamu.edu/April1989/go_tools/internal/gocommand"
+	"github.tamu.edu/April1989/go_tools/internal/gopathwalk"
 )
 
 // importToGroup is a list of functions which map from an import path to

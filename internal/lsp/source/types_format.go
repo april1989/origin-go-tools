@@ -14,9 +14,9 @@ import (
 	"go/types"
 	"strings"
 
-	"github.com/o2lab/go-tools/internal/event"
-	"github.com/o2lab/go-tools/internal/lsp/debug/tag"
-	"github.com/o2lab/go-tools/internal/lsp/protocol"
+	"github.tamu.edu/April1989/go_tools/internal/event"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/debug/tag"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
 )
 
 // formatType returns the detail and kind for a types.Type.

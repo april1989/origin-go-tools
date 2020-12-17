@@ -17,17 +17,17 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/o2lab/go-tools/go/packages/packagestest"
-	"github.com/o2lab/go-tools/internal/jsonrpc2/servertest"
-	"github.com/o2lab/go-tools/internal/lsp/cache"
-	"github.com/o2lab/go-tools/internal/lsp/cmd"
-	"github.com/o2lab/go-tools/internal/lsp/debug"
-	"github.com/o2lab/go-tools/internal/lsp/lsprpc"
-	"github.com/o2lab/go-tools/internal/lsp/protocol"
-	"github.com/o2lab/go-tools/internal/lsp/source"
-	"github.com/o2lab/go-tools/internal/lsp/tests"
-	"github.com/o2lab/go-tools/internal/span"
-	"github.com/o2lab/go-tools/internal/tool"
+	"github.tamu.edu/April1989/go_tools/go/packages/packagestest"
+	"github.tamu.edu/April1989/go_tools/internal/jsonrpc2/servertest"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/cache"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/cmd"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/debug"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/lsprpc"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/source"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/tests"
+	"github.tamu.edu/April1989/go_tools/internal/span"
+	"github.tamu.edu/April1989/go_tools/internal/tool"
 )
 
 type runner struct {

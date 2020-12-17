@@ -29,11 +29,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/o2lab/go-tools/go/analysis"
-	"github.com/o2lab/go-tools/go/analysis/internal/analysisflags"
-	"github.com/o2lab/go-tools/go/packages"
-	"github.com/o2lab/go-tools/internal/analysisinternal"
-	"github.com/o2lab/go-tools/internal/span"
+	"github.tamu.edu/April1989/go_tools/go/analysis"
+	"github.tamu.edu/April1989/go_tools/go/analysis/internal/analysisflags"
+	"github.tamu.edu/April1989/go_tools/go/packages"
+	"github.tamu.edu/April1989/go_tools/internal/analysisinternal"
+	"github.tamu.edu/April1989/go_tools/internal/span"
 )
 
 var (

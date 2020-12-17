@@ -11,15 +11,15 @@ import (
 	"go/token"
 	"go/types"
 
-	"github.com/o2lab/go-tools/go/loader"
-	"github.com/o2lab/go-tools/go/packages"
-	"github.com/o2lab/go-tools/go/ssa"
+	"github.tamu.edu/April1989/go_tools/go/loader"
+	"github.tamu.edu/April1989/go_tools/go/packages"
+	"github.tamu.edu/April1989/go_tools/go/ssa"
 )
 
 // Packages creates an SSA program for a set of packages.
 //
 // The packages must have been loaded from source syntax using the
-// github.com/o2lab/go-tools/go/packages.Load function in LoadSyntax or
+// github.tamu.edu/April1989/go_tools/go/packages.Load function in LoadSyntax or
 // LoadAllSyntax mode.
 //
 // Packages creates an SSA package for each well-typed package in the
@@ -42,7 +42,7 @@ func Packages(initial []*packages.Package, mode ssa.BuilderMode) (*ssa.Program, 
 // their dependencies.
 //
 // The packages must have been loaded from source syntax using the
-// github.com/o2lab/go-tools/go/packages.Load function in LoadAllSyntax mode.
+// github.tamu.edu/April1989/go_tools/go/packages.Load function in LoadAllSyntax mode.
 //
 // AllPackages creates an SSA package for each well-typed package in the
 // initial list, plus all their dependencies. The resulting list of
@@ -101,7 +101,7 @@ func doPackages(initial []*packages.Package, mode ssa.BuilderMode, deps bool) (*
 //
 // The mode parameter controls diagnostics and checking during SSA construction.
 //
-// Deprecated: Use github.com/o2lab/go-tools/go/packages and the Packages
+// Deprecated: Use github.tamu.edu/April1989/go_tools/go/packages and the Packages
 // function instead; see ssa.ExampleLoadPackages.
 //
 func CreateProgram(lprog *loader.Program, mode ssa.BuilderMode) *ssa.Program {

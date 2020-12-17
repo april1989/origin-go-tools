@@ -7,7 +7,7 @@ package cache
 import (
 	"io"
 
-	"github.com/o2lab/go-tools/internal/event/label"
+	"github.tamu.edu/April1989/go_tools/internal/event/label"
 )
 
 var (

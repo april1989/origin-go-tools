@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/o2lab/go-tools/go/buildutil"
+	"github.tamu.edu/April1989/go_tools/go/buildutil"
 )
 
 func TestTags(t *testing.T) {

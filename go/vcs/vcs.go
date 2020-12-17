@@ -12,7 +12,7 @@
 // It needs to be manually kept in sync with upstream when changes are
 // made to cmd/go/internal/get; see https://golang.org/issue/11490.
 //
-package vcs // import "github.com/o2lab/go-tools/go/vcs"
+package vcs // import "github.tamu.edu/April1989/go_tools/go/vcs"
 
 import (
 	"bytes"

@@ -10,9 +10,9 @@ import (
 	"io"
 	"sync"
 
-	"github.com/o2lab/go-tools/internal/event"
-	"github.com/o2lab/go-tools/internal/event/core"
-	"github.com/o2lab/go-tools/internal/event/label"
+	"github.tamu.edu/April1989/go_tools/internal/event"
+	"github.tamu.edu/April1989/go_tools/internal/event/core"
+	"github.tamu.edu/April1989/go_tools/internal/event/label"
 )
 
 // LogWriter returns an Exporter that logs events to the supplied writer.

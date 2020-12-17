@@ -15,10 +15,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/o2lab/go-tools/present"
+	"github.tamu.edu/April1989/go_tools/present"
 )
 
-const basePkg = "github.com/o2lab/go-tools/cmd/present"
+const basePkg = "github.tamu.edu/April1989/go_tools/cmd/present"
 
 var (
 	httpAddr      = flag.String("http", "127.0.0.1:3999", "HTTP service address (e.g., '127.0.0.1:3999')")

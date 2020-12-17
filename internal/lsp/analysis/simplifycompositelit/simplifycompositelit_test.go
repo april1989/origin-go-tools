@@ -7,8 +7,8 @@ package simplifycompositelit_test
 import (
 	"testing"
 
-	"github.com/o2lab/go-tools/go/analysis/analysistest"
-	"github.com/o2lab/go-tools/internal/lsp/analysis/simplifycompositelit"
+	"github.tamu.edu/April1989/go_tools/go/analysis/analysistest"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/analysis/simplifycompositelit"
 )
 
 func Test(t *testing.T) {

@@ -17,7 +17,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/o2lab/go-tools/internal/fastwalk"
+	"github.tamu.edu/April1989/go_tools/internal/fastwalk"
 )
 
 // Options controls the behavior of a Walk call.

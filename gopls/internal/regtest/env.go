@@ -12,9 +12,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/o2lab/go-tools/internal/jsonrpc2/servertest"
-	"github.com/o2lab/go-tools/internal/lsp/fake"
-	"github.com/o2lab/go-tools/internal/lsp/protocol"
+	"github.tamu.edu/April1989/go_tools/internal/jsonrpc2/servertest"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/fake"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
 )
 
 // Env holds an initialized fake Editor, Workspace, and Server, which may be

@@ -13,7 +13,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/o2lab/go-tools/go/analysis"
+	"github.tamu.edu/April1989/go_tools/go/analysis"
 )
 
 const Doc = `check for common mistaken usages of tests and examples

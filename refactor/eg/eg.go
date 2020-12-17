@@ -3,8 +3,8 @@
 // license that can be found in the LICENSE file.
 
 // Package eg implements the example-based refactoring tool whose
-// command-line is defined in github.com/o2lab/go-tools/cmd/eg.
-package eg // import "github.com/o2lab/go-tools/refactor/eg"
+// command-line is defined in github.tamu.edu/April1989/go_tools/cmd/eg.
+package eg // import "github.tamu.edu/April1989/go_tools/refactor/eg"
 
 import (
 	"bytes"

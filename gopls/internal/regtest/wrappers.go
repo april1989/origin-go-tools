@@ -8,8 +8,8 @@ import (
 	"io"
 	"testing"
 
-	"github.com/o2lab/go-tools/internal/lsp/fake"
-	"github.com/o2lab/go-tools/internal/lsp/protocol"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/fake"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
 	errors "golang.org/x/xerrors"
 )
 

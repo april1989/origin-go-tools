@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/o2lab/go-tools/go/loader"
+	"github.tamu.edu/April1989/go_tools/go/loader"
 )
 
 func TestParseExtendedQuery(t *testing.T) {

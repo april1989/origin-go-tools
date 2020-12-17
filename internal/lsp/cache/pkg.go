@@ -8,9 +8,9 @@ import (
 	"go/ast"
 	"go/types"
 
-	"github.com/o2lab/go-tools/go/packages"
-	"github.com/o2lab/go-tools/internal/lsp/source"
-	"github.com/o2lab/go-tools/internal/span"
+	"github.tamu.edu/April1989/go_tools/go/packages"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/source"
+	"github.tamu.edu/April1989/go_tools/internal/span"
 	errors "golang.org/x/xerrors"
 )
 

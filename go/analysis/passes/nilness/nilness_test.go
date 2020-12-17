@@ -7,8 +7,8 @@ package nilness_test
 import (
 	"testing"
 
-	"github.com/o2lab/go-tools/go/analysis/analysistest"
-	"github.com/o2lab/go-tools/go/analysis/passes/nilness"
+	"github.tamu.edu/April1989/go_tools/go/analysis/analysistest"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/nilness"
 )
 
 func Test(t *testing.T) {

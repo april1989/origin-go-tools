@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/o2lab/go-tools/go/packages"
-	"github.com/o2lab/go-tools/internal/testenv"
+	"github.tamu.edu/April1989/go_tools/go/packages"
+	"github.tamu.edu/April1989/go_tools/internal/testenv"
 )
 
 // This test loads the metadata for the standard library,

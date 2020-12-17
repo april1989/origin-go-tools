@@ -1,7 +1,7 @@
 package cgoimport
 
 import (
-	"github.com/o2lab/go-tools/internal/lsp/cgo"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/cgo"
 )
 
 func _() {

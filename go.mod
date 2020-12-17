@@ -1,4 +1,4 @@
-module github.com/o2lab/go-tools
+module github.tamu.edu/April1989/go_tools
 
 go 1.11
 

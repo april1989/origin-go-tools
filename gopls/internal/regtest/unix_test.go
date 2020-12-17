@@ -9,7 +9,7 @@ package regtest
 import (
 	"testing"
 
-	"github.com/o2lab/go-tools/internal/lsp/fake"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/fake"
 )
 
 func TestBadGOPATH(t *testing.T) {

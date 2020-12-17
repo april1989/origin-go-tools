@@ -23,10 +23,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/o2lab/go-tools/go/gcexportdata"
-	"github.com/o2lab/go-tools/internal/gocommand"
-	"github.com/o2lab/go-tools/internal/packagesinternal"
-	"github.com/o2lab/go-tools/internal/typesinternal"
+	"github.tamu.edu/April1989/go_tools/go/gcexportdata"
+	"github.tamu.edu/April1989/go_tools/internal/gocommand"
+	"github.tamu.edu/April1989/go_tools/internal/packagesinternal"
+	"github.tamu.edu/April1989/go_tools/internal/typesinternal"
 )
 
 // A LoadMode controls the amount of detail to return when loading.

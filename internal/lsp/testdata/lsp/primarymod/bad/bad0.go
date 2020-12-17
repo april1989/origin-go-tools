@@ -2,7 +2,7 @@
 
 package bad
 
-import _ "github.com/o2lab/go-tools/internal/lsp/assign/internal/secret" //@diag("\"github.com/o2lab/go-tools/internal/lsp/assign/internal/secret\"", "compiler", "could not import github.com/o2lab/go-tools/internal/lsp/assign/internal/secret (invalid use of internal package github.com/o2lab/go-tools/internal/lsp/assign/internal/secret)", "error")
+import _ "github.tamu.edu/April1989/go_tools/internal/lsp/assign/internal/secret" //@diag("\"github.tamu.edu/April1989/go_tools/internal/lsp/assign/internal/secret\"", "compiler", "could not import github.tamu.edu/April1989/go_tools/internal/lsp/assign/internal/secret (invalid use of internal package github.tamu.edu/April1989/go_tools/internal/lsp/assign/internal/secret)", "error")
 
 func stuff() { //@item(stuff, "stuff", "func()", "func")
 	x := "heeeeyyyy"

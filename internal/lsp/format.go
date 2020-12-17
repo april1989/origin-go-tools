@@ -7,9 +7,9 @@ package lsp
 import (
 	"context"
 
-	"github.com/o2lab/go-tools/internal/lsp/mod"
-	"github.com/o2lab/go-tools/internal/lsp/protocol"
-	"github.com/o2lab/go-tools/internal/lsp/source"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/mod"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/source"
 )
 
 func (s *Server) formatting(ctx context.Context, params *protocol.DocumentFormattingParams) ([]protocol.TextEdit, error) {

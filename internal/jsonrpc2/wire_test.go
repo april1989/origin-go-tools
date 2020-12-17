@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/o2lab/go-tools/internal/jsonrpc2"
+	"github.tamu.edu/April1989/go_tools/internal/jsonrpc2"
 )
 
 var wireIDTestData = []struct {

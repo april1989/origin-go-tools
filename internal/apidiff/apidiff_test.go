@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/o2lab/go-tools/go/packages"
-	"github.com/o2lab/go-tools/internal/testenv"
+	"github.tamu.edu/April1989/go_tools/go/packages"
+	"github.tamu.edu/April1989/go_tools/internal/testenv"
 )
 
 func TestChanges(t *testing.T) {
@@ -137,7 +137,7 @@ func load(t *testing.T, importPath, goPath string) (*packages.Package, error) {
 }
 
 func TestExportedFields(t *testing.T) {
-	pkg, err := load(t, "github.com/o2lab/go-tools/internal/apidiff/testdata/exported_fields", "")
+	pkg, err := load(t, "github.tamu.edu/April1989/go_tools/internal/apidiff/testdata/exported_fields", "")
 	if err != nil {
 		t.Fatal(err)
 	}

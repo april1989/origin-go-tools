@@ -4,7 +4,7 @@
 
 /*
 Package present implements parsing and rendering of present files,
-which can be slide presentations as in github.com/o2lab/go-tools/cmd/present
+which can be slide presentations as in github.tamu.edu/April1989/go_tools/cmd/present
 or articles as in golang.org/x/blog (the Go blog).
 
 File Format
@@ -358,4 +358,4 @@ Notes may appear anywhere within the slide text. For example:
 	: Presenter notes (subsequent paragraph(s))
 
 */
-package present // import "github.com/o2lab/go-tools/present"
+package present // import "github.tamu.edu/April1989/go_tools/present"

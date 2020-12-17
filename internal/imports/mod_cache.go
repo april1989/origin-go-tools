@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/o2lab/go-tools/internal/gopathwalk"
+	"github.tamu.edu/April1989/go_tools/internal/gopathwalk"
 )
 
 // To find packages to import, the resolver needs to know about all of the

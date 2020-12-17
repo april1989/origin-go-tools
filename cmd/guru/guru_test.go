@@ -23,7 +23,7 @@ package main_test
 // correctness, since it is critical information.)
 //
 // Run this test with:
-// 	% go test github.com/o2lab/go-tools/cmd/guru -update
+// 	% go test github.tamu.edu/April1989/go_tools/cmd/guru -update
 // to update the golden files.
 
 import (
@@ -47,8 +47,8 @@ import (
 	"sync"
 	"testing"
 
-	guru "github.com/o2lab/go-tools/cmd/guru"
-	"github.com/o2lab/go-tools/internal/testenv"
+	guru "github.tamu.edu/April1989/go_tools/cmd/guru"
+	"github.tamu.edu/April1989/go_tools/internal/testenv"
 )
 
 func init() {

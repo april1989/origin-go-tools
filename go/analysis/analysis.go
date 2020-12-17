@@ -8,7 +8,7 @@ import (
 	"go/types"
 	"reflect"
 
-	"github.com/o2lab/go-tools/internal/analysisinternal"
+	"github.tamu.edu/April1989/go_tools/internal/analysisinternal"
 )
 
 // An Analyzer describes an analysis function and its options.

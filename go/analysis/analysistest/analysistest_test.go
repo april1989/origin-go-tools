@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/o2lab/go-tools/go/analysis/analysistest"
-	"github.com/o2lab/go-tools/go/analysis/passes/findcall"
-	"github.com/o2lab/go-tools/internal/testenv"
+	"github.tamu.edu/April1989/go_tools/go/analysis/analysistest"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/findcall"
+	"github.tamu.edu/April1989/go_tools/internal/testenv"
 )
 
 func init() {

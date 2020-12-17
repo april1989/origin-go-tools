@@ -15,7 +15,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/o2lab/go-tools/go/ast/astutil"
+	"github.tamu.edu/April1989/go_tools/go/ast/astutil"
 )
 
 func objectKind(obj types.Object) string {
@@ -79,7 +79,7 @@ func isDigit(ch rune) bool {
 	return '0' <= ch && ch <= '9' || ch >= 0x80 && unicode.IsDigit(ch)
 }
 
-// -- Plundered from github.com/o2lab/go-tools/cmd/guru -----------------
+// -- Plundered from github.tamu.edu/April1989/go_tools/cmd/guru -----------------
 
 // sameFile returns true if x and y have the same basename and denote
 // the same file.

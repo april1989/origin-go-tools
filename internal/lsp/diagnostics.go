@@ -13,13 +13,13 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/o2lab/go-tools/internal/event"
-	"github.com/o2lab/go-tools/internal/lsp/debug/tag"
-	"github.com/o2lab/go-tools/internal/lsp/mod"
-	"github.com/o2lab/go-tools/internal/lsp/protocol"
-	"github.com/o2lab/go-tools/internal/lsp/source"
-	"github.com/o2lab/go-tools/internal/span"
-	"github.com/o2lab/go-tools/internal/xcontext"
+	"github.tamu.edu/April1989/go_tools/internal/event"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/debug/tag"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/mod"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/source"
+	"github.tamu.edu/April1989/go_tools/internal/span"
+	"github.tamu.edu/April1989/go_tools/internal/xcontext"
 	errors "golang.org/x/xerrors"
 )
 

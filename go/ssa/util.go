@@ -14,7 +14,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/o2lab/go-tools/go/ast/astutil"
+	"github.tamu.edu/April1989/go_tools/go/ast/astutil"
 )
 
 //// AST utilities

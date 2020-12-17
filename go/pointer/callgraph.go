@@ -11,7 +11,7 @@ import (
 	"go/token"
 	"strconv"
 
-	"github.com/o2lab/go-tools/go/ssa"
+	"github.tamu.edu/April1989/go_tools/go/ssa"
 )
 
 var mainID nodeid //bz: record the target of root call to main method ID, NO REAL use, convenient for debug

@@ -6,11 +6,11 @@ import (
 	"log"
 	"testing"
 
-	"github.com/o2lab/go-tools/internal/event"
-	"github.com/o2lab/go-tools/internal/event/core"
-	"github.com/o2lab/go-tools/internal/event/export"
-	"github.com/o2lab/go-tools/internal/event/keys"
-	"github.com/o2lab/go-tools/internal/event/label"
+	"github.tamu.edu/April1989/go_tools/internal/event"
+	"github.tamu.edu/April1989/go_tools/internal/event/core"
+	"github.tamu.edu/April1989/go_tools/internal/event/export"
+	"github.tamu.edu/April1989/go_tools/internal/event/keys"
+	"github.tamu.edu/April1989/go_tools/internal/event/label"
 )
 
 type Hooks struct {

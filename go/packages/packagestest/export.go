@@ -75,10 +75,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/o2lab/go-tools/go/expect"
-	"github.com/o2lab/go-tools/go/packages"
-	"github.com/o2lab/go-tools/internal/span"
-	"github.com/o2lab/go-tools/internal/testenv"
+	"github.tamu.edu/April1989/go_tools/go/expect"
+	"github.tamu.edu/April1989/go_tools/go/packages"
+	"github.tamu.edu/April1989/go_tools/internal/span"
+	"github.tamu.edu/April1989/go_tools/internal/testenv"
 )
 
 var (

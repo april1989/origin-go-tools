@@ -25,7 +25,7 @@ Starting oragent_prometheus_1 ... done
 5. You can also start oragent in detached mode by running `docker-compose up -d`. To stop oragent while detached, run `docker-compose down`.
 
 ## Exporting Metrics and Traces
-1. Clone the [tools](https://github.com/o2lab/go-tools) subrepository.
+1. Clone the [tools](https://github.tamu.edu/April1989/go_tools) subrepository.
 1. Inside `internal`, create a file named `main.go` with the following contents:
 ```go
 package main
@@ -37,10 +37,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/o2lab/go-tools/internal/event"
-	"github.com/o2lab/go-tools/internal/event/export"
-	"github.com/o2lab/go-tools/internal/event/export/metric"
-	"github.com/o2lab/go-tools/internal/event/export/ocagent"
+	"github.tamu.edu/April1989/go_tools/internal/event"
+	"github.tamu.edu/April1989/go_tools/internal/event/export"
+	"github.tamu.edu/April1989/go_tools/internal/event/export/metric"
+	"github.tamu.edu/April1989/go_tools/internal/event/export/ocagent"
 )
 
 type testExporter struct {

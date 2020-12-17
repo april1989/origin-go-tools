@@ -11,7 +11,7 @@ package regtest
 import (
 	"testing"
 
-	"github.com/o2lab/go-tools/internal/lsp"
+	"github.tamu.edu/April1989/go_tools/internal/lsp"
 )
 
 func TestGenerateProgress(t *testing.T) {

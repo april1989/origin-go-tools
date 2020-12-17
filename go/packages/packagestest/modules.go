@@ -14,9 +14,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/o2lab/go-tools/internal/gocommand"
-	"github.com/o2lab/go-tools/internal/packagesinternal"
-	"github.com/o2lab/go-tools/internal/proxydir"
+	"github.tamu.edu/April1989/go_tools/internal/gocommand"
+	"github.tamu.edu/April1989/go_tools/internal/packagesinternal"
+	"github.tamu.edu/April1989/go_tools/internal/proxydir"
 )
 
 // Modules is the exporter that produces module layouts.

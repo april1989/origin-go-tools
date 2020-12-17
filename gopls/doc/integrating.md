@@ -20,7 +20,7 @@ Many LSP requests pass position or range information. This is described in the [
 
 This means that integrators will need to calculate UTF-16 based column offsets.
 
-[`github.com/o2lab/go-tools/internal/span`] has the code to do this in go.
+[`github.tamu.edu/April1989/go_tools/internal/span`] has the code to do this in go.
 [#31080] tracks making `span` and other useful packages non-internal.
 
 ## Edits
@@ -61,9 +61,9 @@ For instance, files that are needed to do correct type checking are modified by 
 Monitoring files inside gopls directly has a lot of awkward problems, but the [LSP specification] has methods that allow gopls to request that the client notify it of file system changes, specifically [`workspace/didChangeWatchedFiles`].
 This is currently being added to gopls by a community member, and tracked in [#31553]
 
-[InitializeResult]: https://godoc.org/github.com/o2lab/go-tools/internal/lsp/protocol#InitializeResult
-[ServerCapabilities]: https://godoc.org/github.com/o2lab/go-tools/internal/lsp/protocol#ServerCapabilities
-[`github.com/o2lab/go-tools/internal/span`]: https://godoc.org/github.com/o2lab/go-tools/internal/span#NewPoint
+[InitializeResult]: https://godoc.org/github.tamu.edu/April1989/go_tools/internal/lsp/protocol#InitializeResult
+[ServerCapabilities]: https://godoc.org/github.tamu.edu/April1989/go_tools/internal/lsp/protocol#ServerCapabilities
+[`github.tamu.edu/April1989/go_tools/internal/span`]: https://godoc.org/github.tamu.edu/April1989/go_tools/internal/span#NewPoint
 
 [LSP specification]: https://microsoft.github.io/language-server-protocol/specifications/specification-3-14/
 [lsp-response]: https://github.com/Microsoft/language-server-protocol/blob/gh-pages/_specifications/specification-3-14.md#response-message

@@ -17,7 +17,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/o2lab/go-tools/internal/event"
+	"github.tamu.edu/April1989/go_tools/internal/event"
 )
 
 // An Runner will run go command invocations and serialize

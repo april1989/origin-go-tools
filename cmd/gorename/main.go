@@ -2,10 +2,10 @@
 // identifiers in Go source code.
 //
 // Run with -help for usage information, or view the Usage constant in
-// package github.com/o2lab/go-tools/refactor/rename, which contains most of
+// package github.tamu.edu/April1989/go_tools/refactor/rename, which contains most of
 // the implementation.
 //
-package main // import "github.com/o2lab/go-tools/cmd/gorename"
+package main // import "github.tamu.edu/April1989/go_tools/cmd/gorename"
 
 import (
 	"flag"
@@ -14,8 +14,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/o2lab/go-tools/go/buildutil"
-	"github.com/o2lab/go-tools/refactor/rename"
+	"github.tamu.edu/April1989/go_tools/go/buildutil"
+	"github.tamu.edu/April1989/go_tools/refactor/rename"
 )
 
 var (

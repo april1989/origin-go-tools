@@ -13,7 +13,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/o2lab/go-tools/internal/jsonrpc2"
+	"github.tamu.edu/April1989/go_tools/internal/jsonrpc2"
 )
 
 // Connector is the interface used to connect to a server.

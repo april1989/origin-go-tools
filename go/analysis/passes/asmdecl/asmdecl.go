@@ -18,8 +18,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/o2lab/go-tools/go/analysis"
-	"github.com/o2lab/go-tools/go/analysis/passes/internal/analysisutil"
+	"github.tamu.edu/April1989/go_tools/go/analysis"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/internal/analysisutil"
 )
 
 const Doc = "report mismatches between assembly files and Go declarations"

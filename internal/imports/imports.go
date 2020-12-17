@@ -22,10 +22,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/o2lab/go-tools/go/ast/astutil"
+	"github.tamu.edu/April1989/go_tools/go/ast/astutil"
 )
 
-// Options is github.com/o2lab/go-tools/imports.Options with extra internal-only options.
+// Options is github.tamu.edu/April1989/go_tools/imports.Options with extra internal-only options.
 type Options struct {
 	Env *ProcessEnv // The environment to use. Note: this contains the cached module and filesystem state.
 
@@ -44,7 +44,7 @@ type Options struct {
 	FormatOnly bool // Disable the insertion and deletion of imports
 }
 
-// Process implements github.com/o2lab/go-tools/imports.Process with explicit context in opt.Env.
+// Process implements github.tamu.edu/April1989/go_tools/imports.Process with explicit context in opt.Env.
 func Process(filename string, src []byte, opt *Options) (formatted []byte, err error) {
 	fileSet := token.NewFileSet()
 	file, adjust, err := parse(fileSet, filename, src, opt)

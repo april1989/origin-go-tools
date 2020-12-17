@@ -12,13 +12,13 @@
 // problems for developer tools that use it, since they must be able to
 // consume the outputs of the gc compiler both before and after a Go
 // update such as from Go 1.7 to Go 1.8.  Because this package lives in
-// github.com/o2lab/go-tools, sites can update their version of this repo some
+// github.tamu.edu/April1989/go_tools, sites can update their version of this repo some
 // time before the Go 1.8 release and rebuild and redeploy their
 // developer tools, which will then be able to consume both Go 1.7 and
 // Go 1.8 export data files, so they will work before and after the
 // Go update. (See discussion at https://golang.org/issue/15651.)
 //
-package gcexportdata // import "github.com/o2lab/go-tools/go/gcexportdata"
+package gcexportdata // import "github.tamu.edu/April1989/go_tools/go/gcexportdata"
 
 import (
 	"bufio"
@@ -29,7 +29,7 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/o2lab/go-tools/go/internal/gcimporter"
+	"github.tamu.edu/April1989/go_tools/go/internal/gcimporter"
 )
 
 // Find returns the name of an object (.o) or archive (.a) file

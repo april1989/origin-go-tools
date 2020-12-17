@@ -8,7 +8,7 @@ import (
 	"go/ast"
 	"go/types"
 
-	"github.com/o2lab/go-tools/go/ast/astutil"
+	"github.tamu.edu/April1989/go_tools/go/ast/astutil"
 )
 
 // Callee returns the named target of a function call, if any:

@@ -15,12 +15,12 @@ import (
 	"go/types"
 	"unicode"
 
-	"github.com/o2lab/go-tools/go/analysis"
-	"github.com/o2lab/go-tools/go/analysis/passes/inspect"
-	"github.com/o2lab/go-tools/go/ast/astutil"
-	"github.com/o2lab/go-tools/go/ast/inspector"
-	"github.com/o2lab/go-tools/internal/analysisinternal"
-	"github.com/o2lab/go-tools/internal/span"
+	"github.tamu.edu/April1989/go_tools/go/analysis"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/inspect"
+	"github.tamu.edu/April1989/go_tools/go/ast/astutil"
+	"github.tamu.edu/April1989/go_tools/go/ast/inspector"
+	"github.tamu.edu/April1989/go_tools/internal/analysisinternal"
+	"github.tamu.edu/April1989/go_tools/internal/span"
 )
 
 const Doc = `note incomplete struct initializations

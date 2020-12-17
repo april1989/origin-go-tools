@@ -11,14 +11,14 @@ import (
 	"net/http"
 	"text/template"
 
-	"github.com/o2lab/go-tools/godoc"
-	"github.com/o2lab/go-tools/godoc/redirect"
-	"github.com/o2lab/go-tools/godoc/vfs"
+	"github.tamu.edu/April1989/go_tools/godoc"
+	"github.tamu.edu/April1989/go_tools/godoc/redirect"
+	"github.tamu.edu/April1989/go_tools/godoc/vfs"
 )
 
 // This package registers "/compile" and "/share" handlers
 // that redirect to the golang.org playground.
-import _ "github.com/o2lab/go-tools/playground"
+import _ "github.tamu.edu/April1989/go_tools/playground"
 
 var (
 	pres *godoc.Presentation

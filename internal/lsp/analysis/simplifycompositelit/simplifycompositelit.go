@@ -17,9 +17,9 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/o2lab/go-tools/go/analysis"
-	"github.com/o2lab/go-tools/go/analysis/passes/inspect"
-	"github.com/o2lab/go-tools/go/ast/inspector"
+	"github.tamu.edu/April1989/go_tools/go/analysis"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/inspect"
+	"github.tamu.edu/April1989/go_tools/go/ast/inspector"
 )
 
 const Doc = `check for composite literal simplifications

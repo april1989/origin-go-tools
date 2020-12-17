@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/o2lab/go-tools/go/analysis"
+	"github.tamu.edu/April1989/go_tools/go/analysis"
 )
 
 const help = `PROGNAME is a tool for static analysis of Go programs.

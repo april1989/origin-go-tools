@@ -2,8 +2,8 @@
 package main
 
 import (
-	"github.com/o2lab/go-tools/go/analysis/passes/unmarshal"
-	"github.com/o2lab/go-tools/go/analysis/singlechecker"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/unmarshal"
+	"github.tamu.edu/April1989/go_tools/go/analysis/singlechecker"
 )
 
 func main() { singlechecker.Main(unmarshal.Analyzer) }

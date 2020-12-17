@@ -19,12 +19,12 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/o2lab/go-tools/go/ast/astutil"
-	"github.com/o2lab/go-tools/internal/event"
-	"github.com/o2lab/go-tools/internal/imports"
-	"github.com/o2lab/go-tools/internal/lsp/fuzzy"
-	"github.com/o2lab/go-tools/internal/lsp/protocol"
-	"github.com/o2lab/go-tools/internal/lsp/snippet"
+	"github.tamu.edu/April1989/go_tools/go/ast/astutil"
+	"github.tamu.edu/April1989/go_tools/internal/event"
+	"github.tamu.edu/April1989/go_tools/internal/imports"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/fuzzy"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/snippet"
 	errors "golang.org/x/xerrors"
 )
 

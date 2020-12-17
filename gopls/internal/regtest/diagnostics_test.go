@@ -12,11 +12,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/o2lab/go-tools/internal/lsp"
-	"github.com/o2lab/go-tools/internal/lsp/fake"
-	"github.com/o2lab/go-tools/internal/lsp/protocol"
-	"github.com/o2lab/go-tools/internal/lsp/tests"
-	"github.com/o2lab/go-tools/internal/testenv"
+	"github.tamu.edu/April1989/go_tools/internal/lsp"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/fake"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/tests"
+	"github.tamu.edu/April1989/go_tools/internal/testenv"
 )
 
 // Use mod.com for all go.mod files due to golang/go#35230.

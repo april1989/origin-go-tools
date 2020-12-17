@@ -62,8 +62,8 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/o2lab/go-tools/godoc/util"
-	"github.com/o2lab/go-tools/godoc/vfs"
+	"github.tamu.edu/April1989/go_tools/godoc/util"
+	"github.tamu.edu/April1989/go_tools/godoc/vfs"
 )
 
 // ----------------------------------------------------------------------------

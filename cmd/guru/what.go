@@ -15,8 +15,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/o2lab/go-tools/cmd/guru/serial"
-	"github.com/o2lab/go-tools/go/ast/astutil"
+	"github.tamu.edu/April1989/go_tools/cmd/guru/serial"
+	"github.tamu.edu/April1989/go_tools/go/ast/astutil"
 )
 
 // what reports all the information about the query selection that can be

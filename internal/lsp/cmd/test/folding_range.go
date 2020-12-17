@@ -3,7 +3,7 @@ package cmdtest
 import (
 	"testing"
 
-	"github.com/o2lab/go-tools/internal/span"
+	"github.tamu.edu/April1989/go_tools/internal/span"
 )
 
 func (r *runner) FoldingRanges(t *testing.T, spn span.Span) {

@@ -6,8 +6,8 @@
 package main
 
 import (
-	"github.com/o2lab/go-tools/go/analysis/passes/stringintconv"
-	"github.com/o2lab/go-tools/go/analysis/singlechecker"
+	"github.tamu.edu/April1989/go_tools/go/analysis/passes/stringintconv"
+	"github.tamu.edu/April1989/go_tools/go/analysis/singlechecker"
 )
 
 func main() { singlechecker.Main(stringintconv.Analyzer) }

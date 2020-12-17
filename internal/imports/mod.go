@@ -15,8 +15,8 @@ import (
 	"strings"
 
 	"golang.org/x/mod/module"
-	"github.com/o2lab/go-tools/internal/gocommand"
-	"github.com/o2lab/go-tools/internal/gopathwalk"
+	"github.tamu.edu/April1989/go_tools/internal/gocommand"
+	"github.tamu.edu/April1989/go_tools/internal/gopathwalk"
 )
 
 // ModuleResolver implements resolver for modules using the go command as little

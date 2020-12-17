@@ -8,7 +8,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/o2lab/go-tools/internal/gocommand"
+	"github.tamu.edu/April1989/go_tools/internal/gocommand"
 )
 
 func TestGoVersion(t *testing.T) {

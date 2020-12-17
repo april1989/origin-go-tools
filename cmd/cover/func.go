@@ -17,7 +17,7 @@ import (
 	"path/filepath"
 	"text/tabwriter"
 
-	"github.com/o2lab/go-tools/cover"
+	"github.tamu.edu/April1989/go_tools/cover"
 )
 
 // funcOutput takes two file names as arguments, a coverage profile to read as input and an output

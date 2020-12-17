@@ -12,8 +12,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/o2lab/go-tools/internal/lsp/lsprpc"
-	"github.com/o2lab/go-tools/internal/tool"
+	"github.tamu.edu/April1989/go_tools/internal/lsp/lsprpc"
+	"github.tamu.edu/April1989/go_tools/internal/tool"
 )
 
 type inspect struct {

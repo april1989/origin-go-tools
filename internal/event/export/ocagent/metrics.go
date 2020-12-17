@@ -7,9 +7,9 @@ package ocagent
 import (
 	"time"
 
-	"github.com/o2lab/go-tools/internal/event/export/metric"
-	"github.com/o2lab/go-tools/internal/event/export/ocagent/wire"
-	"github.com/o2lab/go-tools/internal/event/label"
+	"github.tamu.edu/April1989/go_tools/internal/event/export/metric"
+	"github.tamu.edu/April1989/go_tools/internal/event/export/ocagent/wire"
+	"github.tamu.edu/April1989/go_tools/internal/event/label"
 )
 
 // dataToMetricDescriptor return a *wire.MetricDescriptor based on data.
