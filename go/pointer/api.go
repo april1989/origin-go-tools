@@ -221,6 +221,21 @@ func (r *ResultWCtx) PointsTo(v ssa.Value) []PointerWCtx {
 	return nil
 }
 
+//bz: user API: return PointerWCtx for a ssa.Value used under context of *ssa.GO,
+//input: ssa.Value, *ssa.GO;
+//output: PointerWCtx; this can be empty with nothing if we cannot match any
+func (r *ResultWCtx) PointsToByGo(v ssa.Value, goInstr *ssa.Go) PointerWCtx {
+	ptss := r.PointsTo(v) //return type: []PointerWCtx
+	for _, pts := range ptss {
+		if pts.MatchMyContext(goInstr) {
+			return pts
+		}
+	}
+	fmt.Println(" ****  Pointer Analysis cannot match this ssa.Value: " + v.String() + " with this *ssa.GO" + goInstr.String() + " **** ") //panic
+	return PointerWCtx{nil, nil, nil}
+}
+
+
 //bz: user API: for debug to dump all result out
 func (r *ResultWCtx) DumpAll() {
 	//bz: also a reference of how to use new APIs here
