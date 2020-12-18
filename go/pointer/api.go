@@ -433,11 +433,10 @@ type PointerWCtx struct {
 }
 
 //bz: whether goID is match with the contexts in this pointer
+//TODO: this does not match parent context if callsite.length > 1 (k > 1)
 func (p PointerWCtx) MatchMyContext(go_instr *ssa.Go) bool {
-	callersite := p.cgn.callersite[0]
-	node := p.a.nodes[callersite.targets] //from user
-	instr := node.callsite[0].instr
-	if instr == go_instr {
+	my_go_instr := p.cgn.callersite[0].goInstr
+	if my_go_instr == go_instr {
 		return true
 	}else{
 		return false

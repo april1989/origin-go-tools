@@ -339,24 +339,25 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 		single := a.createSingleCallSite(callersite)
 		cgn = &cgnode{fn: fn, obj: obj, callersite: single}
 
-	} else {                 // other functions
+	} else {   // other functions
 		if a.config.Origin { //bz: for origin-sensitive
 			if callersite == nil { //we only create new context for make closure and go instruction
 				var fnkcs []*callsite
-				if a.isGoNext(closure) { //case 2: create one with only target, make closure is not ssa.CallInstruction
-					special := &callsite{targets: obj}
+				goInstr := a.isGoNext(closure)
+				if goInstr != nil { //case 2: create one with only target, make closure is not ssa.CallInstruction
+					special := &callsite{targets: obj, goInstr: goInstr}
 					if loopID != -1 { //handle loop TODO: will this affect exist checking?
-						special = &callsite{targets: obj, loopID: loopID}
+						special = &callsite{targets: obj, loopID: loopID, goInstr: goInstr}
 					}
 					fnkcs = a.createKCallSite(caller.callersite, special)
 				} else { // use parent context, since no go invoke afterwards; and not care about loopID
 					fnkcs = caller.callersite
 				}
 				cgn = &cgnode{fn: fn, obj: obj, callersite: fnkcs}
-			} else if _, ok := callersite.instr.(*ssa.Go); ok { //case 1 and 3: this is a *ssa.GO without closure
+			} else if goInstr, ok := callersite.instr.(*ssa.Go); ok { //case 1 and 3: this is a *ssa.GO without closure
 				special := callersite
 				if loopID != -1 { //handle loop TODO: will this affect exist checking?
-					special = &callsite{targets: callersite.targets, instr: callersite.instr, loopID: loopID}
+					special = &callsite{targets: callersite.targets, instr: callersite.instr, loopID: loopID, goInstr: goInstr}
 				}
 				fnkcs := a.createKCallSite(caller.callersite, special)
 				cgn = &cgnode{fn: fn, obj: obj, callersite: fnkcs}
@@ -431,14 +432,14 @@ func (a *analysis) makeParamResultNodes(fn *ssa.Function, obj nodeid, cgn *cgnod
 	}
 }
 
-//bz: create a kcallsite array with a single element
+//bz: create a kcallsite array with a single element --> no new callsite created
 func (a *analysis) createSingleCallSite(callersite *callsite) []*callsite {
 	var slice = make([]*callsite, 1)
 	slice[0] = callersite
 	return slice
 }
 
-//bz: create a kcallsite array with a mix of caller and callee call sites
+//bz: create a kcallsite array with a mix of caller and callee call sites  --> no new callsite created
 func (a *analysis) createKCallSite(caller2sites []*callsite, callersite *callsite) []*callsite {
 	k := a.config.K
 	if k == 1 { //len(caller2sites) == 0 ||
@@ -1259,7 +1260,7 @@ func (a *analysis) valueNodeClosure(cgn *cgnode, closure *ssa.MakeClosure, v ssa
 	fn, _ := v.(*ssa.Function)
 	callersite := cgn.callersite[0]
 	ids, ok, _ := a.existClosure(fn, callersite) //checked
-	if !ok {                                     //not exist
+	if !ok {   //not exist
 		var comment string
 		if a.log != nil {
 			comment = v.String()
@@ -1289,7 +1290,7 @@ func (a *analysis) valueNodeClosure(cgn *cgnode, closure *ssa.MakeClosure, v ssa
 		//update for new closures
 		var c2id = make(map[*callsite][]nodeid)
 		c2id[callersite] = objs
-		a.closures[fn] = &Ctx2nodeid{c2id}
+		a.closures[fn] = &Ctx2nodeid{c2id} //we do not know the matching go instr now
 	}
 	return ids
 }
@@ -1735,19 +1736,19 @@ func (a *analysis) genInstr(cgn *cgnode, instr ssa.Instruction) {
 //}
 
 // bz: check whether the stmt after make closure is go: they must be in the same basic block
-func (a *analysis) isGoNext(instr *ssa.MakeClosure) bool {
+func (a *analysis) isGoNext(instr *ssa.MakeClosure) *ssa.Go {
 	stmts := instr.Block().Instrs
 	for i, stmt := range stmts {
 		if stmt == instr {
-			_, ok := stmts[i+1].(*ssa.Go) //next is the go if available
+			goInstr, ok := stmts[i+1].(*ssa.Go) //next is the go if available
 			if ok {
-				return true
+				return goInstr
 			} else {
-				return false
+				return nil
 			}
 		}
 	}
-	return false
+	return nil
 }
 
 //bz: adjust for data structure changes

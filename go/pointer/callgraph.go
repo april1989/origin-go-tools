@@ -89,6 +89,7 @@ type callsite struct {
 	targets nodeid              // pts(·) contains objects for dynamically called functions
 	instr   ssa.CallInstruction // the call instruction; nil for synthetic/intrinsic
 	loopID  int                 // bz: origin -> loop id, value is 1 or 2; 0 is default value and means no loop TODO: how to get rid of this in other contexts?
+	goInstr *ssa.Go             // TODO: bz: do we add this to match goID in race_checker ??
 }
 
 //bz: to see if two callsites are the same
@@ -189,7 +190,7 @@ func (g *GraphWCtx) CreateNodeWCtx(cgn *cgnode) *Node {
 
 //bz: compute at final
 func (g *GraphWCtx) computeFn2CGNode() {
-	for cgn, _ := range g.Nodes {
+	for cgn := range g.Nodes {
 		m := g.Fn2CGNode[cgn.fn]
 		m = append(m, cgn)
 		g.Fn2CGNode[cgn.fn] = m
