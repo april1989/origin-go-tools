@@ -217,7 +217,8 @@ func (r *ResultWCtx) PointsTo(v ssa.Value) []PointerWCtx {
 	if pointers != nil {
 		return pointers
 	}
-	panic(" ****  Pointer Analysis did not record for this ssa.Value: " + v.String() + " **** ")
+	fmt.Println(" ****  Pointer Analysis did not record for this ssa.Value: " + v.String() + " **** ") //panic
+	return nil
 }
 
 //bz: user API: for debug to dump all result out
