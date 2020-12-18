@@ -26,7 +26,7 @@ type cgnode struct {
 	fn         *ssa.Function
 	obj        nodeid      // start of this contour's object block
 	sites      []*callsite // ordered list of callsites within this function
-	callersite []*callsite // where called from, if known; nil for shared contours ----> bz: k-caller site
+	callersite []*callsite // where called from, if known; nil for shared contours ----> bz: k-caller site and context
 	idx        int         // the index of this in a.cgnodes[]
 }
 

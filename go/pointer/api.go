@@ -432,6 +432,18 @@ type PointerWCtx struct {
 	cgn   *cgnode
 }
 
+//bz: whether goID is match with the contexts in this pointer
+func (p PointerWCtx) MatchMyContext(goID nodeid) bool {
+	n := p.a.nodes[goID] //from user
+	fmt.Println(n.typ.String())
+	callersite := p.cgn.callersite[0]
+	if callersite.targets == goID {
+		return true
+	}else{
+		return false
+	}
+}
+
 //bz: return the context of cgn which calls setValueNode() to record this pointer;
 func (p PointerWCtx) GetMyContext() []*callsite {
 	return p.cgn.callersite

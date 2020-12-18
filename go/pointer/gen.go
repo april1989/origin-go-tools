@@ -92,6 +92,10 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 	// seems like we only query pointers, so CURRENTLY only record for pointers in app methods
 	// -> go to commit@acb4db0349f131f8d10ddbec6d4fb686258becca (or comment out below for now)
 	// to check original code
+	if strings.Contains(v.String(), "command-line-arguments.minConnectTimeout") {
+		fmt.Println()
+	}
+
 	t := v.Type()
 	if cgn == nil {
 		if !withinScope {
