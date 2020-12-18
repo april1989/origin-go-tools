@@ -447,6 +447,11 @@ type PointerWCtx struct {
 	cgn   *cgnode
 }
 
+//bz: we created an empty PointerWCTx to return
+func (p PointerWCtx) IsNil() bool {
+	return p.a == nil
+}
+
 //bz: whether goID is match with the contexts in this pointer
 //TODO: this does not match parent context if callsite.length > 1 (k > 1)
 func (p PointerWCtx) MatchMyContext(go_instr *ssa.Go) bool {
