@@ -232,7 +232,7 @@ func (r *ResultWCtx) PointsToByGo(v ssa.Value, goInstr *ssa.Go) PointerWCtx {
 		}
 	}
 	fmt.Println(" ****  Pointer Analysis cannot match this ssa.Value: " + v.String() + " with this *ssa.GO" + goInstr.String() + " **** ") //panic
-	return PointerWCtx{nil, -1, nil}
+	return PointerWCtx{nil, 0, nil}
 }
 
 
