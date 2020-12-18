@@ -433,11 +433,11 @@ type PointerWCtx struct {
 }
 
 //bz: whether goID is match with the contexts in this pointer
-func (p PointerWCtx) MatchMyContext(goID nodeid) bool {
-	n := p.a.nodes[goID] //from user
-	fmt.Println(n.typ.String())
+func (p PointerWCtx) MatchMyContext(go_instr *ssa.Go) bool {
 	callersite := p.cgn.callersite[0]
-	if callersite.targets == goID {
+	node := p.a.nodes[callersite.targets] //from user
+	instr := node.callsite[0].instr
+	if instr == go_instr {
 		return true
 	}else{
 		return false
