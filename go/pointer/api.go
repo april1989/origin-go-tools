@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"go/token"
 	"io"
+	"strconv"
+	"strings"
 
 	"github.tamu.edu/April1989/go_tools/container/intsets"
 	"github.tamu.edu/April1989/go_tools/go/callgraph"
@@ -215,7 +217,94 @@ func (r *ResultWCtx) PointsTo(v ssa.Value) []PointerWCtx {
 	if pointers != nil {
 		return pointers
 	}
-	panic("Pointer Analysis did not record for this ssa.Value: " + v.String())
+	panic(" ****  Pointer Analysis did not record for this ssa.Value: " + v.String() + " **** ")
+}
+
+//bz: user API: for debug to dump all result out
+func (r *ResultWCtx) DumpAll() {
+	//bz: also a reference of how to use new APIs here
+	main := r.GetMain()
+	fmt.Println("Main CGNode: " + main.String())
+
+	fmt.Println("\nWe are going to print out call graph. If not desired, turn off DEBUG.")
+	callers := r.CallGraph.Nodes
+	fmt.Println("#CGNode: " + strconv.Itoa(len(callers)))
+	for _, caller := range callers {
+		if !strings.Contains(caller.GetFunc().String(), "command-line-arguments.") {
+			continue //we only want the app call edges
+		}
+		fmt.Println(caller.String()) //bz: with context
+		outs := caller.Out           // caller --> callee
+		for _, out := range outs {   //callees
+			fmt.Println("  -> " + out.Callee.String()) //bz: with context
+		}
+	}
+
+	fmt.Println("\nWe are going to print out queries. If not desired, turn off DEBUG.")
+	queries := r.Queries
+	inQueries := r.IndirectQueries
+	globalQueries := r.GlobalQueries
+	fmt.Println("#Queries: " + strconv.Itoa(len(queries)) + "  #Indirect Queries: " + strconv.Itoa(len(inQueries)) +
+		"  #Global Queries: " + strconv.Itoa(len(globalQueries)))
+	////testing only
+	//var p1 pointer.PointerWCtx
+	//var p2 pointer.PointerWCtx
+	//done := false
+
+	testAPI := false //bz: check for testing new api
+	fmt.Println("Queries Detail: ")
+	for v, ps := range queries {
+		for _, p := range ps { //p -> types.Pointer: includes its context
+			//SSA here is your *ssa.Value
+			fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
+			//if strings.Contains(v.String(), "new bool (abort)") {
+			//	p1 = p
+			//}
+			//if strings.Contains(v.String(), "abort : *bool") {
+			//	p2 = p
+			//}
+		}
+		if testAPI {
+			check := r.PointsTo(v)
+			for _, p := range check { //p -> types.Pointer: includes its context
+				fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
+			}
+		}
+	}
+
+	fmt.Println("\nIndirect Queries Detail: ")
+	for v, ps := range inQueries {
+		for _, p := range ps { //p -> types.Pointer: includes its context
+			fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
+		}
+		if testAPI {
+			check := r.PointsTo(v)
+			for _, p := range check { //p -> types.Pointer: includes its context
+				fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
+			}
+		}
+	}
+
+	fmt.Println("\nGlobal Queries Detail: ")
+	for v, ps := range globalQueries {
+		for _, p := range ps { //p -> types.Pointer: includes its context
+			fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
+			//if strings.Contains(v.String(), "abort : *bool") {
+			//	p2 = p
+			//}
+		}
+		if testAPI {
+			check := r.PointsTo(v)
+			for _, p := range check { //p -> types.Pointer: includes its context
+				fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
+			}
+		}
+	}
+	////testing only
+	//yes := p1.PointsTo().Intersects(p2.PointsTo())
+	//if yes {
+	//	fmt.Println(" @@@@ they intersect @@@@ ")
+	//}
 }
 
 // A Pointer is an equivalence class of pointer-like values.
@@ -369,7 +458,7 @@ func (p PointerWCtx) PointsTo() PointsToSet {
 }
 
 // MayAlias reports whether the receiver pointer may alias
-// the argument pointer.
+// the argument pointer.  --> same as Intersects()
 func (p PointerWCtx) MayAlias(q PointerWCtx) bool {
 	return p.PointsTo().Intersects(q.PointsTo())
 }
