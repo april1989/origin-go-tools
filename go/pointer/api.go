@@ -378,3 +378,18 @@ func (p PointerWCtx) MayAlias(q PointerWCtx) bool {
 func (p PointerWCtx) DynamicTypes() *typeutil.Map {
 	return p.PointsTo().DynamicTypes()
 }
+
+// PointsTo returns the set of labels that this points-to set
+// contains. -- TODO: bz: is this working??
+func (p PointerWCtx) Labels() []*Label {
+	var labels []*Label
+	var pp = p.PointsTo()
+	var pts = pp.pts
+	if pts != nil {
+		var space [50]int
+		for _, l := range pts.AppendTo(space[:0]) {
+			labels = append(labels, pp.a.labelFor(nodeid(l)))
+		}
+	}
+	return labels
+}
