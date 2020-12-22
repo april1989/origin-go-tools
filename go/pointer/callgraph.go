@@ -96,7 +96,10 @@ type callsite struct {
 //tmp solution, to compare string ... otherwise too strict ...
 //e.g., return c.targets == other.targets && c.instr.String() == other.instr.String() ----->  this might be too strict ...
 func (c *callsite) equal(o *callsite) bool {
-	if o == nil {
+	if o == nil && c == nil {
+		return true
+	}
+	if o == nil || c == nil {
 		return false
 	}
 	cInstr := c.instr
