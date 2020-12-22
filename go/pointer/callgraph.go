@@ -15,10 +15,16 @@ import (
 )
 
 var mainID nodeid //bz: record the target of root call to main method ID, NO REAL use, convenient for debug
+var DEBUG bool //bz: do we debug ...
 
 //bz: update mainID, since opt.go will renumbering everything and change this
 func UpdateMainID(newid nodeid) {
 	mainID = newid
+}
+
+//bz: update DEBUG, whether we use mainID and UpdateMainID() in contourkFull()
+func UpdateDEBUG(debug bool) {
+	DEBUG = debug
 }
 
 //bz: this is the cgnode created by pointer analysis -> we force to use k callersite
@@ -46,7 +52,7 @@ func (n *cgnode) contour(isKcfa bool) string {
 	return fmt.Sprintf("as called to synthetic/intrinsic (targets=n%d)", n.callersite[0].targets)
 }
 
-//bz: adjust contour() to kcfa
+//bz: adjust contour() to kcfa and origin ---> this is only used when printing out all call graph information
 func (n *cgnode) contourkFull() string {
 	var s string
 	s = s + "["
@@ -61,12 +67,12 @@ func (n *cgnode) contourkFull() string {
 		}
 		if n.fn.String() == "command-line-arguments.main" { //bz: the ctx is "called to synthetic/intrinsic func@n?"; which is root node calling to main.main
 			s = s + strconv.Itoa(idx) + ":root call to command-line-arguments.main; "
-			if mainID == 0 { //bz: initial just once; this has NO REAL use, just convenient for debug
+			if DEBUG && mainID == 0 { //bz: initial just once; this has NO REAL use, just convenient for debug
 				mainID = cs.targets
 			}
 			continue
 		}
-		if cs.targets == mainID { //bz: same as above
+		if DEBUG && cs.targets == mainID { //bz: same as above
 			s = s + strconv.Itoa(idx) + ":root call to command-line-arguments.main; "
 			continue
 		}

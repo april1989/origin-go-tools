@@ -445,8 +445,10 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 		mode = "CONTEXT-INSENSITIVE"
 	}
 
+	UpdateDEBUG(a.config.DEBUG) //in pointer/callgraph
+
 	if a.log != nil {
-		fmt.Fprintln(a.log, "==== Starting analysis: " + mode)
+		fmt.Fprintln(a.log, "==== Starting analysis and logging: ")
 	}
 	fmt.Println(" *** MODE: " + mode + " *** ")
 
