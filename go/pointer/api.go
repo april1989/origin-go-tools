@@ -235,6 +235,17 @@ func (r *ResultWCtx) PointsToByGo(v ssa.Value, goInstr *ssa.Go) PointerWCtx {
 	return PointerWCtx{a: nil}
 }
 
+//bz: user API: return PointerWCtx for a ssa.Value used under the main context
+func (r *ResultWCtx) PointsToByMain(v ssa.Value) PointerWCtx {
+	ptss := r.PointsTo(v) //return type: []PointerWCtx
+	for _, pts := range ptss {
+		if pts.cgn.idx == r.main.idx {
+			return pts
+		}
+	}
+	fmt.Println(" ****  Pointer Analysis cannot match this ssa.Value: " + v.String() + " with main thread **** ") //panic
+	return PointerWCtx{a: nil}
+}
 
 //bz: user API: for debug to dump all result out
 func (r *ResultWCtx) DumpAll() {
