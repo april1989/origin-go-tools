@@ -225,6 +225,9 @@ func (r *ResultWCtx) PointsTo(v ssa.Value) []PointerWCtx {
 //input: ssa.Value, *ssa.GO;
 //output: PointerWCtx; this can be empty with nothing if we cannot match any
 func (r *ResultWCtx) PointsToByGo(v ssa.Value, goInstr *ssa.Go) PointerWCtx {
+	if goInstr == nil {
+		return r.PointsToByMain(v)
+	}
 	ptss := r.PointsTo(v) //return type: []PointerWCtx
 	for _, pts := range ptss {
 		if pts.MatchMyContext(goInstr) {
