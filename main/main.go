@@ -84,13 +84,12 @@ func main() {
 	}
 
 	//create my log file
-	var logName string
-	logName = "gologfile"
-	logfile, err := os.Create(logName) //bz: i do not want messed up log, create/overwrite one each time
+	logfile, err := os.Create("gologfile") //bz: i do not want messed up log, create/overwrite one each time
 	log.SetFormatter(&log.TextFormatter{
 		FullTimestamp: true,
 	})
 
+	var scope = []string {"google.golang.org/grpc"}
 	// Configure pointer analysis to build call-graph
 	ptaConfig := &pointer.Config{
 		Mains:          mains, //bz: NOW assume only one main
@@ -102,9 +101,10 @@ func main() {
 		//origin
 		Origin: true,
 		//shared config
-		K:          2,
+		K:          1,
 		LimitScope: true, //bz: only consider app methods now
 		DEBUG:      true, //bz: rm all printed out info in console
+		Scope:      scope, //bz: analyze scope
 	}
 
 	//*** compute pta here
@@ -117,7 +117,7 @@ func main() {
 	}
 	defer logfile.Close()
 	log.SetOutput(logfile)
-	fmt.Println("\nDone  -- PTA/CG Build; Using " + elapsed.String() + ". \nGo check gologfile for detail. ")
+	fmt.Println("\nDone  -- PTA/CG Build; Using " + elapsed.String() + ". \nGo check gologfile_0 for detail. ")
 
 	if ptaConfig.DEBUG {
 		result.DumpAll()

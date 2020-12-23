@@ -12,9 +12,10 @@ package pointer
 
 import (
 	"fmt"
+	"github.tamu.edu/April1989/go_tools/container/intsets"
+	"github.tamu.edu/April1989/go_tools/go/ssa"
 	"go/token"
 	"go/types"
-	"github.tamu.edu/April1989/go_tools/go/ssa"
 	"math"
 	"strconv"
 	"strings"
@@ -73,7 +74,7 @@ func (a *analysis) addOneNode(typ types.Type, comment string, subelement *fieldI
 // setValueNode associates node id with the value v.
 // cgn identifies the context iff v is a local variable.
 func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
-	if cgn != nil {// bz: both a.localval and a.globalval; will be nullify at the end of genFunc()
+	if cgn != nil { // bz: both a.localval and a.globalval; will be nullify at the end of genFunc()
 		a.localval[v] = id
 	} else {
 		a.globalval[v] = id
@@ -102,7 +103,7 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 		//*ssa.FreeVar (but I PERSONALLY do not want *ssa.Function, *ssa.Global, *ssa.Function, *ssa.Const,
 		//exclude now)
 		if a.log != nil {
-			fmt.Fprintf(a.log, "nil cgn in setValueNode(): v:" + v.Type().String() + " " + v.String() + "\n")
+			fmt.Fprintf(a.log, "nil cgn in setValueNode(): v:"+v.Type().String()+" "+v.String()+"\n")
 		}
 		switch v.(type) {
 		case *ssa.FreeVar:
@@ -174,7 +175,6 @@ func (a *analysis) recordQueries(t types.Type, cgn *cgnode, v ssa.Value, id node
 	a.copy(ptr.n, id, a.sizeof(t))
 }
 
-
 // endObject marks the end of a sequence of calls to addNodes denoting
 // a single object allocation.
 //
@@ -194,7 +194,7 @@ func (a *analysis) endObject(obj nodeid, cgn *cgnode, data interface{}) *object 
 		cgn:  cgn,
 		data: data,
 	}
-	objNode.obj = o //bz: points-to heap ?
+	objNode.obj = o //bz: points-to heap ? this is the only place that assigned to node.obj
 
 	return o
 }
@@ -332,7 +332,7 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 		single := a.createSingleCallSite(callersite)
 		cgn = &cgnode{fn: fn, obj: obj, callersite: single}
 
-	} else {   // other functions
+	} else {                 // other functions
 		if a.config.Origin { //bz: for origin-sensitive
 			if callersite == nil { //we only create new context for make closure and go instruction
 				var fnkcs []*callsite
@@ -881,11 +881,19 @@ func (a *analysis) considerKCFA(fn string) bool {
 	return a.config.CallSiteSensitive == true && a.withinScope(fn) //&& (caller.fn.IsFromApp || a.isMainMethod(caller.fn))
 }
 
-//bz: continue with isMainMethod, currently compare string, will update
+//bz: continue with isMainMethod, currently compare string
 func (a *analysis) withinScope(method string) bool {
 	if a.config.LimitScope {
-		if strings.Contains(method, "command-line-arguments") {
+		if strings.Contains(method, "command-line-arguments") { //default scope
 			return true
+		} else {
+			if len(a.config.Scope) > 0 { //user assigned scope
+				for _, pkg := range a.config.Scope {
+					if strings.Contains(method, pkg) {
+						return true
+					}
+				}
+			}
 		}
 		return false
 	}
@@ -894,22 +902,31 @@ func (a *analysis) withinScope(method string) bool {
 
 //bz: to check whether a go routine is inside a loop; also record the result in *analysis
 func (a *analysis) isInLoop(fn *ssa.Function, inst ssa.Instruction) bool {
-	instbb := inst.Block()    //basic block of inst
-	instIdx := instbb.Index   // index of instbb in all bbs
-	nextbbs := instbb.Succs   //successers
-	var tmp []*ssa.BasicBlock //store for the successers of nextbbs
-	for len(nextbbs) > 0 {
-		for _, nextbb := range nextbbs {
-			if nextbb.Index == instIdx { //see instbb again
+	instbb := inst.Block()  //basic block of inst
+	instIdx := instbb.Index // index of instbb in all bbs
+	nextbbs := instbb.Succs //successers
+	next := make(map[int]*ssa.BasicBlock)
+	var total intsets.Sparse //all been traversed
+	for _, nextbb := range nextbbs {
+		next[nextbb.Index] = nextbb
+		total.Insert(nextbb.Index)
+	}
+	tmp := make(map[int]*ssa.BasicBlock) //store for the successers of nextbbs
+	for len(next) > 0 {
+		for nextIdx, nextbb := range next {
+			if nextIdx == instIdx { //see instbb again
 				return true
 			} else { //continue
 				for _, nnbb := range nextbb.Succs {
-					tmp = append(tmp, nnbb) //next nextbb
+					if !total.Has(nnbb.Index) {
+						tmp[nnbb.Index] = nnbb //next nextbb
+						total.Insert(nnbb.Index) //record
+					}
 				}
 			}
 		}
-		nextbbs = tmp
-		tmp = tmp[:0] //set array to empty
+		next = tmp
+		tmp = make(map[int]*ssa.BasicBlock) //set map to empty
 	}
 	return false
 }
@@ -1079,6 +1096,9 @@ func (a *analysis) genOnline(caller *cgnode, site *callsite, fn *ssa.Function) n
 	//reinitilaize TODO: do we need to save these somewhere and copy them back here ???
 	if a.globalval == nil {
 		a.globalval = make(map[ssa.Value]nodeid)
+	}
+	if a.panicNode == 0 {
+		a.panicNode = a.addNodes(tEface, "panic")
 	}
 
 	//start point
@@ -1253,7 +1273,7 @@ func (a *analysis) valueNodeClosure(cgn *cgnode, closure *ssa.MakeClosure, v ssa
 	fn, _ := v.(*ssa.Function)
 	callersite := cgn.callersite[0]
 	ids, ok, _ := a.existClosure(fn, callersite) //checked
-	if !ok {   //not exist
+	if !ok {                                     //not exist
 		var comment string
 		if a.log != nil {
 			comment = v.String()
@@ -1634,6 +1654,9 @@ func (a *analysis) genInstr(cgn *cgnode, instr ssa.Instruction) {
 		if a.considerMyContext(fn.String()) {
 			if a.config.DEBUG {
 				fmt.Println("CAUGHT APP (MakeClosure) METHOD -- " + fn.String()) //debug
+				if strings.Contains(fn.String(), "(*google.golang.org/grpc/internal/channelz.channelTrace).append$1") {
+					fmt.Print()
+				}
 			}
 			//bz: should only handle this in the origin-sensitive way when the next stmt is go invoke
 			// do this check during the process

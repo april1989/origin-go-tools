@@ -148,7 +148,6 @@ type analysis struct {
 	// NOW also used for static and invoke calls TODO: may be should use nodeid not int (idx) ?
 	closures            map[*ssa.Function]*Ctx2nodeid //bz: solution for makeclosure
     result              *ResultWCtx                   //bz: our result, dump all
-    scope               []string                      //bz: scope of detailed analyzed package names
 }
 
 // enclosingObj returns the first node of the addressable memory
@@ -449,20 +448,18 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 	UpdateDEBUG(a.config.DEBUG) //in pointer/callgraph
 
 	//update analysis scope
-	a.scope = append(a.scope, "command-line-arguments")
+	fmt.Println(" *** MODE: " + mode + " *** ")
+	fmt.Println(" *** Analyze Scope *** ")
 	if len(a.config.Scope) > 0 {
 		for _, pkg := range a.config.Scope {
-			a.scope = append(a.scope, pkg)
+			fmt.Println(" - " + pkg)
 		}
+	}else{
+		fmt.Println(" - default: command-line-arguments")
 	}
 
 	if a.log != nil {
 		fmt.Fprintln(a.log, "==== Starting analysis and logging: ")
-	}
-	fmt.Println(" *** MODE: " + mode + " *** ")
-	fmt.Println(" *** Analyze Scope *** ")
-	for _, pkg := range a.scope {
-		fmt.Println(pkg)
 	}
 
 	// Pointer analysis requires a complete program for soundness.
