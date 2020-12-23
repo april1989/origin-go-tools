@@ -78,7 +78,8 @@ type Config struct {
 	//bz: shared config by context-sensitive
 	K                  int //how many level? the most recent callsite/origin?
 	LimitScope         bool  //only apply kcfa to app methods
-	DEBUG             bool
+	DEBUG              bool //print out debug info
+	Scope              []string //analyzed scope -> packages, can be null
 }
 
 type track uint32
@@ -186,7 +187,7 @@ type ResultWCtx struct {
 	IndirectQueries map[ssa.Value][]PointerWCtx // pts(*v) for each v in setValueNode().
 	GlobalQueries   map[ssa.Value][]PointerWCtx // pts(v) for each freevar in setValueNode().
 	Warnings        []Warning                   // warnings of unsoundness
-	main            *cgnode          // bz: the cgnode for main method
+	main            *cgnode              // bz: the cgnode for main method
 }
 
 //bz: user API: return *cgnode by *ssa.Function

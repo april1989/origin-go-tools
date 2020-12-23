@@ -92,10 +92,6 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 	// seems like we only query pointers, so CURRENTLY only record for pointers in app methods
 	// -> go to commit@acb4db0349f131f8d10ddbec6d4fb686258becca (or comment out below for now)
 	// to check original code
-	if strings.Contains(v.String(), "command-line-arguments.minConnectTimeout") {
-		fmt.Println()
-	}
-
 	t := v.Type()
 	if cgn == nil {
 		if !withinScope {
@@ -215,7 +211,7 @@ func (a *analysis) makeFunctionObject(fn *ssa.Function, callersite *callsite) no
 		fmt.Fprintf(a.log, "\t---- makeFunctionObject %s\n", fn)
 	}
 
-	if a.config.DEBUG && strings.Contains(fn.String(), "command-line-arguments.") {
+	if a.config.DEBUG && a.withinScope(fn.String()) {
 		fmt.Println("  DEBUG(makeFunctionObject): " + fn.String())
 		if len(fn.Params) > 0 {
 			fmt.Println(fn.Params[0].Type().String()) //---> receiver struct type
@@ -258,9 +254,6 @@ func (a *analysis) makeFunctionObjectWithContext(caller *cgnode, fn *ssa.Functio
 
 	if a.config.DEBUG {
 		fmt.Printf("\t---- makeFunctionObjectWithContext (kcfa) for %s\n", fn)
-		if strings.Contains(fn.String(), "command-line-arguments.ParallelizeUntil$1") {
-			fmt.Println("  DEBUG (makeFunctionObjectWithContext): " + fn.String())
-		}
 	}
 
 	if callersite == nil && closure != nil {
@@ -949,7 +942,7 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 		return
 	}
 
-	if a.config.DEBUG && strings.Contains(fn.String(), "command-line-arguments.") {
+	if a.config.DEBUG && a.withinScope(fn.String()) {
 		fmt.Println("  DEBUG (genStaticCall): " + fn.String())
 	}
 
