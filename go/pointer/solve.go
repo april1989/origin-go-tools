@@ -347,6 +347,10 @@ func (c *invokeConstraint) solve(a *analysis, delta *nodeset) {
 			}else{ //newly created app func invokes lib func: all use share contour
 				fnObj = a.genOnline(nil, nil, fn)
 			}
+		}else{
+			if a.log != nil { //debug
+				fmt.Fprintf(a.log, "!! ALREADY EXIST INVOKE FUNC: " + fn.String())
+			}
 		}
 
 		// bz: back to normal workflow -> context-insensitive

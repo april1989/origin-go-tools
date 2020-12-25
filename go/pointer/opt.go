@@ -154,4 +154,7 @@ func (a *analysis) renumber() {
 	}
 
 	a.nodes = newNodes
+	if a.log != nil {
+		fmt.Fprintf(a.log, "Renumbering is Done.\n")
+	}
 }

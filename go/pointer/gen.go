@@ -235,6 +235,10 @@ func (a *analysis) makeFunctionObject(fn *ssa.Function, callersite *callsite) no
 	}
 
 	// Queue it up for constraint processing.
+	if strings.EqualFold(fn.String(), "(*google.golang.org/grpc/internal/channelz.channelTrace).append"){
+		idx++
+		fmt.Print("-- " + strconv.Itoa(idx))
+	}
 	a.genq = append(a.genq, cgn)
 
 	return obj
@@ -256,7 +260,7 @@ func (a *analysis) makeFunctionObjectWithContext(caller *cgnode, fn *ssa.Functio
 		fmt.Printf("\t---- makeFunctionObjectWithContext (kcfa) for %s\n", fn)
 	}
 
-	if callersite == nil && closure != nil {
+	if a.config.Origin && callersite == nil && closure != nil {
 		//origin: case 2: fn is make closure -> we checked before calling this, now needs to create it
 		// and will update the a.closures[] outside
 		// !! for origin, this is the only place triggering context switch !!
@@ -264,10 +268,30 @@ func (a *analysis) makeFunctionObjectWithContext(caller *cgnode, fn *ssa.Functio
 		return obj, true
 	}
 
-	//if we can find an existing cgnode/obj
-	existFnIdx, multiFn, existNodeID, isNew := a.existContextForComb(fn, callersite, caller)
-	if !isNew {
-		return existNodeID, isNew
+	//if we can find an existing cgnode/obj -> update: remove the duplicate cgnode added to a.genq[]
+	var existFnIdx []int
+	var multiFn bool
+	var existNodeID nodeid
+	var isNew bool
+	if a.config.Origin { //bz: origin -> we only create new callsite[] for specific instr, not everyone
+		if _, ok := callersite.instr.(*ssa.Go); callersite == nil || ok {
+			existFnIdx, multiFn, existNodeID, isNew = a.existContextForComb(fn, callersite, caller)
+			if !isNew {
+				return existNodeID, isNew
+			}
+		}else{
+			existFnIdx, multiFn, existNodeID, isNew = a.existContextFor(fn, caller)
+			if !isNew {
+				return existNodeID, isNew
+			}
+		}
+	} else if a.config.CallSiteSensitive { //bz: for kcfa
+		existFnIdx, multiFn, existNodeID, isNew = a.existContextForComb(fn, callersite, caller)
+		if !isNew {
+			return existNodeID, isNew
+		}
+	} else {
+		panic("NO SELECTED MY CONTEXT IN a.config. GO SELECT ONE.")
 	}
 
 	//create a callee for THIS caller context if available, not every caller context
@@ -283,13 +307,16 @@ func (a *analysis) makeFunctionObjectWithContext(caller *cgnode, fn *ssa.Functio
 	return obj, true
 }
 
-//bz: if exist this callsite + cgnode for fn?
-func (a *analysis) existContextForComb(fn *ssa.Function, callersite *callsite, caller *cgnode) ([]int, bool, nodeid, bool) {
+//bz: if exist this caller for fn?
+func (a *analysis) existContextFor(fn *ssa.Function, caller *cgnode) ([]int, bool, nodeid, bool) {
+	if strings.EqualFold(fn.String(), "(*google.golang.org/grpc/internal/channelz.channelTrace).append"){
+		fmt.Print("-- " + strconv.Itoa(idx))
+	}
 	existFnIdx, multiFn := a.fn2cgnodeIdx[fn]
 	if multiFn { //check if we already have the caller + callsite ?? recursive/duplicate call
 		for i, existIdx := range existFnIdx { // idx -> index of fn cgnode in a.cgnodes[]
 			_fnCGNode := a.cgnodes[existIdx]
-			if a.equalContext(_fnCGNode.callersite, callersite, caller.callersite) { //check all callsites
+			if a.equalContextFor(_fnCGNode.callersite, caller.callersite) { //check all callsites
 				//duplicate combination, return this
 				if a.log != nil { //debug
 					fmt.Fprintf(a.log, "    EXIST**: "+strconv.Itoa(i+1)+"th: K-CALLSITE -- "+_fnCGNode.contourkFull()+"\n")
@@ -304,8 +331,47 @@ func (a *analysis) existContextForComb(fn *ssa.Function, callersite *callsite, c
 	return existFnIdx, multiFn, 0, true
 }
 
-//bz: if two []*callsite are the same
-func (a *analysis) equalContext(existCSs []*callsite, cur *callsite, curCallerCSs []*callsite) bool {
+//bz: if two existCSs and curCallerCSs are the same
+func (a *analysis) equalContextFor(existCSs []*callsite, curCallerCSs []*callsite) bool {
+	if len(existCSs) != len(curCallerCSs) {
+		return false
+	}
+	for _, existCS := range existCSs {
+		for _, curCallerCS := range curCallerCSs {
+			if !existCS.equal(curCallerCS) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+//bz: if exist this callsite + caller for fn?
+func (a *analysis) existContextForComb(fn *ssa.Function, callersite *callsite, caller *cgnode) ([]int, bool, nodeid, bool) {
+	if strings.EqualFold(fn.String(), "(*google.golang.org/grpc/internal/channelz.channelTrace).append"){
+		fmt.Print("-- " + strconv.Itoa(idx))
+	}
+	existFnIdx, multiFn := a.fn2cgnodeIdx[fn]
+	if multiFn { //check if we already have the caller + callsite ?? recursive/duplicate call
+		for i, existIdx := range existFnIdx { // idx -> index of fn cgnode in a.cgnodes[]
+			_fnCGNode := a.cgnodes[existIdx]
+			if a.equalContextForComb(_fnCGNode.callersite, callersite, caller.callersite) { //check all callsites
+				//duplicate combination, return this
+				if a.log != nil { //debug
+					fmt.Fprintf(a.log, "    EXIST**: "+strconv.Itoa(i+1)+"th: K-CALLSITE -- "+_fnCGNode.contourkFull()+"\n")
+				}
+				if a.config.DEBUG {
+					fmt.Printf("    EXIST**: " + strconv.Itoa(i+1) + "th: K-CALLSITE -- " + _fnCGNode.contourkFull() + "\n")
+				}
+				return existFnIdx, multiFn, _fnCGNode.obj, false
+			}
+		}
+	}
+	return existFnIdx, multiFn, 0, true
+}
+
+//bz: if two (existCSs == cur + curCallerCSs) are the same
+func (a *analysis) equalContextForComb(existCSs []*callsite, cur *callsite, curCallerCSs []*callsite) bool {
 	for i, existCS := range existCSs {
 		switch i {
 		case 0: //[0] is the most recent
@@ -390,9 +456,15 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 	a.makeParamResultNodes(fn, obj, cgn)
 
 	// Queue it up for constraint processing.
+	if strings.EqualFold(fn.String(), "(*google.golang.org/grpc/internal/channelz.channelTrace).append"){
+		idx++
+		fmt.Print("-- " + strconv.Itoa(idx))
+	}
 	a.genq = append(a.genq, cgn)
 	return obj, fnIdx
 }
+
+var idx int
 
 //bz: continue with makeFunctionObjectWithContext (kcfa), update a.fn2cgnodeIdx for fn
 func (a *analysis) updateFn2NodeID(fn *ssa.Function, multiFn bool, newFnIdx []int, existFnIdx []int) {
@@ -889,7 +961,7 @@ func (a *analysis) withinScope(method string) bool {
 		} else {
 			if len(a.config.Scope) > 0 { //user assigned scope
 				for _, pkg := range a.config.Scope {
-					if strings.Contains(method, pkg) {
+					if strings.Contains(method, pkg) && !strings.Contains(method, "google.golang.org/grpc/grpclog") {
 						return true
 					}
 				}
@@ -985,20 +1057,21 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 			return
 		}
 
-		ids, ok, _ := a.existClosure(fn, caller.callersite[0])
-		if ok { //bz: the cgnode for fn is created already when its previous stmt is make closure; we only want call edges/constraints here
-			if len(ids) > 1 || len(ids) == 0 {
-				panic("SHOULD BE == 1? in fn2closure: a.closure")
-			}
-			obj = ids[0]
-		} else { //normal cases
+		//ids, ok, _ := a.existClosure(fn, caller.callersite[0])
+		//if ok { //bz: the cgnode for fn is created already when its previous stmt is make closure;
+		//	    // we only want call edges/constraints here
+		//	if len(ids) > 1 || len(ids) == 0 {
+		//		panic("SHOULD BE == 1? in fn2closure: a.closure")
+		//	}
+		//	obj = ids[0]
+		//} else { //normal cases
 			//for kcfa: we need a new contour
 			//for origin: whatever left, we use caller context
 			obj, isNew = a.makeFunctionObjectWithContext(caller, fn, site, nil, -1)
 			if !isNew {
 				return //all constraints should be added already
 			}
-		}
+		//}
 	} else {
 		//default: context-insensitive
 		if a.shouldUseContext(fn) {
@@ -1093,14 +1166,6 @@ func (a *analysis) genDynamicCall(caller *cgnode, site *callsite, call *ssa.Call
 
 //bz: online iteratively doing genFunc <-> genInstr iteratively
 func (a *analysis) genOnline(caller *cgnode, site *callsite, fn *ssa.Function) nodeid {
-	//reinitilaize TODO: do we need to save these somewhere and copy them back here ???
-	if a.globalval == nil {
-		a.globalval = make(map[ssa.Value]nodeid)
-	}
-	if a.panicNode == 0 {
-		a.panicNode = a.addNodes(tEface, "panic")
-	}
-
 	//start point
 	fnObj := a.valueNodeInvoke(caller, site, fn)
 
@@ -1654,9 +1719,6 @@ func (a *analysis) genInstr(cgn *cgnode, instr ssa.Instruction) {
 		if a.considerMyContext(fn.String()) {
 			if a.config.DEBUG {
 				fmt.Println("CAUGHT APP (MakeClosure) METHOD -- " + fn.String()) //debug
-				if strings.Contains(fn.String(), "(*google.golang.org/grpc/internal/channelz.channelTrace).append$1") {
-					fmt.Print()
-				}
 			}
 			//bz: should only handle this in the origin-sensitive way when the next stmt is go invoke
 			// do this check during the process
@@ -1991,8 +2053,10 @@ func (a *analysis) generate() {
 	}
 
 	// Discard generation state, to avoid confusion after node renumbering.
-	a.panicNode = 0
-	a.globalval = nil
+	if a.config.K == 0 { //bz: we are using kcfa or origin
+		a.panicNode = 0
+		a.globalval = nil
+	}
 	a.localval = nil
 	a.localobj = nil
 

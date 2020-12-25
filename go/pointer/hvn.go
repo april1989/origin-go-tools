@@ -335,6 +335,10 @@ func (a *analysis) hvn() {
 
 	a.showCounts()
 
+	if h.log != nil {
+		fmt.Fprintf(h.log, "\n==== Pointer equivalence optimization is Done\n")
+	}
+
 	stop("HVN")
 }
 

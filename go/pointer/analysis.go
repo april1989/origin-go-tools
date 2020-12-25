@@ -356,6 +356,10 @@ func Analyze(config *Config) (result *ResultWCtx, err error) { //Result
 		runtime.GC()
 	}
 
+	if a.log != nil {
+		fmt.Fprintln(a.log, "==== Starting solving and generating constraints online ====")
+	}
+
 	a.solve() //bz: officially starts here
 
 	// Compare solutions.
@@ -528,7 +532,7 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 			a.rtypes.SetHasher(a.hasher)
 		}
 
-		a.hvn()
+		a.hvn() //default: do this hvn
 	}
 
 	if debugHVNCrossCheck {
