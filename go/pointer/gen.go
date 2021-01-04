@@ -125,7 +125,7 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 		}
 		//bz: this condition is copied from go2: indirect queries
 		if underType, ok := v.Type().Underlying().(*types.Pointer); ok && CanPoint(underType.Elem()) {
-			a.recordIndirectQueries(t, cgn, v)
+			a.recordIndirectQueries(t, cgn, v, id)
 		}
 	}
 }
@@ -146,7 +146,7 @@ func (a *analysis) recordGlobalQueries(t types.Type, cgn *cgnode, v ssa.Value, i
 }
 
 //bz: utility func to record indirect queries
-func (a *analysis) recordIndirectQueries(t types.Type, cgn *cgnode, v ssa.Value) {
+func (a *analysis) recordIndirectQueries(t types.Type, cgn *cgnode, v ssa.Value, id nodeid) {
 	ptr := PointerWCtx{a, a.addNodes(v.Type(), "query.indirect"), cgn}
 	ptrs, ok := a.result.IndirectQueries[v]
 	if !ok {
@@ -157,7 +157,8 @@ func (a *analysis) recordIndirectQueries(t types.Type, cgn *cgnode, v ssa.Value)
 		ptrs = append(ptrs, ptr)
 	}
 	a.result.IndirectQueries[v] = ptrs
-	a.genLoad(cgn, ptr.n, v, 0, a.sizeof(t))
+	//a.genLoad(cgn, ptr.n, v, 0, a.sizeof(t)) //bz: original code -> cause empty pts; updated to copy below.
+	a.copy(ptr.n, id, a.sizeof(t))
 }
 
 //bz: utility func to record queries
