@@ -232,7 +232,12 @@ func (r *ResultWCtx) PointsTo(v ssa.Value) []PointerWCtx {
 //output: PointerWCtx
 //panic: if no record for such input
 func (r *ResultWCtx) PointsToFreeVar(v ssa.Value) []PointerWCtx {
-	if op, ok := v.(*ssa.UnOp); ok {
+	if freev, ok := v.(*ssa.FreeVar); ok {
+		pointers := r.GlobalQueries[freev]
+		if pointers != nil {
+			return pointers
+		}
+	}else if op, ok := v.(*ssa.UnOp); ok {
 		pointers := r.GlobalQueries[op.X] //bz: X is the freeVar
 		if pointers != nil {
 			return pointers
