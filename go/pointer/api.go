@@ -226,6 +226,23 @@ func (r *ResultWCtx) PointsTo(v ssa.Value) []PointerWCtx {
 	return nil
 }
 
+//bz: user API: return []PointerWCtx for a free var,
+//user does not need to distinguish different queries anymore
+//input: ssa.Value;
+//output: PointerWCtx
+//panic: if no record for such input
+func (r *ResultWCtx) PointsToFreeVar(v ssa.Value) []PointerWCtx {
+	if op, ok := v.(*ssa.UnOp); ok {
+		pointers := r.GlobalQueries[op.X] //bz: X is the freeVar
+		if pointers != nil {
+			return pointers
+		}
+	}
+	fmt.Println(" ****  Pointer Analysis did not record for this ssa.Value: " + v.String() + " **** ") //panic
+	return nil
+}
+
+
 //bz: user API: return PointerWCtx for a ssa.Value used under context of *ssa.GO,
 //input: ssa.Value, *ssa.GO;
 //output: PointerWCtx; this can be empty with nothing if we cannot match any
@@ -239,6 +256,10 @@ func (r *ResultWCtx) PointsToByGo(v ssa.Value, goInstr *ssa.Go) PointerWCtx {
 			return pts
 		}
 	}
+	ptss = r.PointsToFreeVar(v)
+	if ptss != nil {
+		return ptss[0] //bz: should only have one value
+	}
 	fmt.Println(" ****  Pointer Analysis cannot match this ssa.Value: " + v.String() + " with this *ssa.GO" + goInstr.String() + " **** ") //panic
 	return PointerWCtx{a: nil}
 }
@@ -250,6 +271,10 @@ func (r *ResultWCtx) PointsToByMain(v ssa.Value) PointerWCtx {
 		if pts.cgn.idx == r.main.idx {
 			return pts
 		}
+	}
+	ptss = r.PointsToFreeVar(v)
+	if ptss != nil {
+		return ptss[0] //bz: should only have one value
 	}
 	fmt.Println(" ****  Pointer Analysis cannot match this ssa.Value: " + v.String() + " with main thread **** ") //panic
 	return PointerWCtx{a: nil}
