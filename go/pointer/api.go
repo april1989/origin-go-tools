@@ -206,6 +206,19 @@ func (r *ResultWCtx) GetMain() *Node {
 //output: PointerWCtx
 //panic: if no record for such input
 func (r *ResultWCtx) PointsTo(v ssa.Value) []PointerWCtx {
+	pointers := r.PointsToRegular(v)
+	if pointers != nil {
+		return pointers
+	}
+	pointers = r.PointsToFreeVar(v)
+	if pointers != nil {
+		return pointers
+	}
+	fmt.Println(" ****  Pointer Analysis did not record for this ssa.Value: " + v.String() + " **** ") //panic
+	return nil
+}
+
+func (r *ResultWCtx) PointsToRegular(v ssa.Value) []PointerWCtx {
 	pointers := r.Queries[v]
 	if pointers != nil {
 		return pointers
@@ -214,16 +227,11 @@ func (r *ResultWCtx) PointsTo(v ssa.Value) []PointerWCtx {
 	if pointers != nil {
 		return pointers
 	}
-
-	fmt.Println(" ****  Pointer Analysis did not record for this ssa.Value: " + v.String() + " **** ") //panic
+	fmt.Println(" ****  Pointer Analysis did not record for this ssa.Value: " + v.String() + " **** (PointsToRegular)") //panic
 	return nil
 }
 
-//bz: user API: return []PointerWCtx for a free var,
-//user does not need to distinguish different queries anymore
-//input: ssa.Value;
-//output: PointerWCtx
-//panic: if no record for such input
+//bz: return []PointerWCtx for a free var,
 func (r *ResultWCtx) PointsToFreeVar(v ssa.Value) []PointerWCtx {
 	if freev, ok := v.(*ssa.FreeVar); ok {
 		pointers := r.GlobalQueries[freev]
@@ -236,7 +244,7 @@ func (r *ResultWCtx) PointsToFreeVar(v ssa.Value) []PointerWCtx {
 			return pointers
 		}
 	}
-	fmt.Println(" ****  Pointer Analysis did not record for this ssa.Value: " + v.String() + " **** ") //panic
+	fmt.Println(" ****  Pointer Analysis did not record for this ssa.Value: " + v.String() + " **** (PointsToFreeVar)") //panic
 	return nil
 }
 
@@ -248,7 +256,7 @@ func (r *ResultWCtx) PointsToByGo(v ssa.Value, goInstr *ssa.Go) PointerWCtx {
 	if goInstr == nil {
 		return r.PointsToByMain(v)
 	}
-	ptss := r.PointsTo(v) //return type: []PointerWCtx
+	ptss := r.PointsToRegular(v) //return type: []PointerWCtx
 	for _, pts := range ptss {
 		if pts.MatchMyContext(goInstr) {
 			return pts
@@ -258,13 +266,13 @@ func (r *ResultWCtx) PointsToByGo(v ssa.Value, goInstr *ssa.Go) PointerWCtx {
 	if ptss != nil {
 		return ptss[0] //bz: should only have one value
 	}
-	fmt.Println(" ****  Pointer Analysis cannot match this ssa.Value: " + v.String() + " with this *ssa.GO" + goInstr.String() + " **** ") //panic
+	fmt.Println(" ****  Pointer Analysis cannot match this ssa.Value: " + v.String() + " with this *ssa.GO: " + goInstr.String() + " **** ") //panic
 	return PointerWCtx{a: nil}
 }
 
 //bz: user API: return PointerWCtx for a ssa.Value used under the main context
 func (r *ResultWCtx) PointsToByMain(v ssa.Value) PointerWCtx {
-	ptss := r.PointsTo(v) //return type: []PointerWCtx
+	ptss := r.PointsToRegular(v) //return type: []PointerWCtx
 	for _, pts := range ptss {
 		if pts.cgn.idx == r.main.idx {
 			return pts
