@@ -214,10 +214,14 @@ func (r *ResultWCtx) PointsTo(v ssa.Value) []PointerWCtx {
 	if pointers != nil {
 		return pointers
 	}
-	pointers = r.GlobalQueries[v]
-	if pointers != nil {
-		return pointers
+
+	if op, ok := v.(*ssa.UnOp); ok {
+		pointers = r.GlobalQueries[op.X] //bz: X is the freeVar
+		if pointers != nil {
+			return pointers
+		}
 	}
+
 	fmt.Println(" ****  Pointer Analysis did not record for this ssa.Value: " + v.String() + " **** ") //panic
 	return nil
 }
