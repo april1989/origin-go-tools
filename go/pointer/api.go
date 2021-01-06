@@ -193,21 +193,24 @@ type ResultWCtx struct {
 
 //bz: user API: tmp solution for missing invoke callee target if func wrapped in parameters
 //alloc should be a freevar
-func (r *ResultWCtx) GetFreeVarFunc(alloc *ssa.Alloc, instr ssa.Instruction, goInstr *ssa.Go) *ssa.Function {
-	call, _ := instr.(*ssa.Call)
+func (r *ResultWCtx) GetFreeVarFunc(alloc *ssa.Alloc, call *ssa.Call, goInstr *ssa.Go) *ssa.Function {
 	val, _ := call.Common().Value.(*ssa.UnOp)
 	freeV := val.X //this should be the free var of func
 	pointers := r.PointsToFreeVar(freeV)
-	for {
-		p := pointers[0].PointsTo()//here should be only one element
-		a := p.a
-		pts := p.pts
+	p := pointers[0].PointsTo()//here should be only one element
+	a := p.a
+	pts := p.pts
+
+	for { //recursively find the func body, since it can be assigned multiple times...
 		if pts.Len() > 1 {
 			fmt.Println(" ****  Pointer Analysis: " + freeV.String() + " has multiple targets **** ") //panic
 		}
 		nid := pts.Min()
 		n := a.nodes[nid]
-		fmt.Print(n.obj)
+		pts = &n.solve.pts
+		if pts.IsEmpty() { // this maybe right maybe wrong ....
+			return n.obj.cgn.fn
+		}//else: continue to find...
 	}
 
 	return nil
