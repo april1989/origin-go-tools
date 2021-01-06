@@ -69,7 +69,7 @@ package pointer
 // CROSS-CHECK below).  In particular, both linear and cyclic chains of
 // copies are each replaced by a single node.
 //
-// Nodes and constraints created "online" (e.g. while solving reflection
+// Nodes and constraints created "Online" (e.g. while solving reflection
 // constraints) are not subject to this optimization.
 //
 // PERFORMANCE

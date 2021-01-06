@@ -546,7 +546,7 @@ future.
 SOLVER
 
 The solver is currently a naive Andersen-style implementation; it does
-not perform online cycle detection, though we plan to add solver
+not perform Online cycle detection, though we plan to add solver
 optimisations such as Hybrid- and Lazy- Cycle Detection from (Hardekopf
 & Lin, PLDI'07).
 

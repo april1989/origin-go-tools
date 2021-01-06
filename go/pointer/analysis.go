@@ -24,8 +24,8 @@ import (
 
 const (
 	// optimization options; enable all when committing
-	optRenumber = true // enable renumbering optimization (makes logs hard to read)
-	optHVN      = true // enable pointer equivalence via Hash-Value Numbering
+	optRenumber = false // enable renumbering optimization (makes logs hard to read)
+	optHVN      = false // enable pointer equivalence via Hash-Value Numbering
 
 	// debugging options; disable all when committing
 	debugHVN           = false // enable assertions in HVN
@@ -357,7 +357,7 @@ func Analyze(config *Config) (result *ResultWCtx, err error) { //Result
 	}
 
 	if a.log != nil {
-		fmt.Fprintln(a.log, "==== Starting solving and generating constraints online ====")
+		fmt.Fprintln(a.log, "==== Starting solving and generating constraints Online ====")
 	}
 
 	a.solve() //bz: officially starts here
@@ -429,6 +429,7 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 			Queries:         make(map[ssa.Value][]PointerWCtx),
 			IndirectQueries: make(map[ssa.Value][]PointerWCtx),
 			GlobalQueries:   make(map[ssa.Value][]PointerWCtx),
+			ExtendedQueries: make(map[ssa.Value][]PointerWCtx),
 		},
 		deltaSpace: make([]int, 0, 100),
 		//bz: i did not clear the following two after offline TODO: do I ?
@@ -556,6 +557,10 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 		for _, caller := range a.cgnodes {
 			cg.CreateNodeWCtx(caller) //bz: create if absent
 		}
+	}
+
+	if a.log != nil { // log format
+		fmt.Fprintf(a.log, "\n\n\nCall Graph -----> \n")
 	}
 
 	// Add dynamic edges to call graph.

@@ -186,6 +186,7 @@ type ResultWCtx struct {
 	Queries         map[ssa.Value][]PointerWCtx // pts(v) for each v in setValueNode().
 	IndirectQueries map[ssa.Value][]PointerWCtx // pts(*v) for each v in setValueNode().
 	GlobalQueries   map[ssa.Value][]PointerWCtx // pts(v) for each freevar in setValueNode().
+	ExtendedQueries map[ssa.Value][]PointerWCtx
 	Warnings        []Warning                   // warnings of unsoundness
 	main            *cgnode              // bz: the cgnode for main method
 }
@@ -309,8 +310,10 @@ func (r *ResultWCtx) DumpAll() {
 	fmt.Println("\nWe are going to print out queries. If not desired, turn off DEBUG.")
 	queries := r.Queries
 	inQueries := r.IndirectQueries
+	exQueries := r.ExtendedQueries
 	globalQueries := r.GlobalQueries
 	fmt.Println("#Queries: " + strconv.Itoa(len(queries)) + "  #Indirect Queries: " + strconv.Itoa(len(inQueries)) +
+		"  #Extended Queries: " + strconv.Itoa(len(exQueries)) +
 		"  #Global Queries: " + strconv.Itoa(len(globalQueries)))
 	////testing only
 	//var p1 pointer.PointerWCtx
@@ -340,6 +343,19 @@ func (r *ResultWCtx) DumpAll() {
 
 	fmt.Println("\nIndirect Queries Detail: ")
 	for v, ps := range inQueries {
+		for _, p := range ps { //p -> types.Pointer: includes its context
+			fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
+		}
+		if testAPI {
+			check := r.PointsTo(v)
+			for _, p := range check { //p -> types.Pointer: includes its context
+				fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
+			}
+		}
+	}
+
+	fmt.Println("\nExtended Queries Detail: ")
+	for v, ps := range exQueries {
 		for _, p := range ps { //p -> types.Pointer: includes its context
 			fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
 		}

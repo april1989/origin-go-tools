@@ -27,6 +27,7 @@ var (
 	tUnsafePtr = types.Typ[types.UnsafePointer]
 
 	withinScope = false //bz: whether the current genInstr() is working on a method within our scope
+	Online      = false //bz: whether a constraint is from genOnline()
 )
 
 // ---------- Node creation ----------
@@ -111,28 +112,43 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 			// a.globalobj[v] = n0  --> nothing stored, do not use this
 			a.recordGlobalQueries(t, cgn, v, id)
 		}
-		return //nothing to record
+		return //else: nothing to record
 	}
-	//if a.config.DEBUG {
-	//	fmt.Println("query (out): " + v.Type().String())
-	//}
+
 	if a.withinScope(cgn.fn.String()) { //record queries
 		//if a.config.DEBUG {
 		//	fmt.Println("query (in): " + t.String())
 		//}
 		if CanPoint(t) {
 			a.recordQueries(t, cgn, v, id)
-		}
+		}else
 		//bz: this condition is copied from go2: indirect queries
 		if underType, ok := v.Type().Underlying().(*types.Pointer); ok && CanPoint(underType.Elem()) {
 			a.recordIndirectQueries(t, cgn, v, id)
 		}
+		//else { //bz: extended queries for debug
+		//	a.recordExtendedQueries(t, cgn, v, id)
+		//}
 	}
+}
+
+func (a *analysis) recordExtendedQueries(t types.Type, cgn *cgnode, v ssa.Value, id nodeid) {
+	ptr := PointerWCtx{a, a.addNodes(t, "query.extended"), nil}
+	ptrs, ok := a.result.ExtendedQueries[v]
+	if !ok {
+		// First time?  Create the canonical query node.
+		ptrs = make([]PointerWCtx, 1)
+		ptrs[0] = ptr
+	} else {
+		ptrs = append(ptrs, ptr)
+	}
+	a.result.ExtendedQueries[v] = ptrs
+	a.copy(ptr.n, id, a.sizeof(t))
 }
 
 //bz: utility func to record global queries
 func (a *analysis) recordGlobalQueries(t types.Type, cgn *cgnode, v ssa.Value, id nodeid) {
-	ptr := PointerWCtx{a, a.addNodes(t, "query global"), nil}
+	ptr := PointerWCtx{a, a.addNodes(t, "query.global"), nil}
 	ptrs, ok := a.result.GlobalQueries[v]
 	if !ok {
 		// First time?  Create the canonical query node.
@@ -163,7 +179,7 @@ func (a *analysis) recordIndirectQueries(t types.Type, cgn *cgnode, v ssa.Value,
 
 //bz: utility func to record queries
 func (a *analysis) recordQueries(t types.Type, cgn *cgnode, v ssa.Value, id nodeid) {
-	ptr := PointerWCtx{a, a.addNodes(t, "query"), cgn}
+	ptr := PointerWCtx{a, a.addNodes(t, "query.direct"), cgn}
 	ptrs, ok := a.result.Queries[v]
 	if !ok {
 		// First time?  Create the canonical query node.
@@ -661,6 +677,14 @@ func (a *analysis) copy(dst, src nodeid, sizeof uint32) {
 	}
 	for i := uint32(0); i < sizeof; i++ {
 		a.addConstraint(&copyConstraint{dst, src})
+
+		if Online { //bz: Online solving
+			a.addWork(dst)
+			if a.log != nil {
+				fmt.Fprintf(a.log, "%s\n\n", " -> add Online constraint to worklist: " + dst.String() + " " + src.String())
+			}
+		}
+
 		src++
 		dst++
 	}
@@ -1038,7 +1062,7 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 
 	// Ascertain the context (contour/cgnode) for a particular call.
 	var obj nodeid //bz: only used in some cases below
-	var isNew bool //bz: whether obj is a new cgnode
+	//var isNew bool //bz: whether obj is a new cgnode
 
 	//bz: for origin-sensitive, we have two cases:
 	//case 1: no closure, directly invoke static function: e.g., go Producer(t0, t1, t3), we create a new context for it
@@ -1068,10 +1092,10 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 		//} else { //normal cases
 			//for kcfa: we need a new contour
 			//for origin: whatever left, we use caller context
-			obj, isNew = a.makeFunctionObjectWithContext(caller, fn, site, nil, -1)
-			if !isNew {
-				return //all constraints should be added already
-			}
+			obj, _ = a.makeFunctionObjectWithContext(caller, fn, site, nil, -1)
+			//if !isNew {
+			//	return //all constraints should be added already
+			//}
 		//}
 	} else {
 		//default: context-insensitive
@@ -1165,22 +1189,31 @@ func (a *analysis) genDynamicCall(caller *cgnode, site *callsite, call *ssa.Call
 	}
 }
 
-//bz: online iteratively doing genFunc <-> genInstr iteratively
+//bz: Online iteratively doing genFunc <-> genInstr iteratively
 func (a *analysis) genOnline(caller *cgnode, site *callsite, fn *ssa.Function) nodeid {
+	//set status
+	Online = true
+
 	//start point
 	fnObj := a.valueNodeInvoke(caller, site, fn)
 
+	//TODO: we skip optimization now, just in case it will mess up. maybe add it later??
+	return fnObj
+}
+
+//bz: Online iteratively doing genFunc <-> genInstr iteratively
+func (a *analysis) genConstraintsOnline() {
 	//generate constraints for each one
 	for len(a.genq) > 0 {
 		cgn := a.genq[0]
 		a.genq = a.genq[1:]
 		a.genFunc(cgn)
 	}
-	//TODO: we skip optimization now, just in case it will mess up. maybe add it later??
-	return fnObj
+
+	Online = false //set back
 }
 
-//bz: special handling for invoke, doing something like genMethodsOf() and valueNode() for invoke calls; called online
+//bz: special handling for invoke, doing something like genMethodsOf() and valueNode() for invoke calls; called Online
 //must be global
 func (a *analysis) valueNodeInvoke(caller *cgnode, site *callsite, fn *ssa.Function) nodeid {
 	if caller == nil && site == nil { //requires shared contour
@@ -1208,7 +1241,7 @@ func (a *analysis) valueNodeInvoke(caller *cgnode, site *callsite, fn *ssa.Funct
 
 // genInvoke generates constraints for a dynamic method invocation.
 // bz: NOTE: not every x.m() is treated by genInvoke() here, some is treated by genStaticCall(),
-// move the genFunc() for invoke calls online
+// move the genFunc() for invoke calls Online
 func (a *analysis) genInvoke(caller *cgnode, site *callsite, call *ssa.CallCommon, result nodeid) {
 	if call.Value.Type() == a.reflectType {
 		a.genInvokeReflectType(caller, site, call, result)
@@ -1238,11 +1271,11 @@ func (a *analysis) genInvoke(caller *cgnode, site *callsite, call *ssa.CallCommo
 	// caller's and the callee's P/R blocks for each discovered
 	// call target.
 	if a.considerMyContext(sig.Recv().Type().String()) { //requires receiver type
-		//bz: simple solution; start to be kcfa from main.main; INSTEAD OF genMethodsOf(), we create it online
+		//bz: simple solution; start to be kcfa from main.main; INSTEAD OF genMethodsOf(), we create it Online
 		if a.config.DEBUG {
 			fmt.Println("CAUGHT APP INVOKE METHOD -- " + sig.Recv().Type().String() + "   NO FUNC, WILL CREATE IT ONLINE LATER.")
 		}
-		a.addConstraint(&invokeConstraint{call.Method, a.valueNode(call.Value), block, site, caller}) //bz: we need sites later online
+		a.addConstraint(&invokeConstraint{call.Method, a.valueNode(call.Value), block, site, caller}) //bz: we need sites later Online
 	} else {
 		a.addConstraint(&invokeConstraint{call.Method, a.valueNode(call.Value), block, nil, nil}) //bz: call.Value is local and base, e.g., t1
 	}
@@ -1614,6 +1647,10 @@ func (a *analysis) genInstr(cgn *cgnode, instr ssa.Instruction) {
 		fmt.Fprintf(a.log, "; %s%s\n", prefix, instr)
 	}
 
+	if strings.Contains(cgn.String(), "flushBackoffQCompleted@") {
+		fmt.Println("..... why again: " + cgn.String())
+	}
+
 	switch instr := instr.(type) {
 	case *ssa.DebugRef:
 		// no-op.
@@ -1965,7 +2002,7 @@ func (a *analysis) genFunc(cgn *cgnode) {
 	}
 
 	//bz: we only want to track global values used in the app methods
-	withinScope = a.considerMyContext(fn.String())
+	withinScope = a.considerMyContext(fn.String()) //global bool
 	// Generate constraints for instructions.
 	for _, b := range fn.Blocks {
 		for _, instr := range b.Instrs {

@@ -37,6 +37,9 @@ func (a *analysis) solve() {
 		if !a.work.TakeMin(&x) {
 			break // empty worklist
 		}
+		if x == 107675 {
+			fmt.Print()
+		}
 		id := nodeid(x)
 		if a.log != nil {
 			fmt.Fprintf(a.log, "\tnode n%d\n", id)
@@ -109,7 +112,7 @@ func (a *analysis) processNewConstraints() {
 			// have other constraints attached.
 			// (A no-op in round 1.)
 			if !dst.solve.copyTo.IsEmpty() || len(dst.solve.complex) > 0 {
-				a.addWork(c.dst) //bz: add to worklist
+				a.addWork(c.dst) //bz: original code: add to worklist
 			}
 		}
 	}
@@ -125,7 +128,7 @@ func (a *analysis) processNewConstraints() {
 		case *copyConstraint:
 			// simple (copy) constraint
 			id = c.src
-			a.nodes[id].solve.copyTo.add(c.dst) //bz: ?? dst.solve.copyTo.add(src) ??
+			a.nodes[id].solve.copyTo.add(c.dst)
 		default:
 			// complex constraint
 			id = c.ptr()
@@ -193,7 +196,7 @@ func (a *analysis) addWork(id nodeid) {
 	}
 }
 
-// onlineCopy adds a copy edge.  It is called online, i.e. during
+// onlineCopy adds a copy edge.  It is called Online, i.e. during
 // solving, so it adds edges and pts members directly rather than by
 // instantiating a 'constraint'.
 //
@@ -226,6 +229,13 @@ func (a *analysis) onlineCopyN(dst, src nodeid, sizeof uint32) uint32 {
 	for i := uint32(0); i < sizeof; i++ {
 		if a.onlineCopy(dst, src) {
 			a.addWork(dst)
+
+			if Online { //bz: Online solving
+				a.addWork(dst)
+				if a.log != nil {
+					fmt.Fprintf(a.log, "%s\n\n", " -> add Online constraint to worklist: "+dst.String()+" "+src.String())
+				}
+			}
 		}
 		src++
 		dst++
@@ -235,6 +245,10 @@ func (a *analysis) onlineCopyN(dst, src nodeid, sizeof uint32) uint32 {
 
 //bz: different solves for complex instructions
 func (c *loadConstraint) solve(a *analysis, delta *nodeset) {
+	if c.dst == 107647 && c.src == 107644 {
+		fmt.Print()
+	}
+
 	var changed bool
 	for _, x := range delta.AppendTo(a.deltaSpace) {
 		k := nodeid(x)
@@ -332,7 +346,11 @@ func (c *invokeConstraint) solve(a *analysis, delta *nodeset) {
 		sig := fn.Signature
 		fnObj := a.globalobj[fn] // dynamic calls use shared contour  ---> bz: fnObj is nodeid
 
+		isOnline := false
 		if fnObj == 0 {
+			if a.log != nil { //debug
+				fmt.Fprintf(a.log, "\n\n------------- GENERATING INVOKE FUNC HERE: " + fn.String() + " ------------------------------ \n")
+			}
 			// a.objectNode(fn) was not called during gen phase.
 			if a.considerMyContext(fn.String()) {
 				if c.caller == nil && c.site == nil {
@@ -344,17 +362,34 @@ func (c *invokeConstraint) solve(a *analysis, delta *nodeset) {
 					fmt.Println("!! GENERATING INVOKE FUNC HERE: " + fn.String())
 				}
 				fnObj = a.genOnline(c.caller, c.site, fn)
-			}else{ //newly created app func invokes lib func: all use share contour
+			}else{ //newly created app func invokes lib func: use share contour
 				fnObj = a.genOnline(nil, nil, fn)
+			}
+			isOnline = true
+			if a.log != nil { //debug
+				fmt.Fprintf(a.log, "------------------------------ ------------------------------ ---------------------------- \n")
 			}
 		}else{
 			if a.log != nil { //debug
-				fmt.Fprintf(a.log, "!! ALREADY EXIST INVOKE FUNC: " + fn.String())
+				fmt.Fprintf(a.log, "!! ALREADY EXIST INVOKE FUNC: " + fn.String() + "\n")
 			}
 		}
 
 		// bz: back to normal workflow -> context-insensitive
 		c.eachSolve(a, fnObj, sig, v)
+
+		// bz: we continue our Online process
+		if isOnline {
+			if a.log != nil { //debug
+				fmt.Fprintf(a.log, "\n\n----------- GENERATING CONSTRAINTS HERE -------------------------- ----------------------- ")
+			}
+
+			a.genConstraintsOnline()
+
+			if a.log != nil { //debug
+				fmt.Fprintf(a.log, "------------------------------ ------------------------------ ---------------------------- \n")
+			}
+		}
 	}
 }
 

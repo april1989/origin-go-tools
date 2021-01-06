@@ -143,7 +143,7 @@ type invokeConstraint struct {
 	iface  nodeid      // (ptr) the interface
 	params nodeid      // the start of the identity/params/results block
 
-	// bz: to genFunc() online; kcfa -> need both; origin -> need caller.callsites[]
+	// bz: to genFunc() Online; kcfa -> need both; origin -> need caller.callsites[]
 	site   *callsite
 	caller *cgnode
 }
