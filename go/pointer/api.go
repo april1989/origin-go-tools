@@ -289,6 +289,8 @@ func (r *ResultWCtx) PointsToByMain(v ssa.Value) PointerWCtx {
 
 //bz: user API: for debug to dump all result out
 func (r *ResultWCtx) DumpAll() {
+	fmt.Println("\nWe are going to dump all results. If not desired, turn off DEBUG.")
+
 	//bz: also a reference of how to use new APIs here
 	main := r.GetMain()
 	fmt.Println("Main CGNode: " + main.String())

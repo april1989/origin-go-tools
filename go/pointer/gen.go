@@ -1647,10 +1647,6 @@ func (a *analysis) genInstr(cgn *cgnode, instr ssa.Instruction) {
 		fmt.Fprintf(a.log, "; %s%s\n", prefix, instr)
 	}
 
-	if strings.Contains(cgn.String(), "flushBackoffQCompleted@") {
-		fmt.Println("..... why again: " + cgn.String())
-	}
-
 	switch instr := instr.(type) {
 	case *ssa.DebugRef:
 		// no-op.
@@ -1852,16 +1848,30 @@ func (a *analysis) genInstr(cgn *cgnode, instr ssa.Instruction) {
 //}
 
 // bz: check whether the stmt after make closure is go: they must be in the same basic block
+// Update: this is too strict, things happens in Kubernetes88331: (*command-line-arguments.PriorityQueue).Run
+// now update to if there exists a go that refers instr, but they still must be in the same basic block
 func (a *analysis) isGoNext(instr *ssa.MakeClosure) *ssa.Go {
 	stmts := instr.Block().Instrs
 	for i, stmt := range stmts {
-		if stmt == instr {
-			goInstr, ok := stmts[i+1].(*ssa.Go) //next is the go if available
-			if ok {
-				return goInstr
-			} else {
-				return nil
+		if stmt == instr { //start check from here
+			for j := i + 1; j < len(stmts); j++ {
+				goInstr, ok := stmts[j].(*ssa.Go) //if the go if available
+				if ok {
+					val := goInstr.Call.Value
+					if closure, ok := val.(*ssa.MakeClosure); ok {
+						if instr == closure { //these two values should be the same
+							return goInstr
+						}
+					}else if _, ok := val.(*ssa.Function); ok {
+						args := goInstr.Call.Args
+						closure := args[0] // this should be closure
+						if instr == closure { //these two values should be the same
+							return goInstr
+						}
+					}
+				}
 			}
+			return nil //no go instr until end of basic block
 		}
 	}
 	return nil

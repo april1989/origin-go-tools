@@ -37,9 +37,7 @@ func (a *analysis) solve() {
 		if !a.work.TakeMin(&x) {
 			break // empty worklist
 		}
-		if x == 107675 {
-			fmt.Print()
-		}
+
 		id := nodeid(x)
 		if a.log != nil {
 			fmt.Fprintf(a.log, "\tnode n%d\n", id)
@@ -229,12 +227,8 @@ func (a *analysis) onlineCopyN(dst, src nodeid, sizeof uint32) uint32 {
 	for i := uint32(0); i < sizeof; i++ {
 		if a.onlineCopy(dst, src) {
 			a.addWork(dst)
-
-			if Online { //bz: Online solving
-				a.addWork(dst)
-				if a.log != nil {
-					fmt.Fprintf(a.log, "%s\n\n", " -> add Online constraint to worklist: "+dst.String()+" "+src.String())
-				}
+			if Online && a.log != nil { //bz: Online solving debug
+				fmt.Fprintf(a.log, "%s\n\n", " -> add Online constraint to worklist: "+dst.String()+" "+src.String())
 			}
 		}
 		src++
@@ -245,10 +239,6 @@ func (a *analysis) onlineCopyN(dst, src nodeid, sizeof uint32) uint32 {
 
 //bz: different solves for complex instructions
 func (c *loadConstraint) solve(a *analysis, delta *nodeset) {
-	if c.dst == 107647 && c.src == 107644 {
-		fmt.Print()
-	}
-
 	var changed bool
 	for _, x := range delta.AppendTo(a.deltaSpace) {
 		k := nodeid(x)
