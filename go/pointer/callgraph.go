@@ -247,7 +247,7 @@ type Edge struct {
 }
 
 func (e Edge) String() string {
-	return fmt.Sprintf("%s --> %s", e.Caller, e.Callee)
+	return fmt.Sprintf("%s --(%s)--> %s", e.Caller, e.Site, e.Callee)
 }
 
 func (e Edge) Description() string {
@@ -273,7 +273,6 @@ func (e Edge) Pos() token.Pos {
 // AddEdge adds the edge (caller, site, callee) to the call graph.
 // Elimination of duplicate edges is the caller's responsibility.
 func AddEdge(caller *Node, site ssa.CallInstruction, callee *Node) {
-	//fmt.Println (" ** " + caller.String() + " --> " + callee.String())
 	e := &Edge{caller, site, callee}
 	callee.In = append(callee.In, e)
 	caller.Out = append(caller.Out, e)

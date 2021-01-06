@@ -191,6 +191,28 @@ type ResultWCtx struct {
 	main            *cgnode              // bz: the cgnode for main method
 }
 
+//bz: user API: tmp solution for missing invoke callee target if func wrapped in parameters
+//alloc should be a freevar
+func (r *ResultWCtx) GetFreeVarFunc(alloc *ssa.Alloc, instr ssa.Instruction, goInstr *ssa.Go) *ssa.Function {
+	call, _ := instr.(*ssa.Call)
+	val, _ := call.Common().Value.(*ssa.UnOp)
+	freeV := val.X //this should be the free var of func
+	pointers := r.PointsToFreeVar(freeV)
+	for {
+		p := pointers[0].PointsTo()//here should be only one element
+		a := p.a
+		pts := p.pts
+		if pts.Len() > 1 {
+			fmt.Println(" ****  Pointer Analysis: " + freeV.String() + " has multiple targets **** ") //panic
+		}
+		nid := pts.Min()
+		n := a.nodes[nid]
+		fmt.Print(n.obj)
+	}
+
+	return nil
+}
+
 //bz: user API: return *cgnode by *ssa.Function
 func (r *ResultWCtx) GetCGNodebyFunc(fn *ssa.Function) []*cgnode {
 	return r.CallGraph.Fn2CGNode[fn]
