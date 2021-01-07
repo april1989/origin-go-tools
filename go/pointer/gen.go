@@ -277,6 +277,10 @@ func (a *analysis) makeFunctionObjectWithContext(caller *cgnode, fn *ssa.Functio
 		fmt.Printf("\t---- makeFunctionObjectWithContext (kcfa) for %s\n", fn)
 	}
 
+	if strings.Contains(fn.String(), "(*command-line-arguments.ttlCache).evicter"){
+		fmt.Println()
+	}
+
 	if a.config.Origin && callersite == nil && closure != nil {
 		//origin: case 2: fn is make closure -> we checked before calling this, now needs to create it
 		// and will update the a.closures[] outside
@@ -434,6 +438,7 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 				cgn = &cgnode{fn: fn, obj: obj, callersite: fnkcs}
 			} else if goInstr, ok := callersite.instr.(*ssa.Go); ok { //case 1 and 3: this is a *ssa.GO without closure
 				special := callersite
+				special.goInstr = goInstr //update
 				if loopID != -1 { //handle loop TODO: will this affect exist checking?
 					special = &callsite{targets: callersite.targets, instr: callersite.instr, loopID: loopID, goInstr: goInstr}
 				}
