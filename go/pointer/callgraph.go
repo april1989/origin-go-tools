@@ -221,6 +221,11 @@ func (g *GraphWCtx) CreateNodeWCtx(cgn *cgnode) *Node {
 	return n
 }
 
+//bz:
+func (g *GraphWCtx) GetNodeWCtx(cgn *cgnode) *Node {
+	return g.Nodes[cgn]
+}
+
 //bz: compute at final
 func (g *GraphWCtx) computeFn2CGNode() {
 	for cgn := range g.Nodes {

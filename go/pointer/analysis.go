@@ -575,6 +575,9 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 		}
 	}
 
+	//bz: update all callee actual ctx for a.closureWOGo
+	a.updateActaulCallSites()
+
 	//bz: just assign for the main method; not a good solution, will resolve later
 	for _, cgn := range a.cgnodes {
 		if cgn.fn == a.config.Mains[0].Func("main") {
@@ -586,6 +589,33 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 	a.result.CallGraph.computeFn2CGNode() //bz: update Fn2CGNode for user API
 
 	return a.result, nil
+}
+
+//bz: solution@field actualCallerSite []*callsite of cgnode type
+//update the callee of nodes in a.closureWOGo
+func (a *analysis) updateActaulCallSites() {
+	cg := a.result.CallGraph
+	var total nodeset
+	waiting := a.closureWOGo
+	for _, nid := range waiting {
+		cgn := a.nodes[nid].obj.cgn
+		total.Insert(cgn.idx)//record
+
+		node := cg.GetNodeWCtx(cgn)
+		for _, outEdge := range node.Out {
+			target := outEdge.Callee.cgn
+			if !total.Has(target.idx) {
+				if a.log != nil {
+					fmt.Fprintf(a.log, "* Update actualCallerSite for ----> \n   %s -> [%s] \n", target, cgn.contourkFull())
+				}
+				if a.config.DEBUG {
+					fmt.Printf("* Update actualCallerSite for ----> \n   %s -> [%s] \n", target, cgn.contourkFull())
+				}
+				target.actualCallerSite = append(target.actualCallerSite, cgn.callersite) //update
+				waiting[target.obj] = target.obj //next round
+			}
+		}
+	}
 }
 
 // callEdge is called for each edge in the callgraph.
