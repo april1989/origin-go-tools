@@ -217,6 +217,41 @@ func (r *ResultWCtx) GetFreeVarFunc(alloc *ssa.Alloc, call *ssa.Call, goInstr *s
 	return nil
 }
 
+//bz: user API: to handle special case -> extract target (cgn) from call graph
+func (r *ResultWCtx) GetFunc(p ssa.Value, call *ssa.Call, goInstr *ssa.Go) *ssa.Function {
+	parentFn := p.Parent()
+	parent_cgns := r.GetCGNodebyFunc(parentFn)
+	//match the ctx
+	var parent_cgn *cgnode
+	for _, cand := range parent_cgns {
+		if cand.callersite[0] == nil && len(parent_cgns) == 1{
+			//shared contour + only one target
+			parent_cgn = cand
+			break
+		}
+		//otherwise
+		cand_goInstr := cand.callersite[0].goInstr
+		if cand_goInstr == goInstr {
+			parent_cgn = cand
+			break
+		}
+	}
+	if parent_cgn == nil {
+		return nil //should not be ...
+	}
+
+	parent_cgnode := r.CallGraph.GetNodeWCtx(parent_cgn)
+	outedges := parent_cgnode.Out
+	for _, outedge := range outedges {
+		callinstr := outedge.Site
+		if callinstr == call { //this is the call edge
+			return outedge.Callee.cgn.fn
+		}
+	}
+
+	return nil
+}
+
 //bz: user API: return *cgnode by *ssa.Function
 func (r *ResultWCtx) GetCGNodebyFunc(fn *ssa.Function) []*cgnode {
 	return r.CallGraph.Fn2CGNode[fn]
