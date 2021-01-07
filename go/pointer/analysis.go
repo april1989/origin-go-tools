@@ -606,12 +606,14 @@ func (a *analysis) updateActaulCallSites() {
 			target := outEdge.Callee.cgn
 			if !total.Has(target.idx) {
 				if a.log != nil {
-					fmt.Fprintf(a.log, "* Update actualCallerSite for ----> \n   %s -> [%s] \n", target, cgn.contourkFull())
+					fmt.Fprintf(a.log, "* Update actualCallerSite for ----> \n   %s -> [%s] \n", target, cgn.contourkActualFull())
 				}
 				if a.config.DEBUG {
-					fmt.Printf("* Update actualCallerSite for ----> \n   %s -> [%s] \n", target, cgn.contourkFull())
+					fmt.Printf("* Update actualCallerSite for ----> \n   %s -> [%s] \n", target, cgn.contourkActualFull())
 				}
-				target.actualCallerSite = append(target.actualCallerSite, cgn.callersite) //update
+				for _, actual := range cgn.actualCallerSite {
+					target.actualCallerSite = append(target.actualCallerSite, actual) //update
+				}
 				waiting[target.obj] = target.obj //next round
 			}
 		}
