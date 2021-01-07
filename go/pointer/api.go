@@ -189,6 +189,7 @@ type ResultWCtx struct {
 	ExtendedQueries map[ssa.Value][]PointerWCtx
 	Warnings        []Warning                   // warnings of unsoundness
 	main            *cgnode              // bz: the cgnode for main method
+	nodes           []*node              // bz: just in case a pointer we did not record
 }
 
 //bz: user API: tmp solution for missing invoke callee target if func wrapped in parameters
@@ -271,6 +272,17 @@ func (r *ResultWCtx) PointsToFreeVar(v ssa.Value) []PointerWCtx {
 		}
 	}
 	//fmt.Println(" ****  Pointer Analysis did not record for this ssa.Value: " + v.String() + " **** (PointsToFreeVar)") //panic
+	return nil
+}
+
+//bz: just in case we did not record for v
+//TODO: (incomplete) iterate all a.nodes to find it ....
+func (r *ResultWCtx) PointsToFurther(v ssa.Value) []PointerWCtx {
+	for _, p := range r.nodes {
+		if p.solve.pts.IsEmpty() {
+			continue //not a pointer or empty pts
+		}
+	}
 	return nil
 }
 
