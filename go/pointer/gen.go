@@ -1871,6 +1871,9 @@ func (a *analysis) isGoNext(instr *ssa.MakeClosure) *ssa.Go {
 					}
 				}
 			}
+			if a.config.DEBUG {
+				fmt.Println(">>> NO GO FOR MAKECLOSURE: " + instr.String())
+			}
 			return nil //no go instr until end of basic block
 		}
 	}

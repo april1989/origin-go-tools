@@ -253,7 +253,7 @@ func (r *ResultWCtx) PointsToRegular(v ssa.Value) []PointerWCtx {
 	if pointers != nil {
 		return pointers
 	}
-	fmt.Println(" ****  Pointer Analysis did not record for this ssa.Value: " + v.String() + " **** (PointsToRegular)") //panic
+	//fmt.Println(" ****  Pointer Analysis did not record for this ssa.Value: " + v.String() + " **** (PointsToRegular)") //panic
 	return nil
 }
 
@@ -270,7 +270,7 @@ func (r *ResultWCtx) PointsToFreeVar(v ssa.Value) []PointerWCtx {
 			return pointers
 		}
 	}
-	fmt.Println(" ****  Pointer Analysis did not record for this ssa.Value: " + v.String() + " **** (PointsToFreeVar)") //panic
+	//fmt.Println(" ****  Pointer Analysis did not record for this ssa.Value: " + v.String() + " **** (PointsToFreeVar)") //panic
 	return nil
 }
 
