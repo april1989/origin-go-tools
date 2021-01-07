@@ -34,6 +34,12 @@ type cgnode struct {
 	sites      []*callsite // ordered list of callsites within this function
 	callersite []*callsite // where called from, if known; nil for shared contours ----> bz: k-caller site and context
 	idx        int         // the index of this in a.cgnodes[]
+
+	actualCallerSite [][]*callsite //bz: makeclosure of func and pass as a parameter, then it is called by a new go routine.
+	// e.g., Kubernetes.81091 : func (g *genericScheduler) findNodesThatFit().
+	// cannot update this actualCallerSite during the iteration (genConstraint <-> solve), since its genDynamicCall()
+	// -> I did not find a good way to fix this, so I attached the new go routine ctx here as actual_callersite
+	//    so that the pointer can use this to match the query ctx. This field is updated when finalizing call graph
 }
 
 // contour returns a description of this node's contour.
@@ -52,11 +58,10 @@ func (n *cgnode) contour(isKcfa bool) string {
 	return fmt.Sprintf("as called to synthetic/intrinsic (targets=n%d)", n.callersite[0].targets)
 }
 
-//bz: adjust contour() to kcfa and origin ---> this is only used when printing out all call graph information
-func (n *cgnode) contourkFull() string {
+//bz: convenient
+func contourK(n *cgnode, callersite []*callsite) string {
 	var s string
-	s = s + "["
-	for idx, cs := range n.callersite {
+	for idx, cs := range callersite {
 		if cs == nil {
 			s = s + strconv.Itoa(idx) + ":shared contour; "
 			continue
@@ -77,6 +82,25 @@ func (n *cgnode) contourkFull() string {
 			continue
 		}
 		s = s + strconv.Itoa(idx) + ":" + cs.String() + "; " //":" + "called to synthetic func@" + cs.targets.String() + "; " //func id + cgnode id
+	}
+	return s
+}
+
+//bz: adjust contour() to kcfa and origin ---> this is only used when printing out all call graph information
+func (n *cgnode) contourkFull() string {
+	var s string
+	s = s + "["
+	s = s + contourK(n, n.callersite)
+	s = s + "]"
+	return s
+}
+
+//bz:
+func (n *cgnode) contourkActualFull() string {
+	var s string
+	s = s + "["
+	for idx, actualcs := range n.actualCallerSite {
+		s = s + "Actual " + strconv.Itoa(idx) + ": " + contourK(n, actualcs) + "; "
 	}
 	s = s + "]"
 	return s

@@ -208,7 +208,7 @@ func (r *ResultWCtx) GetFreeVarFunc(alloc *ssa.Alloc, call *ssa.Call, goInstr *s
 		nid := pts.Min()
 		n := a.nodes[nid]
 		pts = &n.solve.pts
-		if pts.IsEmpty() { // this maybe right maybe wrong ....
+		if pts.IsEmpty() { //TODO: bz: this maybe right maybe wrong ....
 			return n.obj.cgn.fn
 		}//else: continue to find...
 	}
@@ -232,11 +232,11 @@ func (r *ResultWCtx) GetMain() *Node {
 //output: PointerWCtx
 //panic: if no record for such input
 func (r *ResultWCtx) PointsTo(v ssa.Value) []PointerWCtx {
-	pointers := r.PointsToRegular(v)
+	pointers := r.PointsToFreeVar(v)
 	if pointers != nil {
 		return pointers
 	}
-	pointers = r.PointsToFreeVar(v)
+	pointers = r.PointsToRegular(v)
 	if pointers != nil {
 		return pointers
 	}
@@ -282,15 +282,15 @@ func (r *ResultWCtx) PointsToByGo(v ssa.Value, goInstr *ssa.Go) PointerWCtx {
 	if goInstr == nil {
 		return r.PointsToByMain(v)
 	}
-	ptss := r.PointsToRegular(v) //return type: []PointerWCtx
+	ptss := r.PointsToFreeVar(v)
+	if ptss != nil {
+		return ptss[0] //bz: should only have one value
+	}
+	ptss = r.PointsToRegular(v) //return type: []PointerWCtx
 	for _, pts := range ptss {
 		if pts.MatchMyContext(goInstr) {
 			return pts
 		}
-	}
-	ptss = r.PointsToFreeVar(v)
-	if ptss != nil {
-		return ptss[0] //bz: should only have one value
 	}
 	fmt.Println(" ****  Pointer Analysis cannot match this ssa.Value: " + v.String() + " with this *ssa.GO: " + goInstr.String() + " **** ") //panic
 	return PointerWCtx{a: nil}
@@ -298,15 +298,15 @@ func (r *ResultWCtx) PointsToByGo(v ssa.Value, goInstr *ssa.Go) PointerWCtx {
 
 //bz: user API: return PointerWCtx for a ssa.Value used under the main context
 func (r *ResultWCtx) PointsToByMain(v ssa.Value) PointerWCtx {
-	ptss := r.PointsToRegular(v) //return type: []PointerWCtx
+	ptss := r.PointsToFreeVar(v)
+	if ptss != nil {
+		return ptss[0] //bz: should only have one value
+	}
+	ptss = r.PointsToRegular(v) //return type: []PointerWCtx
 	for _, pts := range ptss {
 		if pts.cgn.idx == r.main.idx {
 			return pts
 		}
-	}
-	ptss = r.PointsToFreeVar(v)
-	if ptss != nil {
-		return ptss[0] //bz: should only have one value
 	}
 	fmt.Println(" ****  Pointer Analysis cannot match this ssa.Value: " + v.String() + " with main thread **** ") //panic
 	return PointerWCtx{a: nil}
@@ -551,9 +551,18 @@ func (p PointerWCtx) MatchMyContext(go_instr *ssa.Go) bool {
 	my_go_instr := p.cgn.callersite[0].goInstr
 	if my_go_instr == go_instr {
 		return true
-	}else{
+	}
+	if p.cgn.actualCallerSite == nil {
 		return false
 	}
+	//double check actualCallerSite
+	for _, actualCS := range p.cgn.actualCallerSite {
+		actual_go_instr := actualCS[0].goInstr
+		if actual_go_instr == go_instr {
+			return true
+		}
+	}
+	return false
 }
 
 //bz: return the context of cgn which calls setValueNode() to record this pointer;
@@ -571,7 +580,11 @@ func (p PointerWCtx) String() string {
 	if p.cgn == nil {
 		return fmt.Sprintf("n%d&Global", p.n)
 	}
-	return fmt.Sprintf("n%d&%s", p.n, p.cgn.contourkFull())
+	if p.cgn.actualCallerSite == nil {
+		return fmt.Sprintf("n%d&%s", p.n, p.cgn.contourkFull())
+	}else {
+		return fmt.Sprintf("n%d&%s%s", p.n, p.cgn.contourkFull(), p.cgn.contourkActualFull())
+	}
 }
 
 // PointsTo returns the points-to set of this pointer.

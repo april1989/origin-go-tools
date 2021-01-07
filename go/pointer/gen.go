@@ -426,7 +426,9 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 						special = &callsite{targets: obj, loopID: loopID, goInstr: goInstr}
 					}
 					fnkcs = a.createKCallSite(caller.callersite, special)
-				} else { // use parent context, since no go invoke afterwards; and not care about loopID
+				} else { // use parent context, since no go invoke afterwards (currently reachable);
+					//update: we will update the parent ctx (including loopID) later
+					a.closureWOGo[obj] = obj //record
 					fnkcs = caller.callersite
 				}
 				cgn = &cgnode{fn: fn, obj: obj, callersite: fnkcs}
@@ -1201,7 +1203,7 @@ func (a *analysis) genOnline(caller *cgnode, site *callsite, fn *ssa.Function) n
 	return fnObj
 }
 
-//bz: Online iteratively doing genFunc <-> genInstr iteratively
+//bz: Online iteratively doing genFunc <-> genInstr iteratively: after solving param/ret constraints
 func (a *analysis) genConstraintsOnline() {
 	//generate constraints for each one
 	for len(a.genq) > 0 {

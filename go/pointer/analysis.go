@@ -148,6 +148,7 @@ type analysis struct {
 	// NOW also used for static and invoke calls TODO: may be should use nodeid not int (idx) ?
 	closures            map[*ssa.Function]*Ctx2nodeid //bz: solution for makeclosure
     result              *ResultWCtx                   //bz: our result, dump all
+    closureWOGo         map[nodeid]nodeid                     //bz: solution@field actualCallerSite []*callsite of cgnode type
 }
 
 // enclosingObj returns the first node of the addressable memory
@@ -435,6 +436,7 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 		//bz: i did not clear the following two after offline TODO: do I ?
 		fn2cgnodeIdx: make(map[*ssa.Function][]int),
 		closures:     make(map[*ssa.Function]*Ctx2nodeid),
+		closureWOGo:  make(map[nodeid]nodeid),
 	}
 
 	if false {
@@ -594,6 +596,19 @@ func (a *analysis) callEdge(caller *cgnode, site *callsite, calleeid nodeid) {
 		panic(fmt.Sprintf("callEdge %s -> n%d: not a function object", site, calleeid))
 	}
 	callee := obj.cgn
+
+	//bz: solution@field actualCallerSite []*callsite of cgnode type
+	if a.closureWOGo[calleeid] != 0 {
+		if !a.equalContextFor(caller.callersite, callee.callersite) {
+			if a.log != nil {
+				fmt.Fprintf(a.log, "Update actualCallerSite for ----> \n   %s -> [%s] \n", callee, caller.contourkFull())
+			}
+			if a.config.DEBUG {
+				fmt.Printf("Update actualCallerSite for ----> \n   %s -> [%s] \n", callee, caller.contourkFull())
+			}
+			callee.actualCallerSite = append(callee.actualCallerSite, caller.callersite) //update
+		}
+	}
 
 	if cg := a.result.CallGraph; cg != nil {
 		// TODO(adonovan): opt: I would expect duplicate edges
