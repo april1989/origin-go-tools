@@ -464,6 +464,7 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 	}else{
 		fmt.Println(" - default: command-line-arguments")
 	}
+	fmt.Println(" ********************* ")
 
 	if a.log != nil {
 		fmt.Fprintln(a.log, "==== Starting analysis and logging: ")

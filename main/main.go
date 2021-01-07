@@ -89,7 +89,11 @@ func main() {
 		FullTimestamp: true,
 	})
 
-	var scope = []string {"google.golang.org/grpc"}
+	var channelComm = false // analyze channel communication in grpc
+	var scope []string
+	if channelComm {
+		scope = []string {"google.golang.org/grpc"}
+	}
 	// Configure pointer analysis to build call-graph
 	ptaConfig := &pointer.Config{
 		Mains:          mains, //bz: NOW assume only one main

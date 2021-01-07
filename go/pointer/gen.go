@@ -277,10 +277,6 @@ func (a *analysis) makeFunctionObjectWithContext(caller *cgnode, fn *ssa.Functio
 		fmt.Printf("\t---- makeFunctionObjectWithContext (kcfa) for %s\n", fn)
 	}
 
-	if strings.Contains(fn.String(), "(*command-line-arguments.ttlCache).evicter"){
-		fmt.Println()
-	}
-
 	if a.config.Origin && callersite == nil && closure != nil {
 		//origin: case 2: fn is make closure -> we checked before calling this, now needs to create it
 		// and will update the a.closures[] outside
@@ -482,13 +478,13 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 	// Queue it up for constraint processing.
 	if strings.EqualFold(fn.String(), "(*google.golang.org/grpc/internal/channelz.channelTrace).append"){
 		idx++
-		fmt.Print("-- " + strconv.Itoa(idx))
+		fmt.Print("-- " + strconv.Itoa(idx) + "  #fn: (*google.golang.org/grpc/internal/channelz.channelTrace).append")
 	}
 	a.genq = append(a.genq, cgn)
 	return obj, fnIdx
 }
 
-var idx int
+var idx int //debug grpc
 
 //bz: continue with makeFunctionObjectWithContext (kcfa), update a.fn2cgnodeIdx for fn
 func (a *analysis) updateFn2NodeID(fn *ssa.Function, multiFn bool, newFnIdx []int, existFnIdx []int) {
