@@ -125,10 +125,9 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 		//bz: this condition is copied from go2: indirect queries
 		if underType, ok := v.Type().Underlying().(*types.Pointer); ok && CanPoint(underType.Elem()) {
 			a.recordIndirectQueries(t, cgn, v, id)
+		} else { //bz: extended queries for debug
+			a.recordExtendedQueries(t, cgn, v, id)
 		}
-		//else { //bz: extended queries for debug
-		//	a.recordExtendedQueries(t, cgn, v, id)
-		//}
 	}
 }
 

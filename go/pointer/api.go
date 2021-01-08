@@ -279,13 +279,17 @@ func (r *ResultWCtx) PointsTo(v ssa.Value) []PointerWCtx {
 	fmt.Println(" ****  Pointer Analysis did not record for this ssa.Value: " + v.String() + " **** ") //panic
 	return nil
 }
-
+//bz: return []PointerWCtx for query and indirect query and extended query
 func (r *ResultWCtx) PointsToRegular(v ssa.Value) []PointerWCtx {
 	pointers := r.Queries[v]
 	if pointers != nil {
 		return pointers
 	}
 	pointers = r.IndirectQueries[v]
+	if pointers != nil {
+		return pointers
+	}
+	pointers = r.ExtendedQueries[v]
 	if pointers != nil {
 		return pointers
 	}
@@ -309,6 +313,8 @@ func (r *ResultWCtx) PointsToFreeVar(v ssa.Value) []PointerWCtx {
 	//fmt.Println(" ****  Pointer Analysis did not record for this ssa.Value: " + v.String() + " **** (PointsToFreeVar)") //panic
 	return nil
 }
+
+
 
 //bz: just in case we did not record for v
 //TODO: (incomplete) iterate all a.nodes to find it ....
