@@ -190,6 +190,7 @@ type ResultWCtx struct {
 	Warnings        []Warning                   // warnings of unsoundness
 	main            *cgnode              // bz: the cgnode for main method
 	nodes           []*node              // bz: just in case a pointer we did not record
+	DEBUG           bool                 // bz: print out debug info ...
 }
 
 //bz: user API: tmp solution for missing invoke callee target if func wrapped in parameters
@@ -204,7 +205,9 @@ func (r *ResultWCtx) GetFreeVarFunc(alloc *ssa.Alloc, call *ssa.Call, goInstr *s
 
 	for { //recursively find the func body, since it can be assigned multiple times...
 		if pts.Len() > 1 {
-			fmt.Println(" ****  Pointer Analysis: " + freeV.String() + " has multiple targets **** ") //panic
+			if r.DEBUG {
+				fmt.Println(" ****  Pointer Analysis: " + freeV.String() + " has multiple targets **** ") //panic
+			}
 		}
 		nid := pts.Min()
 		n := a.nodes[nid]
@@ -276,7 +279,9 @@ func (r *ResultWCtx) PointsTo(v ssa.Value) []PointerWCtx {
 	if pointers != nil {
 		return pointers
 	}
-	fmt.Println(" ****  Pointer Analysis did not record for this ssa.Value: " + v.String() + " **** ") //panic
+	if r.DEBUG {
+		fmt.Println(" ****  Pointer Analysis did not record for this ssa.Value: " + v.String() + " **** ") //panic
+	}
 	return nil
 }
 //bz: return []PointerWCtx for query and indirect query and extended query
@@ -314,8 +319,6 @@ func (r *ResultWCtx) PointsToFreeVar(v ssa.Value) []PointerWCtx {
 	return nil
 }
 
-
-
 //bz: just in case we did not record for v
 //TODO: (incomplete) iterate all a.nodes to find it ....
 func (r *ResultWCtx) PointsToFurther(v ssa.Value) []PointerWCtx {
@@ -345,7 +348,9 @@ func (r *ResultWCtx) PointsToByGo(v ssa.Value, goInstr *ssa.Go) PointerWCtx {
 			return pts
 		}
 	}
-	fmt.Println(" ****  Pointer Analysis cannot match this ssa.Value: " + v.String() + " with this *ssa.GO: " + goInstr.String() + " **** ") //panic
+	if r.DEBUG {
+		fmt.Println(" ****  Pointer Analysis cannot match this ssa.Value: " + v.String() + " with this *ssa.GO: " + goInstr.String() + " **** ") //panic
+	}
 	return PointerWCtx{a: nil}
 }
 
@@ -364,7 +369,9 @@ func (r *ResultWCtx) PointsToByMain(v ssa.Value) PointerWCtx {
 			return pts
 		}
 	}
-	fmt.Println(" ****  Pointer Analysis cannot match this ssa.Value: " + v.String() + " with main thread **** ") //panic
+	if r.DEBUG {
+		fmt.Println(" ****  Pointer Analysis cannot match this ssa.Value: " + v.String() + " with main thread **** ") //panic
+	}
 	return PointerWCtx{a: nil}
 }
 
