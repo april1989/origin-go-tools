@@ -227,10 +227,13 @@ func (r *ResultWCtx) GetFunc(p ssa.Value, call *ssa.Call, goInstr *ssa.Go) *ssa.
 	//match the ctx
 	var parent_cgn *cgnode
 	for _, cand := range parent_cgns {
-		if cand.callersite[0] == nil && len(parent_cgns) == 1{
-			//shared contour + only one target
-			parent_cgn = cand
-			break
+		if cand.callersite[0] == nil {//shared contour
+			if len(parent_cgns) == 1 {
+				// + only one target
+				parent_cgn = cand
+				break
+			}
+			continue
 		}
 		//otherwise
 		cand_goInstr := cand.callersite[0].goInstr
