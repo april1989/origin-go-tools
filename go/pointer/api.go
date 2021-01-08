@@ -357,6 +357,9 @@ func (r *ResultWCtx) PointsToByMain(v ssa.Value) PointerWCtx {
 	}
 	ptss = r.PointsToRegular(v) //return type: []PointerWCtx
 	for _, pts := range ptss {
+		if pts.cgn == nil {
+			continue //from extended query
+		}
 		if pts.cgn.idx == r.main.idx {
 			return pts
 		}
@@ -631,7 +634,7 @@ func (p PointerWCtx) Parent() *cgnode {
 //bz: add ctx
 func (p PointerWCtx) String() string {
 	if p.cgn == nil {
-		return fmt.Sprintf("n%d&Global", p.n)
+		return fmt.Sprintf("n%d&(Global/Local)", p.n)
 	}
 	if p.cgn.actualCallerSite == nil {
 		return fmt.Sprintf("n%d&%s", p.n, p.cgn.contourkFull())
