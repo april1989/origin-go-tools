@@ -253,7 +253,7 @@ func (a *analysis) makeFunctionObject(fn *ssa.Function, callersite *callsite) no
 	// Queue it up for constraint processing.
 	if strings.EqualFold(fn.String(), "(*google.golang.org/grpc/internal/channelz.channelTrace).append"){
 		idx++
-		fmt.Print("-- " + strconv.Itoa(idx) + "  #fn: (*google.golang.org/grpc/internal/channelz.channelTrace).append")
+		fmt.Println("-- " + strconv.Itoa(idx) + "  #fn: (*google.golang.org/grpc/internal/channelz.channelTrace).append")
 	}
 	a.genq = append(a.genq, cgn)
 
@@ -326,7 +326,7 @@ func (a *analysis) makeFunctionObjectWithContext(caller *cgnode, fn *ssa.Functio
 //bz: if exist this caller for fn?
 func (a *analysis) existContextFor(fn *ssa.Function, caller *cgnode) ([]int, bool, nodeid, bool) {
 	if strings.EqualFold(fn.String(), "(*google.golang.org/grpc/internal/channelz.channelTrace).append"){
-		fmt.Print("-- " + strconv.Itoa(idx) + " #fn: (*google.golang.org/grpc/internal/channelz.channelTrace).append")
+		fmt.Println("-- " + strconv.Itoa(idx) + " #fn: (*google.golang.org/grpc/internal/channelz.channelTrace).append")
 	}
 	existFnIdx, multiFn := a.fn2cgnodeIdx[fn]
 	if multiFn { //check if we already have the caller + callsite ?? recursive/duplicate call
@@ -365,7 +365,7 @@ func (a *analysis) equalContextFor(existCSs []*callsite, curCallerCSs []*callsit
 //bz: if exist this callsite + caller for fn?
 func (a *analysis) existContextForComb(fn *ssa.Function, callersite *callsite, caller *cgnode) ([]int, bool, nodeid, bool) {
 	if strings.EqualFold(fn.String(), "(*google.golang.org/grpc/internal/channelz.channelTrace).append"){
-		fmt.Print("-- " + strconv.Itoa(idx) + "  #fn: (*google.golang.org/grpc/internal/channelz.channelTrace).append")
+		fmt.Println("-- " + strconv.Itoa(idx) + "  #fn: (*google.golang.org/grpc/internal/channelz.channelTrace).append")
 	}
 	existFnIdx, multiFn := a.fn2cgnodeIdx[fn]
 	if multiFn { //check if we already have the caller + callsite ?? recursive/duplicate call
@@ -477,7 +477,7 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 	// Queue it up for constraint processing.
 	if strings.EqualFold(fn.String(), "(*google.golang.org/grpc/internal/channelz.channelTrace).append"){
 		idx++
-		fmt.Print("-- " + strconv.Itoa(idx) + "  #fn: (*google.golang.org/grpc/internal/channelz.channelTrace).append")
+		fmt.Println("-- " + strconv.Itoa(idx) + "  #fn: (*google.golang.org/grpc/internal/channelz.channelTrace).append")
 	}
 	a.genq = append(a.genq, cgn)
 	return obj, fnIdx
