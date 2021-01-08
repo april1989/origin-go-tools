@@ -344,7 +344,9 @@ func (c *invokeConstraint) solve(a *analysis, delta *nodeset) {
 			// a.objectNode(fn) was not called during gen phase.
 			if a.considerMyContext(fn.String()) {
 				if c.caller == nil && c.site == nil {
-					fmt.Println("!! Nil caller & site: " + fn.String() + " SKIP GENERATING INVOKE FUNC.")
+					if a.config.DEBUG {
+						fmt.Println("!! Nil caller & site: " + fn.String() + " SKIP GENERATING INVOKE FUNC.")
+					}
 					continue
 				}
 				//bz: special handling of invoke targets, create here

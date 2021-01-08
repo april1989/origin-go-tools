@@ -251,10 +251,6 @@ func (a *analysis) makeFunctionObject(fn *ssa.Function, callersite *callsite) no
 	}
 
 	// Queue it up for constraint processing.
-	if strings.EqualFold(fn.String(), "(*google.golang.org/grpc/internal/channelz.channelTrace).append"){
-		idx++
-		fmt.Println("-- " + strconv.Itoa(idx) + "  #fn: (*google.golang.org/grpc/internal/channelz.channelTrace).append")
-	}
 	a.genq = append(a.genq, cgn)
 
 	return obj
@@ -325,9 +321,6 @@ func (a *analysis) makeFunctionObjectWithContext(caller *cgnode, fn *ssa.Functio
 
 //bz: if exist this caller for fn?
 func (a *analysis) existContextFor(fn *ssa.Function, caller *cgnode) ([]int, bool, nodeid, bool) {
-	if strings.EqualFold(fn.String(), "(*google.golang.org/grpc/internal/channelz.channelTrace).append"){
-		fmt.Println("-- " + strconv.Itoa(idx) + " #fn: (*google.golang.org/grpc/internal/channelz.channelTrace).append")
-	}
 	existFnIdx, multiFn := a.fn2cgnodeIdx[fn]
 	if multiFn { //check if we already have the caller + callsite ?? recursive/duplicate call
 		for i, existIdx := range existFnIdx { // idx -> index of fn cgnode in a.cgnodes[]
@@ -364,9 +357,6 @@ func (a *analysis) equalContextFor(existCSs []*callsite, curCallerCSs []*callsit
 
 //bz: if exist this callsite + caller for fn?
 func (a *analysis) existContextForComb(fn *ssa.Function, callersite *callsite, caller *cgnode) ([]int, bool, nodeid, bool) {
-	if strings.EqualFold(fn.String(), "(*google.golang.org/grpc/internal/channelz.channelTrace).append"){
-		fmt.Println("-- " + strconv.Itoa(idx) + "  #fn: (*google.golang.org/grpc/internal/channelz.channelTrace).append")
-	}
 	existFnIdx, multiFn := a.fn2cgnodeIdx[fn]
 	if multiFn { //check if we already have the caller + callsite ?? recursive/duplicate call
 		for i, existIdx := range existFnIdx { // idx -> index of fn cgnode in a.cgnodes[]
@@ -475,15 +465,9 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 	a.makeParamResultNodes(fn, obj, cgn)
 
 	// Queue it up for constraint processing.
-	if strings.EqualFold(fn.String(), "(*google.golang.org/grpc/internal/channelz.channelTrace).append"){
-		idx++
-		fmt.Println("-- " + strconv.Itoa(idx) + "  #fn: (*google.golang.org/grpc/internal/channelz.channelTrace).append")
-	}
 	a.genq = append(a.genq, cgn)
 	return obj, fnIdx
 }
-
-var idx int //debug grpc
 
 //bz: continue with makeFunctionObjectWithContext (kcfa), update a.fn2cgnodeIdx for fn
 func (a *analysis) updateFn2NodeID(fn *ssa.Function, multiFn bool, newFnIdx []int, existFnIdx []int) {
