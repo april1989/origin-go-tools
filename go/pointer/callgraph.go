@@ -144,9 +144,12 @@ func (c *callsite) equal(o *callsite) bool {
 }
 
 //bz: equal without when one c.loopID == 0 and o.loopID is 1 or 2
-// only used by existClosure()
+// !! only used by existClosure()
 func (c *callsite) loopEqual(o *callsite) bool {
-	if o == nil {
+	if o == nil && c == nil {
+		return true
+	}
+	if o == nil || c == nil {
 		return false
 	}
 	cInstr := c.instr
