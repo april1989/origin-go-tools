@@ -307,7 +307,12 @@ func (r *ResultWCtx) PointsToRegular(v ssa.Value) []PointerWCtx {
 
 //bz: return []PointerWCtx for a free var,
 func (r *ResultWCtx) PointsToFreeVar(v ssa.Value) []PointerWCtx {
-	if freev, ok := v.(*ssa.FreeVar); ok {
+	if globalv, ok := v.(*ssa.Global); ok {
+		pointers := r.GlobalQueries[globalv]
+		if pointers != nil {
+			return pointers
+		}
+	}else if freev, ok := v.(*ssa.FreeVar); ok {
 		pointers := r.GlobalQueries[freev]
 		if pointers != nil {
 			return pointers
@@ -338,12 +343,12 @@ func (r *ResultWCtx) PointsToFurther(v ssa.Value) []PointerWCtx {
 //input: ssa.Value, *ssa.GO;
 //output: PointerWCtx; this can be empty with nothing if we cannot match any
 func (r *ResultWCtx) PointsToByGo(v ssa.Value, goInstr *ssa.Go) PointerWCtx {
-	if goInstr == nil {
-		return r.PointsToByMain(v)
-	}
 	ptss := r.PointsToFreeVar(v)
 	if ptss != nil {
 		return ptss[0] //bz: should only have one value
+	}
+	if goInstr == nil {
+		return r.PointsToByMain(v)
 	}
 	ptss = r.PointsToRegular(v) //return type: []PointerWCtx
 	for _, pts := range ptss {
