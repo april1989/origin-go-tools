@@ -111,6 +111,9 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 			//bz: Global object. But are they unique mapping/replaced when put into a.globalval[]?
 			// a.globalobj[v] = n0  --> nothing stored, do not use this
 			a.recordGlobalQueries(t, cgn, v, id)
+		case *ssa.Global:
+			//Updated: bz: capture global var, e.g., race_checker/tests/runc_simple.go:31
+			a.recordGlobalQueries(t, cgn, v, id)
 		}
 		return //else: nothing to record
 	}
