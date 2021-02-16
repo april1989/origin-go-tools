@@ -17,6 +17,7 @@ import (
 	"runtime/debug"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.tamu.edu/April1989/go_tools/go/ssa"
 	"github.tamu.edu/April1989/go_tools/go/types/typeutil"
@@ -24,8 +25,10 @@ import (
 
 const (
 	// optimization options; enable all when committing
+	// TODO: bz: these optimizations are good ... but it mess up my constraints ...
+	//       tmp turn them off ....
 	optRenumber = false // enable renumbering optimization (makes logs hard to read)
-	optHVN      = true // enable pointer equivalence via Hash-Value Numbering
+	optHVN      = false // enable pointer equivalence via Hash-Value Numbering
 
 	// debugging options; disable all when committing
 	debugHVN           = false // enable assertions in HVN
@@ -118,8 +121,8 @@ type analysis struct {
 	flattenMemo map[types.Type][]*fieldInfo // memoization of flatten()
 	trackTypes  map[types.Type]bool         // memoization of shouldTrack()
 	constraints []constraint                // set of constraints
-	cgnodes     []*cgnode        // all cgnodes       --> bz: nodes in cg; will copy to callgraph.cg at the end
-	genq        []*cgnode        // queue of functions to generate constraints for
+	cgnodes     []*cgnode                   // all cgnodes       --> bz: nodes in cg; will copy to callgraph.cg at the end
+	genq        []*cgnode                   // queue of functions to generate constraints for
 	intrinsics  map[*ssa.Function]intrinsic // non-nil values are summaries for intrinsic fns
 	globalval   map[ssa.Value]nodeid        // node for each global ssa.Value          ---> bz: localval/globalval: only used in valueNode() and setValueNode() for each function, will be nil.
 	localval    map[ssa.Value]nodeid        // node for each local ssa.Value           ---> bz: BUT the key will be replaced if multiple ctx exist
@@ -129,8 +132,8 @@ type analysis struct {
 	mapValues   []nodeid                    // values of makemap objects (indirect in HVN)
 	work        nodeset                     // solver's worklist
 	//result      *Result                     // results of the analysis
-	track       track                       // pointerlike types whose aliasing we track
-	deltaSpace  []int                       // working space for iterating over PTS deltas
+	track      track // pointerlike types whose aliasing we track
+	deltaSpace []int // working space for iterating over PTS deltas
 
 	// Reflection & intrinsics:
 	hasher              typeutil.Hasher // cache of type hashes
@@ -144,11 +147,14 @@ type analysis struct {
 	runtimeSetFinalizer *ssa.Function   // runtime.SetFinalizer
 
 	//bz: my record
-	fn2cgnodeIdx        map[*ssa.Function][]int //bz: a map of fn with a set of its cgnodes represented by the indexes of cgnodes[]
+	fn2cgnodeIdx map[*ssa.Function][]int //bz: a map of fn with a set of its cgnodes represented by the indexes of cgnodes[]
 	// NOW also used for static and invoke calls TODO: may be should use nodeid not int (idx) ?
-	closures            map[*ssa.Function]*Ctx2nodeid //bz: solution for makeclosure
-    result              *ResultWCtx                   //bz: our result, dump all
-    closureWOGo         map[nodeid]nodeid                     //bz: solution@field actualCallerSite []*callsite of cgnode type
+	closures    map[*ssa.Function]*Ctx2nodeid //bz: solution for makeclosure
+	result      *ResultWCtx                   //bz: our result, dump all
+	closureWOGo map[nodeid]nodeid             //bz: solution@field actualCallerSite []*callsite of cgnode type
+
+	considerReflect bool //bz: whether we have reflect in exclusions
+	num_constraints int //bz:  performance
 }
 
 // enclosingObj returns the first node of the addressable memory
@@ -220,15 +226,40 @@ func (a *analysis) computeTrackBits() {
 	}
 }
 
+var main2Analysis map[*ssa.Package]*Result //bz: skip redo everytime calls Analyze()
 
-// Analyze runs the pointer analysis with the scope and options
-// specified by config, and returns the (synthetic) root of the callgraph.
-//
-// Pointer analysis of a transitively closed well-typed program should
-// always succeed.  An error can occur only due to an internal bug.
-//
-// bz: updated, works for context-sensitive but result does not include context-sensitive call graph
-func Analyze(config *Config) (result *ResultWCtx, err error) { //Result
+//bz: fill in the result
+func translateQueries(val ssa.Value, id nodeid, cgn *cgnode, result *Result, _result *ResultWCtx) {
+	t := val.Type()
+	if CanPoint(t) {
+		ptr := PointerWCtx{_result.a, id, cgn}
+		ptrs, ok := result.Queries[val]
+		if !ok {
+			// First time?  Create the canonical query node.
+			ptrs = make([]PointerWCtx, 1)
+			ptrs[0] = ptr
+		} else {
+			ptrs = append(ptrs, ptr)
+		}
+		result.Queries[val] = ptrs
+	} else { //indirect
+		ptr := PointerWCtx{_result.a, id, cgn}
+		ptrs, ok := result.IndirectQueries[val]
+		if !ok {
+			// First time?  Create the canonical query node.
+			ptrs = make([]PointerWCtx, 1)
+			ptrs[0] = ptr
+		} else {
+			ptrs = append(ptrs, ptr)
+		}
+		result.IndirectQueries[val] = ptrs
+	}
+}
+
+//bz: change to default api
+//but result does not include call graph (a.result.CallGraph),
+//since the type does not match and race checker also does not use this
+func Analyze(config *Config) (result *Result, err error) {
 	if config.Mains == nil {
 		return nil, fmt.Errorf("no main/test packages to analyze (check $GOROOT/$GOPATH)")
 	}
@@ -240,156 +271,49 @@ func Analyze(config *Config) (result *ResultWCtx, err error) { //Result
 		}
 	}()
 
-	a := &analysis{
-		config:      config,
-		log:         config.Log,
-		prog:        config.prog(),
-		globalval:   make(map[ssa.Value]nodeid),
-		globalobj:   make(map[ssa.Value]nodeid),
-		flattenMemo: make(map[types.Type][]*fieldInfo),
-		trackTypes:  make(map[types.Type]bool),
-		atFuncs:     make(map[*ssa.Function]bool),
-		hasher:      typeutil.MakeHasher(),
-		intrinsics:  make(map[*ssa.Function]intrinsic),
-		//result: &Result{
-		//	Queries:         make(map[ssa.Value]Pointer),
-		//	IndirectQueries: make(map[ssa.Value]Pointer),
-		//},
-		result: &ResultWCtx{
-			Queries:         make(map[ssa.Value][]PointerWCtx),
-			IndirectQueries: make(map[ssa.Value][]PointerWCtx),
-		},
-		deltaSpace: make([]int, 0, 100),
-		//bz: i did not clear these after offline TODO: do I ?
-		fn2cgnodeIdx: make(map[*ssa.Function][]int),
-		closures:     make(map[*ssa.Function]*Ctx2nodeid),
+	main := config.Mains[0] //bz: currently only handle one main
+	if result, ok := main2Analysis[main]; ok {
+		//we already done the analysis, now find and wrap the result
+		return result, nil
 	}
 
-	if false {
-		a.log = os.Stderr // for debugging crashes; extremely verbose
+	//we initially run the analysis
+	_result, err := AnalyzeWCtx(config)
+	if err != nil {
+		return nil, err
+	}
+	//translate to default return value
+	result = &Result{
+		Queries:         make(map[ssa.Value][]PointerWCtx),
+		IndirectQueries: make(map[ssa.Value][]PointerWCtx),
 	}
 
-	var mode string //which pta is running
-	if a.config.Origin {
-		mode = strconv.Itoa(a.config.K) + "-ORIGIN-SENSITIVE"
-	} else if a.config.CallSiteSensitive {
-		mode = strconv.Itoa(a.config.K) + "-CFA"
-	} else {
-		mode = "CONTEXT-INSENSITIVE"
-	}
-
-	if a.log != nil {
-		fmt.Fprintln(a.log, "==== Starting analysis: " + mode)
-	}
-	fmt.Println(" *** MODE: " + mode + " *** ")
-
-	// Pointer analysis requires a complete program for soundness.
-	// Check to prevent accidental misconfiguration.
-	for _, pkg := range a.prog.AllPackages() {
-		// (This only checks that the package scope is complete,
-		// not that func bodies exist, but it's a good signal.)
-		if !pkg.Pkg.Complete() {
-			return nil, fmt.Errorf(`pointer analysis requires a complete program yet package %q was incomplete`, pkg.Pkg.Path())
-		}
-	}
-
-	if reflect := a.prog.ImportedPackage("reflect"); reflect != nil {
-		rV := reflect.Pkg.Scope().Lookup("Value")
-		a.reflectValueObj = rV
-		a.reflectValueCall = a.prog.LookupMethod(rV.Type(), nil, "Call")
-		a.reflectType = reflect.Pkg.Scope().Lookup("Type").Type().(*types.Named)
-		a.reflectRtypeObj = reflect.Pkg.Scope().Lookup("rtype")
-		a.reflectRtypePtr = types.NewPointer(a.reflectRtypeObj.Type())
-
-		// Override flattening of reflect.Value, treating it like a basic type.
-		tReflectValue := a.reflectValueObj.Type()
-		a.flattenMemo[tReflectValue] = []*fieldInfo{{typ: tReflectValue}}
-
-		// Override shouldTrack of reflect.Value and *reflect.rtype.
-		// Always track pointers of these types.
-		a.trackTypes[tReflectValue] = true
-		a.trackTypes[a.reflectRtypePtr] = true
-
-		a.rtypes.SetHasher(a.hasher)
-		a.reflectZeros.SetHasher(a.hasher)
-	}
-	if runtime := a.prog.ImportedPackage("runtime"); runtime != nil {
-		a.runtimeSetFinalizer = runtime.Func("SetFinalizer")
-	}
-	a.computeTrackBits() //bz: use when there is input queries before running this analysis; we do not need this for now?
-
-	a.generate()   //bz: a preprocess for reflection/runtime/import libs
-	a.showCounts() //bz: print out size ...
-
-	if optRenumber {
-		a.renumber()
-	}
-
-	N := len(a.nodes) // excludes solver-created nodes
-
-	if optHVN { //bz: default true
-		if debugHVNCrossCheck { //default : false
-			// Cross-check: run the solver once without
-			// optimization, once with, and compare the
-			// solutions.
-			savedConstraints := a.constraints
-
-			a.solve()
-			a.dumpSolution("A.pts", N)
-
-			// Restore.
-			a.constraints = savedConstraints
-			for _, n := range a.nodes {
-				n.solve = new(solverState)
+	//go through each cgnode
+	callgraph := _result.CallGraph
+	fns := callgraph.Fn2CGNode
+	for _, cgns := range fns {
+		for _, cgn := range cgns {
+			for val, id := range cgn.localval {
+				translateQueries(val, id, cgn, result, _result)
 			}
-			a.nodes = a.nodes[:N]
 
-			// rtypes is effectively part of the solver state.
-			a.rtypes = typeutil.Map{}
-			a.rtypes.SetHasher(a.hasher)
-		}
-
-		a.hvn()
-	}
-
-	if debugHVNCrossCheck {
-		runtime.GC()
-		runtime.GC()
-	}
-
-	if a.log != nil {
-		fmt.Fprintln(a.log, "==== Starting solving and generating constraints Online ====")
-	}
-
-	a.solve() //bz: officially starts here
-
-	// Compare solutions.
-	if optHVN && debugHVNCrossCheck {
-		a.dumpSolution("B.pts", N)
-
-		if !diff("A.pts", "B.pts") {
-			return nil, fmt.Errorf("internal error: optimization changed solution")
-		}
-	}
-
-	// Create callgraph.Nodes in deterministic order.
-	if cg := a.result.CallGraph; cg != nil {
-		for _, caller := range a.cgnodes {
-			cg.CreateNodeWCtx(caller) //bz: changed
-		}
-	}
-
-	// Add dynamic edges to call graph.
-	var space [100]int
-	for _, caller := range a.cgnodes {
-		for _, site := range caller.sites {
-			for _, callee := range a.nodes[site.targets].solve.pts.AppendTo(space[:0]) {
-				a.callEdge(caller, site, nodeid(callee))
+			for obj, id := range cgn.localobj {
+				translateQueries(obj, id, cgn, result, _result)
 			}
 		}
 	}
+	for val, id := range _result.a.globalval {
+		translateQueries(val, id, nil, result, _result)
+	}
+	for obj, id := range _result.a.globalobj {
+		translateQueries(obj, id, nil, result, _result)
+	}
 
-	return a.result, nil
+	main2Analysis = make(map[*ssa.Package]*Result)
+	main2Analysis[main] = result
+	result.a = _result.a
+
+	return result, nil
 }
 
 // bz: lazy way
@@ -422,16 +346,14 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 		atFuncs:     make(map[*ssa.Function]bool),
 		hasher:      typeutil.MakeHasher(),
 		intrinsics:  make(map[*ssa.Function]intrinsic),
-		//result: &Result{
-		//	Queries:         make(map[ssa.Value]Pointer),
-		//	IndirectQueries: make(map[ssa.Value]Pointer),
-		//},
 		result: &ResultWCtx{
 			Queries:         make(map[ssa.Value][]PointerWCtx),
 			IndirectQueries: make(map[ssa.Value][]PointerWCtx),
 			GlobalQueries:   make(map[ssa.Value][]PointerWCtx),
 			ExtendedQueries: make(map[ssa.Value][]PointerWCtx),
 			DEBUG:           config.DEBUG,
+			DiscardQueries:  config.DiscardQueries,
+			UseQueriesAPI:   config.UseQueriesAPI,
 		},
 		deltaSpace: make([]int, 0, 100),
 		//bz: i did not clear the following two after offline TODO: do I ?
@@ -455,17 +377,57 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 
 	UpdateDEBUG(a.config.DEBUG) //in pointer/callgraph
 
-	//update analysis scope
+	//update analysis scope: +
+	imports := a.config.Mains[0].Pkg.Imports()
+	if len(imports) > 0 {
+		for _, _import := range imports {
+			a.config.imports = append(a.config.imports, _import.Name())
+		}
+	}
 	fmt.Println(" *** MODE: " + mode + " *** ")
-	fmt.Println(" *** Analyze Scope *** ")
+	fmt.Println(" *** Analyze Scope ***************** ")
 	if len(a.config.Scope) > 0 {
 		for _, pkg := range a.config.Scope {
 			fmt.Println(" - " + pkg)
 		}
-	}else{
-		fmt.Println(" - default: command-line-arguments")
 	}
-	fmt.Println(" ********************* ")
+	fmt.Println(" *********************************** ")
+	fmt.Println(" *** Import Libs ******************* ")
+	if len(a.config.imports) > 0 {
+		for _, pkg := range a.config.imports {
+			fmt.Print(pkg + ", ")
+		}
+		fmt.Println()
+	}
+	fmt.Println(" *********************************** ")
+	if len(a.config.Mains) > 1 {
+		fmt.Println(" *** Multiple Mains **************** ")
+		for i, main := range a.config.Mains {
+			fmt.Println(strconv.Itoa(i) + ": " + main.String())
+		}
+		fmt.Println(" *********************************** ")
+	}
+	fmt.Println(" *** Level: " + strconv.Itoa(a.config.Level) + " *** ")
+	if a.config.DiscardQueries && !a.config.UseQueriesAPI {
+		fmt.Println(" *** No Queries *** ")
+	} else {
+		fmt.Println(" *** Use Queries/IndirectQueries *** ")
+	}
+	if a.config.UseQueriesAPI {
+		fmt.Println(" *** Use Default Queries API *** ")
+	} else {
+		fmt.Println(" *** Use My API *** ")
+	}
+	if a.config.TrackMore {
+		fmt.Println(" *** Track Types in Scope *** ")
+	} else {
+		fmt.Println(" *** Default Type Tracking *** ")
+	}
+	//if optRenumber {
+	//	fmt.Println(" *** optRenumber ON *** ")
+	//} else {
+	//	fmt.Println(" *** optRenumber OFF *** ")
+	//}
 
 	if a.log != nil {
 		fmt.Fprintln(a.log, "==== Starting analysis and logging: ")
@@ -481,35 +443,43 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 		}
 	}
 
-	if reflect := a.prog.ImportedPackage("reflect"); reflect != nil {
-		rV := reflect.Pkg.Scope().Lookup("Value")
-		a.reflectValueObj = rV
-		a.reflectValueCall = a.prog.LookupMethod(rV.Type(), nil, "Call")
-		a.reflectType = reflect.Pkg.Scope().Lookup("Type").Type().(*types.Named)
-		a.reflectRtypeObj = reflect.Pkg.Scope().Lookup("rtype")
-		a.reflectRtypePtr = types.NewPointer(a.reflectRtypeObj.Type())
+	if !ContainString(a.config.Exclusion, "reflect") { //bz: only do if race checker considers
+		a.considerReflect = true //update
 
-		// Override flattening of reflect.Value, treating it like a basic type.
-		tReflectValue := a.reflectValueObj.Type()
-		a.flattenMemo[tReflectValue] = []*fieldInfo{{typ: tReflectValue}}
+		if reflect := a.prog.ImportedPackage("reflect"); reflect != nil {
+			rV := reflect.Pkg.Scope().Lookup("Value")
+			a.reflectValueObj = rV
+			a.reflectValueCall = a.prog.LookupMethod(rV.Type(), nil, "Call")
+			a.reflectType = reflect.Pkg.Scope().Lookup("Type").Type().(*types.Named)
+			a.reflectRtypeObj = reflect.Pkg.Scope().Lookup("rtype")
+			a.reflectRtypePtr = types.NewPointer(a.reflectRtypeObj.Type())
 
-		// Override shouldTrack of reflect.Value and *reflect.rtype.
-		// Always track pointers of these types.
-		a.trackTypes[tReflectValue] = true
-		a.trackTypes[a.reflectRtypePtr] = true
+			// Override flattening of reflect.Value, treating it like a basic type.
+			tReflectValue := a.reflectValueObj.Type()
+			a.flattenMemo[tReflectValue] = []*fieldInfo{{typ: tReflectValue}}
 
-		a.rtypes.SetHasher(a.hasher)
-		a.reflectZeros.SetHasher(a.hasher)
+			// Override shouldTrack of reflect.Value and *reflect.rtype.
+			// Always track pointers of these types.
+			a.trackTypes[tReflectValue] = true
+			a.trackTypes[a.reflectRtypePtr] = true
+
+			a.rtypes.SetHasher(a.hasher)
+			a.reflectZeros.SetHasher(a.hasher)
+		}
+	} else {
+		a.considerReflect = false //update -> do not consider 'reflect'
 	}
-	if runtime := a.prog.ImportedPackage("runtime"); runtime != nil {
-		a.runtimeSetFinalizer = runtime.Func("SetFinalizer")
+	if !ContainString(a.config.Exclusion, "runtime") { //bz: only do if race checker considers
+		if runtime := a.prog.ImportedPackage("runtime"); runtime != nil {
+			a.runtimeSetFinalizer = runtime.Func("SetFinalizer")
+		}
 	}
 	a.computeTrackBits() //bz: use when there is input queries before running this analysis; we do not need this for now?
 
 	a.generate()   //bz: a preprocess for reflection/runtime/import libs
 	a.showCounts() //bz: print out size ...
 
-	if optRenumber {
+	if optRenumber { //bz: default true
 		a.renumber()
 	}
 
@@ -589,9 +559,47 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 	}
 
 	a.result.CallGraph.computeFn2CGNode() //bz: update Fn2CGNode for user API
-	a.result.nodes = a.nodes //bz: just in case
+	a.result.a = a    //bz: update
+
+	if a.config.DoPerformance { //bz: performance test; dump info
+		fmt.Println("--------------------- Performance ------------------------")
+		fmt.Println("#pts: ", len(a.nodes))
+		fmt.Println("#constraints (totol num): ", a.num_constraints)
+		fmt.Println("#cgnodes (totol num): ", len(a.cgnodes))
+		//fmt.Println("#func (totol num): ", len(a.fn2cgnodeIdx))
+		numTyp := 0
+		for _, track := range a.trackTypes {
+			if track {
+				numTyp++
+			}
+		}
+		fmt.Println("#tracked types (totol num): ", numTyp)
+		fmt.Println("#origins (totol num): ", len(a.closures))
+		fmt.Println("\nCall Graph: \n#Nodes: ", len(a.result.CallGraph.Nodes))
+		fmt.Println("#Edges: ", GetNumEdges())
+	}
 
 	return a.result, nil
+}
+
+//bz: used by me
+func ContainString(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
+//bz: used in race_checker
+func ContainStringRelax(s []string, e string) bool {
+	for _, a := range s {
+		if strings.Contains(e, a) {
+			return true
+		}
+	}
+	return false
 }
 
 //bz: solution@field actualCallerSite []*callsite of cgnode type
@@ -602,7 +610,7 @@ func (a *analysis) updateActaulCallSites() {
 	waiting := a.closureWOGo
 	for _, nid := range waiting {
 		cgn := a.nodes[nid].obj.cgn
-		total.Insert(cgn.idx)//record
+		total.Insert(cgn.idx) //record
 
 		node := cg.GetNodeWCtx(cgn)
 		for _, outEdge := range node.Out {
@@ -630,6 +638,7 @@ func (a *analysis) callEdge(caller *cgnode, site *callsite, calleeid nodeid) {
 	if obj.flags&otFunction == 0 {
 		panic(fmt.Sprintf("callEdge %s -> n%d: not a function object", site, calleeid))
 	}
+
 	callee := obj.cgn
 
 	//bz: solution@field actualCallerSite []*callsite of cgnode type
@@ -726,3 +735,175 @@ func (a *analysis) showCounts() {
 		fmt.Fprintf(a.log, "# ptsets:\t%d\n", len(m))
 	}
 }
+
+//bz: stay here as a reference
+//// Analyze runs the pointer analysis with the scope and options
+//// specified by config, and returns the (synthetic) root of the callgraph.
+////
+//// Pointer analysis of a transitively closed well-typed program should
+//// always succeed.  An error can occur only due to an internal bug.
+////
+//// bz: updated, works for context-sensitive but result does not include context-sensitive call graph
+//func Analyze(config *Config) (result *ResultWCtx, err error) { //Result
+//	if config.Mains == nil {
+//		return nil, fmt.Errorf("no main/test packages to analyze (check $GOROOT/$GOPATH)")
+//	}
+//	defer func() {
+//		if p := recover(); p != nil {
+//			err = fmt.Errorf("internal error in pointer analysis: %v (please report this bug)", p)
+//			fmt.Fprintln(os.Stderr, "Internal panic in pointer analysis:")
+//			debug.PrintStack()
+//		}
+//	}()
+//
+//	a := &analysis{
+//		config:      config,
+//		log:         config.Log,
+//		prog:        config.prog(),
+//		globalval:   make(map[ssa.Value]nodeid),
+//		globalobj:   make(map[ssa.Value]nodeid),
+//		flattenMemo: make(map[types.Type][]*fieldInfo),
+//		trackTypes:  make(map[types.Type]bool),
+//		atFuncs:     make(map[*ssa.Function]bool),
+//		hasher:      typeutil.MakeHasher(),
+//		intrinsics:  make(map[*ssa.Function]intrinsic),
+//		//result: &Result{
+//		//	Queries:         make(map[ssa.Value]Pointer),
+//		//	IndirectQueries: make(map[ssa.Value]Pointer),
+//		//},
+//		result: &ResultWCtx{
+//			Queries:         make(map[ssa.Value][]PointerWCtx),
+//			IndirectQueries: make(map[ssa.Value][]PointerWCtx),
+//		},
+//		deltaSpace: make([]int, 0, 100),
+//		//bz: i did not clear these after offline TODO: do I ?
+//		fn2cgnodeIdx: make(map[*ssa.Function][]int),
+//		closures:     make(map[*ssa.Function]*Ctx2nodeid),
+//	}
+//
+//	if false {
+//		a.log = os.Stderr // for debugging crashes; extremely verbose
+//	}
+//
+//	var mode string //which pta is running
+//	if a.config.Origin {
+//		mode = strconv.Itoa(a.config.K) + "-ORIGIN-SENSITIVE"
+//	} else if a.config.CallSiteSensitive {
+//		mode = strconv.Itoa(a.config.K) + "-CFA"
+//	} else {
+//		mode = "CONTEXT-INSENSITIVE"
+//	}
+//
+//	if a.log != nil {
+//		fmt.Fprintln(a.log, "==== Starting analysis: " + mode)
+//	}
+//	fmt.Println(" *** MODE: " + mode + " *** ")
+//
+//	// Pointer analysis requires a complete program for soundness.
+//	// Check to prevent accidental misconfiguration.
+//	for _, pkg := range a.prog.AllPackages() {
+//		// (This only checks that the package scope is complete,
+//		// not that func bodies exist, but it's a good signal.)
+//		if !pkg.Pkg.Complete() {
+//			return nil, fmt.Errorf(`pointer analysis requires a complete program yet package %q was incomplete`, pkg.Pkg.Path())
+//		}
+//	}
+//
+//	if reflect := a.prog.ImportedPackage("reflect"); reflect != nil {
+//		rV := reflect.Pkg.Scope().Lookup("Value")
+//		a.reflectValueObj = rV
+//		a.reflectValueCall = a.prog.LookupMethod(rV.Type(), nil, "Call")
+//		a.reflectType = reflect.Pkg.Scope().Lookup("Type").Type().(*types.Named)
+//		a.reflectRtypeObj = reflect.Pkg.Scope().Lookup("rtype")
+//		a.reflectRtypePtr = types.NewPointer(a.reflectRtypeObj.Type())
+//
+//		// Override flattening of reflect.Value, treating it like a basic type.
+//		tReflectValue := a.reflectValueObj.Type()
+//		a.flattenMemo[tReflectValue] = []*fieldInfo{{typ: tReflectValue}}
+//
+//		// Override shouldTrack of reflect.Value and *reflect.rtype.
+//		// Always track pointers of these types.
+//		a.trackTypes[tReflectValue] = true
+//		a.trackTypes[a.reflectRtypePtr] = true
+//
+//		a.rtypes.SetHasher(a.hasher)
+//		a.reflectZeros.SetHasher(a.hasher)
+//	}
+//	if runtime := a.prog.ImportedPackage("runtime"); runtime != nil {
+//		a.runtimeSetFinalizer = runtime.Func("SetFinalizer")
+//	}
+//	a.computeTrackBits() //bz: use when there is input queries before running this analysis; we do not need this for now?
+//
+//	a.generate()   //bz: a preprocess for reflection/runtime/import libs
+//	a.showCounts() //bz: print out size ...
+//
+//	if optRenumber {
+//		a.renumber()
+//	}
+//
+//	N := len(a.nodes) // excludes solver-created nodes
+//
+//	if optHVN { //bz: default true
+//		if debugHVNCrossCheck { //default : false
+//			// Cross-check: run the solver once without
+//			// optimization, once with, and compare the
+//			// solutions.
+//			savedConstraints := a.constraints
+//
+//			a.solve()
+//			a.dumpSolution("A.pts", N)
+//
+//			// Restore.
+//			a.constraints = savedConstraints
+//			for _, n := range a.nodes {
+//				n.solve = new(solverState)
+//			}
+//			a.nodes = a.nodes[:N]
+//
+//			// rtypes is effectively part of the solver state.
+//			a.rtypes = typeutil.Map{}
+//			a.rtypes.SetHasher(a.hasher)
+//		}
+//
+//		a.hvn()
+//	}
+//
+//	if debugHVNCrossCheck {
+//		runtime.GC()
+//		runtime.GC()
+//	}
+//
+//	if a.log != nil {
+//		fmt.Fprintln(a.log, "==== Starting solving and generating constraints Online ====")
+//	}
+//
+//	a.solve() //bz: officially starts here
+//
+//	// Compare solutions.
+//	if optHVN && debugHVNCrossCheck {
+//		a.dumpSolution("B.pts", N)
+//
+//		if !diff("A.pts", "B.pts") {
+//			return nil, fmt.Errorf("internal error: optimization changed solution")
+//		}
+//	}
+//
+//	// Create callgraph.Nodes in deterministic order.
+//	if cg := a.result.CallGraph; cg != nil {
+//		for _, caller := range a.cgnodes {
+//			cg.CreateNodeWCtx(caller) //bz: changed
+//		}
+//	}
+//
+//	// Add dynamic edges to call graph.
+//	var space [100]int
+//	for _, caller := range a.cgnodes {
+//		for _, site := range caller.sites {
+//			for _, callee := range a.nodes[site.targets].solve.pts.AppendTo(space[:0]) {
+//				a.callEdge(caller, site, nodeid(callee))
+//			}
+//		}
+//	}
+//
+//	return a.result, nil
+//}

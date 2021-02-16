@@ -3,15 +3,27 @@ package main
 import (
 	"flag"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"github.tamu.edu/April1989/go_tools/go/packages"
 	"github.tamu.edu/April1989/go_tools/go/pointer"
 	"github.tamu.edu/April1989/go_tools/go/ssa"
 	"github.tamu.edu/April1989/go_tools/go/ssa/ssautil"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
+
+var excludedPkgs = []string{ //bz: excluded a lot of default constraints
+	"runtime",
+	"reflect",
+	"os",
+}
+var projPath = ""   // interested packages are those located at this path
+var maxTime time.Duration
+var minTime time.Duration
+var doLog = false
+var doPerforamnce = true
+
 
 // mainPackages returns the main packages to analyze.
 // Each resulting package is named "main" and has a main function.
@@ -28,23 +40,12 @@ func findMainPackages(pkgs []*ssa.Package) ([]*ssa.Package, error) {
 	return mains, nil
 }
 
-//bz: tested
-// cmd/callgraph/testdata/src/pkg/pkg.go
-// godel2: mytest/dine3-chan-race.go, mytest/no-race-mut-bad.go, mytest/prod-cons-race.go
-// ../go2/race_checker/GoBench/Kubernetes/88331/main.go
-// ../go2/race_checker/GoBench/Grpc/3090/main.go
-// ../go2/race_checker/pointer_analysis_test/main.go
-
-// ../go2/race_checker/GoBench/Cockroach/35501/main.go
-// ../go2/race_checker/GoBench/Etcd/9446/main.go
-// ../go2/race_checker/tests/GoBench/Grpc/1862/main.go
-// ../go2/race_checker/GoBench/Istio/8144/main.go
-// ../go2/race_checker/GoBench/Istio/8967/main.go
-
-//TODO: program counter ???
 func main() {
-	flag.Bool("ptrAnalysis", false, "Prints pointer analysis results. ")
+	path := flag.String("path", "", "Designated project filepath. ")
 	flag.Parse()
+	if *path != "" {
+		projPath = *path
+	}
 	args := flag.Args()
 	cfg := &packages.Config{
 		Mode:  packages.LoadAllSyntax, // the level of information returned for each package
@@ -57,19 +58,20 @@ func main() {
 		return
 	}
 	if packages.PrintErrors(initial) > 0 {
-		fmt.Println("packages contain errors")
-		return
+		errSize, errPkgs := packages.PrintErrorsAndMore(initial) //bz: errPkg will be nil in initial
+		if errSize > 0 {
+			fmt.Println("Excluded the following packages contain errors, due to the above errors. ")
+			for i, errPkg := range errPkgs {
+				fmt.Println(i, " ", errPkg.ID)
+			}
+			fmt.Println("Continue   -- ")
+		}
 	} else if len(initial) == 0 {
-		fmt.Println("package list empty")
+		fmt.Println("Package list empty")
 		return
 	}
+	fmt.Println("Done  -- " + strconv.Itoa(len(initial)) + " packages loaded")
 
-	// Print the names of the source files
-	// for each package listed on the command line.
-	for nP, pkg := range initial {
-		fmt.Println(pkg.ID, pkg.GoFiles)
-		fmt.Println("Done  -- " + strconv.Itoa(nP+1) + " packages loaded")
-	}
 	// Create and build SSA-form program representation.
 	prog, pkgs := ssautil.AllPackages(initial, 0)
 
@@ -83,47 +85,101 @@ func main() {
 		return
 	}
 
-	//create my log file
-	logfile, err := os.Create("gologfile") //bz: i do not want messed up log, create/overwrite one each time
-	log.SetFormatter(&log.TextFormatter{
-		FullTimestamp: true,
-	})
+	fmt.Println("#TOTAL MAIN: " + strconv.Itoa(len(mains)) + "\n")
 
-	var channelComm = false // analyze channel communication in grpc
-	var scope []string
-	if channelComm {
-		scope = []string {"google.golang.org/grpc"}
+	maxTime = 0
+	minTime = 10000000000000
+
+	//baseline: foreach
+	start := time.Now()   //performance
+	for i, main := range mains {
+ 		fmt.Println(i, " ", main.String())
+		//doEachMain(i, main) //old api
+ 		doEachMainDefaultAPI(i, main)
+		fmt.Println("=============================================================================")
 	}
+	t := time.Now()
+	elapsed := t.Sub(start)
+	fmt.Println("\n\nBASELINE All Done  -- PTA/CG Build.\nTOTAL: ", elapsed.String() + ".")
+	fmt.Println("Max: ", maxTime.String() + ".")
+	fmt.Println("Min: ", minTime.String() + ".")
+	fmt.Println("Avg: ", (float32(elapsed.Milliseconds())/float32(len(mains) - 1)/float32(1000)), "s." )
+}
+
+func doEachMainDefaultAPI(i int, main *ssa.Package) {
+	var logfile  *os.File
+	if doLog { //create my log file
+		logfile, _ = os.Create("/Users/Bozhen/Documents/GO2/go2/go_tools/_logs/full_log_" + strconv.Itoa(i))
+	}else{
+		logfile = nil
+	}
+	var scope []string
+	if projPath != "" {
+		scope = []string {projPath}
+	}
+	//scope = append(scope, "istio.io/istio/")
+	//scope = append(scope, "google.golang.org/grpc")
+	//scope = append(scope, "github.com/pingcap/tidb")
+	if strings.EqualFold(main.String(), "package command-line-arguments") {//default
+		scope = append(scope, "command-line-arguments")
+	}else{
+		scope = append(scope, main.String())
+	}
+
+	var mains []*ssa.Package
+	mains = append(mains, main)
 	// Configure pointer analysis to build call-graph
 	ptaConfig := &pointer.Config{
 		Mains:          mains, //bz: NOW assume only one main
 		Reflection:     false,
 		BuildCallGraph: true,
 		Log:            logfile,
-		//kcfa
-		//CallSiteSensitive: true,
-		//origin
-		Origin: true,
+		//CallSiteSensitive: true, //kcfa
+		Origin:     true, //origin
 		//shared config
 		K:          1,
-		LimitScope: true, //bz: only consider app methods now
-		DEBUG:      true, //bz: rm all printed out info in console
-		Scope:      scope, //bz: analyze scope
+		LimitScope: true, //bz: only consider app methods now -> no import will be considered
+		DEBUG:      false, //bz: rm all printed out info in console
+		Scope:      scope, //bz: analyze scope + include + import
+		Exclusion:  excludedPkgs, //bz: copied from race_checker
+		DiscardQueries: true, //bz: do not use query any more
+		UseQueriesAPI:  true, //bz: change the api the same as default pta
+		TrackMore:      true, //bz: track pointers with types declared in Analyze Scope
+		Level:      0,    //bz: see pointer.Config
+		DoPerformance : doPerforamnce, //bz: if we output performance related info
 	}
 
 	//*** compute pta here
 	start := time.Now()                           //performance
-	result, err := pointer.AnalyzeWCtx(ptaConfig) // conduct pointer analysis
+	result, err := pointer.Analyze(ptaConfig) // conduct pointer analysis
 	t := time.Now()
 	elapsed := t.Sub(start)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 	}
 	defer logfile.Close()
-	log.SetOutput(logfile)
 	fmt.Println("\nDone  -- PTA/CG Build; Using " + elapsed.String() + ". \nGo check gologfile for detail. ")
+
+	if maxTime < elapsed {
+		maxTime = elapsed
+	}
+	if minTime > elapsed {
+		minTime = elapsed
+	}
 
 	if ptaConfig.DEBUG {
 		result.DumpAll()
 	}
+
+	//start2 := time.Now()
+	//result2, err2 := pointer.Analyze(ptaConfig) // conduct pointer analysis
+	//t2 := time.Now()
+	//elapsed2 := t2.Sub(start2)
+	//if err2 != nil {
+	//	log.Fatal(err2)
+	//}
+	//fmt.Println("\nDone  -- Retrieve Result " + elapsed2.String() + ".")
+	//if result == result2 {
+	//	fmt.Println("\nChecked  -- Same Result Returned. ")
+	//}
 }

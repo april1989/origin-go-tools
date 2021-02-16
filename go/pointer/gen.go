@@ -84,6 +84,10 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 		fmt.Fprintf(a.log, "\tval[%s] = n%d  (%T)\n", v.Name(), id, v)
 	}
 
+	if a.config.DiscardQueries {
+		return //bz: skip recording queries
+	}
+
 	// Default: Due to context-sensitivity, we may encounter the same Value
 	// in many contexts. We merge them to a canonical node, since
 	// that's what all clients want.
@@ -124,7 +128,7 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 		//}
 		if CanPoint(t) {
 			a.recordQueries(t, cgn, v, id)
-		}else
+		} else
 		//bz: this condition is copied from go2: indirect queries
 		if underType, ok := v.Type().Underlying().(*types.Pointer); ok && CanPoint(underType.Elem()) {
 			a.recordIndirectQueries(t, cgn, v, id)
@@ -229,13 +233,9 @@ func (a *analysis) makeFunctionObject(fn *ssa.Function, callersite *callsite) no
 	if a.log != nil {
 		fmt.Fprintf(a.log, "\t---- makeFunctionObject %s\n", fn)
 	}
-
-	if a.config.DEBUG && a.withinScope(fn.String()) {
-		fmt.Println("  DEBUG(makeFunctionObject): " + fn.String())
-		if len(fn.Params) > 0 {
-			fmt.Println(fn.Params[0].Type().String()) //---> receiver struct type
-		}
-	}
+	//if a.config.DEBUG {
+	//	fmt.Println("\t---- makeFunctionObject for " + fn.String())
+	//}
 
 	// obj is the function object (identity, params, results).
 	obj := a.nextNode()
@@ -270,10 +270,9 @@ func (a *analysis) makeFunctionObjectWithContext(caller *cgnode, fn *ssa.Functio
 	if a.log != nil {
 		fmt.Fprintf(a.log, "\t---- makeFunctionObjectWithContext (kcfa) %s\n", fn)
 	}
-
-	if a.config.DEBUG {
-		fmt.Printf("\t---- makeFunctionObjectWithContext (kcfa) for %s\n", fn)
-	}
+	//if a.config.DEBUG {
+	//	fmt.Printf("\t---- makeFunctionObjectWithContext (kcfa) for %s\n", fn)
+	//}
 
 	if a.config.Origin && callersite == nil && closure != nil {
 		//origin: case 2: fn is make closure -> we checked before calling this, now needs to create it
@@ -294,7 +293,7 @@ func (a *analysis) makeFunctionObjectWithContext(caller *cgnode, fn *ssa.Functio
 			if !isNew {
 				return existNodeID, isNew
 			}
-		}else{
+		} else {
 			existFnIdx, multiFn, existNodeID, isNew = a.existContextFor(fn, caller)
 			if !isNew {
 				return existNodeID, isNew
@@ -427,7 +426,7 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 			} else if goInstr, ok := callersite.instr.(*ssa.Go); ok { //case 1 and 3: this is a *ssa.GO without closure
 				special := callersite
 				special.goInstr = goInstr //update
-				if loopID != -1 { //handle loop TODO: will this affect exist checking?
+				if loopID != -1 {         //handle loop TODO: will this affect exist checking?
 					special = &callsite{targets: callersite.targets, instr: callersite.instr, loopID: loopID, goInstr: goInstr}
 				}
 				fnkcs := a.createKCallSite(caller.callersite, special)
@@ -575,7 +574,7 @@ func (a *analysis) rtypeTaggedValue(obj nodeid) types.Type {
 // values containing no pointers.
 //
 func (a *analysis) valueNode(v ssa.Value) nodeid {
-	// Value nodes for locals are created en masse by genFunc.
+	// Value nodes for locals are created en masse (== in a group) by genFunc.
 	if id, ok := a.localval[v]; ok {
 		return id
 	}
@@ -620,7 +619,7 @@ func (a *analysis) taggedValue(obj nodeid) (tDyn types.Type, v nodeid, indirect 
 	n := a.nodes[obj]
 	flags := n.obj.flags
 	if flags&otTagged == 0 {
-		panic(fmt.Sprintf("not a tagged object: n%d", obj))
+		panic(fmt.Sprintf("not a tagged object: n%d = %s", obj, n))
 	}
 	return n.typ, obj + 1, flags&otIndirect != 0
 }
@@ -670,7 +669,7 @@ func (a *analysis) copy(dst, src nodeid, sizeof uint32) {
 		if Online { //bz: Online solving
 			a.addWork(dst)
 			if a.log != nil {
-				fmt.Fprintf(a.log, "%s\n\n", " -> add Online constraint to worklist: " + dst.String() + " " + src.String())
+				fmt.Fprintf(a.log, "%s\n", " -> add Online constraint to worklist: "+dst.String()+" "+src.String())
 			}
 		}
 
@@ -688,8 +687,15 @@ func (a *analysis) addressOf(T types.Type, id, obj nodeid) {
 	if obj == 0 {
 		panic("addressOf: zero obj")
 	}
-	if withinScope || a.shouldTrack(T) {
-		a.addConstraint(&addrConstraint{id, obj})
+
+	if a.config.TrackMore {
+		if withinScope || a.shouldTrack(T) {
+			a.addConstraint(&addrConstraint{id, obj})
+		}
+	}else{ //default
+		if a.shouldTrack(T) {
+			a.addConstraint(&addrConstraint{id, obj})
+		}
 	}
 }
 
@@ -740,9 +746,16 @@ func (a *analysis) store(dst, src nodeid, offset uint32, sizeof uint32) {
 // T is the type of the address.
 //
 func (a *analysis) offsetAddr(T types.Type, dst, src nodeid, offset uint32) {
-	if !withinScope && !a.shouldTrack(T) {
-		return
+	if a.config.TrackMore {
+		if !withinScope && !a.shouldTrack(T)  {
+			return
+		}
+	}else{ //default
+		if !a.shouldTrack(T)  {
+			return
+		}
 	}
+
 	if offset == 0 {
 		// Simplify  dst = &src->f0
 		//       to  dst = src
@@ -940,24 +953,13 @@ func (a *analysis) shouldUseContext(fn *ssa.Function) bool {
 	return true
 }
 
-// bz: whehter this is a main method, but actually we only use Mains[0]...
-// TODO: too much library methods .... cannot do this for all library methods ...
-func (a *analysis) isMainMethod(method *ssa.Function) bool {
-	for _, mainPkg := range a.config.Mains {
-		main := mainPkg.Func("main")
-		if main == method {
-			return true
-		}
-	}
-	return false
-}
-
 //bz: do pta use our context-sensitive algo? which algo?
+//if true, must be in scope. otherwise, use shared contour
 func (a *analysis) considerMyContext(fn string) bool {
 	return a.considerKCFA(fn) || a.considerOrigin(fn)
 }
 
-//bz: return whether we do origin-sensitive on this closure !!! only on closure
+//bz: whether we do origin-sensitive on this fn
 func (a *analysis) considerOrigin(fn string) bool {
 	return a.config.Origin == true && a.withinScope(fn) //&& (caller.fn.IsFromApp || a.isMainMethod(caller.fn))
 }
@@ -967,17 +969,65 @@ func (a *analysis) considerKCFA(fn string) bool {
 	return a.config.CallSiteSensitive == true && a.withinScope(fn) //&& (caller.fn.IsFromApp || a.isMainMethod(caller.fn))
 }
 
-//bz: continue with isMainMethod, currently compare string
+//bz:  currently compare string, already considered LimitScope
+// !!!!!! manually excluded pkg google.golang.org/grpc/grpclog ...
 func (a *analysis) withinScope(method string) bool {
 	if a.config.LimitScope {
 		if strings.Contains(method, "command-line-arguments") { //default scope
 			return true
 		} else {
-			if len(a.config.Scope) > 0 { //user assigned scope
+			if len(a.config.Exclusion) > 0 { //user assigned exclusion -> bz: want to exclude all reflection ...
+				for _, pkg := range a.config.Exclusion {
+					if strings.Contains(method, pkg) {
+						return false
+					}
+				}
+			}
+			if len(a.config.Scope) > 0 { //project scope
 				for _, pkg := range a.config.Scope {
 					if strings.Contains(method, pkg) && !strings.Contains(method, "google.golang.org/grpc/grpclog") {
 						return true
 					}
+				}
+			}
+			//if len(a.config.imports) > 0 { //user assigned scope
+			//	for _, pkg := range a.config.imports {
+			//		if strings.Contains(method, pkg) && !strings.Contains(method, "google.golang.org/grpc/grpclog") {
+			//			return true
+			//		}
+			//	}
+			//}
+		}
+		return false
+	}
+	return true
+}
+
+//bz: whether a func is from a.config.imports
+func (a *analysis) fromImports(method string) bool {
+	if a.config.LimitScope {
+		if len(a.config.imports) > 0 { //user assigned scope
+			for _, pkg := range a.config.imports {
+				if strings.Contains(method, pkg) {
+					return true
+				}
+			}
+		}
+		return false
+	}
+	return true
+}
+
+//bz: whether a func is from a.config.Exclusion
+func (a *analysis) fromExclusion(fn *ssa.Function) bool {
+	if a.config.LimitScope {
+		if len(a.config.Exclusion) > 0 { //user assigned scope
+			if fn.Pkg == nil || fn.Pkg.Pkg == nil {
+				return false
+			}
+			for _, pkg := range a.config.Exclusion {
+				if strings.Contains(fn.Pkg.Pkg.Path(), pkg) {
+					return true
 				}
 			}
 		}
@@ -1005,7 +1055,7 @@ func (a *analysis) isInLoop(fn *ssa.Function, inst ssa.Instruction) bool {
 			} else { //continue
 				for _, nnbb := range nextbb.Succs {
 					if !total.Has(nnbb.Index) {
-						tmp[nnbb.Index] = nnbb //next nextbb
+						tmp[nnbb.Index] = nnbb   //next nextbb
 						total.Insert(nnbb.Index) //record
 					}
 				}
@@ -1017,11 +1067,63 @@ func (a *analysis) isInLoop(fn *ssa.Function, inst ssa.Instruction) bool {
 	return false
 }
 
+//bz: which level of lib/app calls we consider: true -> create func/cgnode; false -> do not create
+//scope: 1<2<3<0
+func (a *analysis) createForLevelX(caller *ssa.Function, callee *ssa.Function) bool {
+	if a.config.Level == 1 {
+		//bz: if callee is from app or import => 1 level
+		//caller in app, callee in lib || caller in app, callee in app || caller in lib, callee in app
+		if a.withinScope(callee.String()) || a.fromImports(callee.String()) {
+			return true
+		}
+	} else if a.config.Level == 2 {
+		//bz: parent of caller in app, caller in lib, callee also in lib
+		// || parent in lib, caller in app, callee in lib || parent in lib, caller in lib, callee in app
+		if caller == nil {
+			if a.withinScope(callee.String()) || a.fromImports(callee.String()) {
+				return true //bz: as long as callee is app/path func, we do it
+			}
+			return true
+		}
+		//parentcaller -> app; caller -> lib; callee -> lib  => 2 level
+		parentCaller := caller.Parent()
+		if parentCaller == nil { //bz: pkg initializer, no parent or other cases
+			if a.withinScope(callee.String()) || a.fromImports(callee.String()) || a.withinScope(caller.String()) || a.fromImports(caller.String()) {
+				return true
+			}
+			return false
+		}
+		if a.withinScope(parentCaller.String()) || a.withinScope(caller.String()) || a.withinScope(callee.String()) {
+			return true
+		}
+	} else if a.config.Level == 3 {
+		//bz: this analyze lib's import
+		if caller == nil {
+			if a.withinScope(callee.String()) || a.fromImports(callee.String()) {
+				return true
+			}
+			return false
+		}
+		if a.withinScope(callee.String()) || a.fromImports(callee.String()) || a.withinScope(caller.String()) || a.fromImports(caller.String()) {
+			return true
+		}
+	}
+
+	//bz: this is really considering all, including lib's lib, lib's lib's lib, etc.
+	return true
+}
+
 //  ------------- bz : the following several functions generate constraints for different method calls --------------
 // genStaticCall generates constraints for a statically dispatched function call.
 // bz: force call site here
 func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site *callsite, call *ssa.CallCommon, result nodeid) {
 	fn := call.StaticCallee()
+	if !a.createForLevelX(caller.fn, fn) {
+		if a.config.DEBUG {
+			fmt.Println("Level excluded: " + fn.String())
+		}
+		return
+	}
 
 	// Special cases for inlined intrinsics.
 	switch fn {
@@ -1045,50 +1147,37 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 		return
 	}
 
-	if a.config.DEBUG && a.withinScope(fn.String()) {
-		fmt.Println("  DEBUG (genStaticCall): " + fn.String())
-	}
-
 	// Ascertain the context (contour/cgnode) for a particular call.
 	var obj nodeid //bz: only used in some cases below
 	//var isNew bool //bz: whether obj is a new cgnode
 
-	//bz: for origin-sensitive, we have two cases:
-	//case 1: no closure, directly invoke static function: e.g., go Producer(t0, t1, t3), we create a new context for it
-	//case 2: has closure: make closure has been created earlier, here find the çreated obj and use its context
-	//case 3: no closure, but invoke virtual function: e.g., go (*ccBalancerWrapper).watcher(t0), we create a new context for it
-	if a.considerMyContext(fn.String()) {
-		//bz: simple brute force solution; start to be kcfa from main.main.go
-		if a.config.DEBUG {
-			fmt.Println("CAUGHT APP METHOD -- " + fn.String()) //debug
-		}
-		_, ok := site.instr.(*ssa.Go)
-		if ok { //bz: invoke a go routine --> detail check for different context-sensitivities
-			if a.config.DEBUG { //debug
-				fmt.Println("        BUT ssa.GO -- " + site.instr.String() + "   LET'S SEE.")
+	if a.config.K > 0 {
+		//bz: for origin-sensitive, we have two cases:
+		//case 1: no closure, directly invoke static function: e.g., go Producer(t0, t1, t3), we create a new context for it
+		//case 2: has closure: make closure has been created earlier, here find the çreated obj and use its context
+		//case 3: no closure, but invoke virtual function: e.g., go (*ccBalancerWrapper).watcher(t0), we create a new context for it
+		if a.considerMyContext(fn.String()) {
+			//bz: simple brute force solution; start to be kcfa from main.main.go
+			if a.config.DEBUG {
+				fmt.Println("CAUGHT APP METHOD -- " + fn.String()) //debug
 			}
-			a.genStaticCallForGoCall(caller, instr, site, call, result) //bz: direct the handling outside and return
-			return
-		}
+			_, ok := site.instr.(*ssa.Go)
+			if ok { //bz: invoke a go routine --> detail check for different context-sensitivities
+				if a.config.DEBUG { //debug
+					fmt.Println("        BUT ssa.GO -- " + site.instr.String() + "   LET'S SEE.")
+				}
+				a.genStaticCallForGoCall(caller, instr, site, call, result) //bz: direct the handling outside and return
+				return
+			}
 
-		//ids, ok, _ := a.existClosure(fn, caller.callersite[0])
-		//if ok { //bz: the cgnode for fn is created already when its previous stmt is make closure;
-		//	    // we only want call edges/constraints here
-		//	if len(ids) > 1 || len(ids) == 0 {
-		//		panic("SHOULD BE == 1? in fn2closure: a.closure")
-		//	}
-		//	obj = ids[0]
-		//} else { //normal cases
 			//for kcfa: we need a new contour
 			//for origin: whatever left, we use caller context
 			obj, _ = a.makeFunctionObjectWithContext(caller, fn, site, nil, -1)
-			//if !isNew {
-			//	return //all constraints should be added already
-			//}
-		//}
-	} else {
-		//default: context-insensitive
-		if a.shouldUseContext(fn) {
+		}else{
+			obj = a.objectNode(nil, fn) // shared contour
+		}
+	}else { //default: context-insensitive
+		if a.shouldUseContext(fn) { // default
 			obj = a.makeFunctionObject(fn, site) // new contour
 		} else {
 			obj = a.objectNode(nil, fn) // shared contour
@@ -1207,7 +1296,7 @@ func (a *analysis) genConstraintsOnline() {
 func (a *analysis) valueNodeInvoke(caller *cgnode, site *callsite, fn *ssa.Function) nodeid {
 	if caller == nil && site == nil { //requires shared contour
 		obj := a.valueNode(fn)
-		return obj
+		return obj + 1 //bz: why obj is not the right one? not tagged with otFunction ??
 	}
 
 	//similar with valueNode(),  created on demand. Instead of a.globalval[], we use a.fn2cgnodeid[]
@@ -1231,6 +1320,8 @@ func (a *analysis) valueNodeInvoke(caller *cgnode, site *callsite, fn *ssa.Funct
 // genInvoke generates constraints for a dynamic method invocation.
 // bz: NOTE: not every x.m() is treated by genInvoke() here, some is treated by genStaticCall(),
 // move the genFunc() for invoke calls Online
+// Update: we cannot know the exact target function, maybe call.Method() to look up the concrete method???
+//  so we create the constraints here; if we confirm this is not reachable or excluded, we just leave the constraints here
 func (a *analysis) genInvoke(caller *cgnode, site *callsite, call *ssa.CallCommon, result nodeid) {
 	if call.Value.Type() == a.reflectType {
 		a.genInvokeReflectType(caller, site, call, result)
@@ -1283,15 +1374,21 @@ func (a *analysis) genInvoke(caller *cgnode, site *callsite, call *ssa.CallCommo
 //    rt.F()
 // as this:
 //    rt.(*reflect.rtype).F()
-//bz: for now use 1-callsite (original defaut), TODO: if necessary, update to kcfa
+//bz: for now use 1-callsite (original default), TODO: if necessary, update to kcfa
 func (a *analysis) genInvokeReflectType(caller *cgnode, site *callsite, call *ssa.CallCommon, result nodeid) {
+	// Look up the concrete method.
+	fn := a.prog.LookupMethod(a.reflectRtypePtr, call.Method.Pkg(), call.Method.Name())
+	if !a.createForLevelX(caller.fn, fn) {
+		if a.config.DEBUG {
+			fmt.Println("Level excluded: " + fn.String())
+		}
+		return
+	}
+
 	// Unpack receiver into rtype
 	rtype := a.addOneNode(a.reflectRtypePtr, "rtype.recv", nil)
 	recv := a.valueNode(call.Value)
 	a.typeAssert(a.reflectRtypePtr, rtype, recv, true)
-
-	// Look up the concrete method.
-	fn := a.prog.LookupMethod(a.reflectRtypePtr, call.Method.Pkg(), call.Method.Name())
 
 	obj := a.makeFunctionObject(fn, site) // new contour for this call
 	a.callEdge(caller, site, obj)
@@ -1501,10 +1598,8 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 				//bz: this has NO ssa.CallInstruction as callsite;
 				//v should not be make closure, we handle it in a different function for both kcfa and origin, panic!
 				isClosure := a.isFromMakeClosure(v)
-				if a.considerMyContext(v.String()) {
-					if isClosure {
-						panic("WRONG PATH @objectNode() FOR MAKE CLOSURE: " + v.String())
-					}
+				if isClosure && a.considerMyContext(v.String()) {
+					panic("WRONG PATH @objectNode() FOR MAKE CLOSURE: " + v.String())
 				} else { //normal case
 					obj = a.makeFunctionObject(v, nil)
 				}
@@ -1851,9 +1946,9 @@ func (a *analysis) isGoNext(instr *ssa.MakeClosure) *ssa.Go {
 						if instr == closure { //these two values should be the same
 							return goInstr
 						}
-					}else if _, ok := val.(*ssa.Function); ok {
+					} else if _, ok := val.(*ssa.Function); ok {
 						args := goInstr.Call.Args
-						closure := args[0] // this should be closure
+						closure := args[0]    // this should be closure
 						if instr == closure { //these two values should be the same
 							return goInstr
 						}
@@ -1869,7 +1964,7 @@ func (a *analysis) isGoNext(instr *ssa.MakeClosure) *ssa.Go {
 	return nil
 }
 
-//bz: adjust for data structure changes
+//bz: default: adjust for data structure changes
 func (a *analysis) makeCGNode(fn *ssa.Function, obj nodeid, callersite *callsite) *cgnode {
 	//bz: context-insensitive default code;
 	//-> the same with 1callsite, where callersite can be null
@@ -1887,7 +1982,7 @@ func (a *analysis) makeCGNode(fn *ssa.Function, obj nodeid, callersite *callsite
 //
 func (a *analysis) genRootCalls() *cgnode {
 	r := a.prog.NewFunction("<root>", new(types.Signature), "root of callgraph")
-	root := a.makeCGNode(r, 0, nil)
+	root := a.makeCGNode(r, 0, nil) //bz: root is a fake node, like to all main.init and main.main
 
 	// TODO(adonovan): make an ssa utility to construct an actual
 	// root function so we don't need to special-case site-less
@@ -1953,8 +2048,15 @@ func (a *analysis) genFunc(cgn *cgnode) {
 		fmt.Fprintln(a.log, "; Creating nodes for local values")
 	}
 
-	a.localval = make(map[ssa.Value]nodeid)
-	a.localobj = make(map[ssa.Value]nodeid)
+	if a.config.DiscardQueries {
+		//bz: we do replace a.localval and a.localobj by cgn's
+		cgn.initLocalMaps()
+		a.localval = cgn.localval
+		a.localobj = cgn.localobj
+	} else {
+		a.localval = make(map[ssa.Value]nodeid)
+		a.localobj = make(map[ssa.Value]nodeid)
+	}
 
 	// The value nodes for the params are in the func object block.
 	params := a.funcParams(cgn.obj)
@@ -2048,7 +2150,8 @@ func (a *analysis) generate() {
 	// Create the global node for panic values.
 	a.panicNode = a.addNodes(tEface, "panic")
 
-	// Create nodes and constraints for all methods of reflect.rtype.
+	// Create nodes and constraints
+	//for all methods of reflect.rtype.
 	// (Shared contours are used by dynamic calls to reflect.Type
 	// methods---typically just String().)
 	if rtype := a.reflectRtypePtr; rtype != nil {
@@ -2057,43 +2160,64 @@ func (a *analysis) generate() {
 
 	root := a.genRootCalls()
 
-	if a.config.BuildCallGraph {
+	if a.config.BuildCallGraph { //bz:
 		a.result.CallGraph = NewWCtx(root)
 	}
 
 	// Create nodes and constraints for all methods of all types
 	// that are dynamically accessible via reflection or interfaces.
+	skip := 0
 	for _, T := range a.prog.RuntimeTypes() {
-		if a.considerMyContext(T.String()) {
+		_type := T.String()
+		if a.considerMyContext(_type) {
 			//bz: we want to make function (called by interfaces) later for kcfa, here uses share contour
-			if a.config.DEBUG {
-				fmt.Println("SKIP genMethodsOf() offline for type: " + T.String())
+			if a.log != nil {
+				fmt.Fprintf(a.log, "SKIP genMethodsOf() offline for type: "+T.String()+"\n")
 			}
 			continue
 		}
-		a.genMethodsOf(T)
+
+		//bz: generate for app only; previously ->  || a.fromImports(_type)
+		if a.withinScope(_type) {
+			a.genMethodsOf(T)
+		} else {
+			if a.log != nil {
+				fmt.Fprintf(a.log, "EXCLUDE genMethodsOf() offline for type: " + T.String()+"\n")
+			}
+			skip++
+		}
+	}
+	fmt.Println("#EXCLUDE genMethodsOf() offline: ", skip)
+	if a.log != nil {
+		fmt.Fprintf(a.log, "\n Done genMethodsOf() offline. \n")
 	}
 
 	// Generate constraints for functions as they become reachable
 	// from the roots.  (No constraints are generated for functions
-	// that are dead in this analysis scope.)  ---> bz: want to generate cgn called by interfaces here, so it can have kcfa not shared contour
+	// that are dead in this analysis scope.)
+	//---> bz: want to generate cgn called by interfaces here, so it can have kcfa not shared contour
+	//Update: bz: only generate if it is in app scope, since we have a lot of untagged obj panics happens
+	//if we create constraints for some lib function here
 	for len(a.genq) > 0 {
 		cgn := a.genq[0]
 		a.genq = a.genq[1:]
 		a.genFunc(cgn)
 	}
 
-	// The runtime magically allocates os.Args; so should we.  ----> bz: can we skip this ?
-	if os := a.prog.ImportedPackage("os"); os != nil {
-		// In effect:  os.Args = new([1]string)[:]
-		T := types.NewSlice(types.Typ[types.String])
-		obj := a.addNodes(sliceToArray(T), "<command-line args>")
-		a.endObject(obj, nil, "<command-line args>")
-		a.addressOf(T, a.objectNode(nil, os.Var("Args")), obj)
+	// The runtime magically allocates os.Args; so should we.
+	if !(ContainString(a.config.Exclusion, "os") && ContainString(a.config.Exclusion, "runtime")) {
+		//bz: we are trying to skip this iff "runtime" and "os" are both in exclusions
+		if os := a.prog.ImportedPackage("os"); os != nil {
+			// In effect:  os.Args = new([1]string)[:]
+			T := types.NewSlice(types.Typ[types.String])
+			obj := a.addNodes(sliceToArray(T), "<command-line args>")
+			a.endObject(obj, nil, "<command-line args>")
+			a.addressOf(T, a.objectNode(nil, os.Var("Args")), obj)
+		}
 	}
 
 	// Discard generation state, to avoid confusion after node renumbering.
-	if a.config.K == 0 { //bz: we are using kcfa or origin
+	if a.config.K == 0 { //bz: when we are using kcfa or origin, we still need this when genInvoke on-the-fly
 		a.panicNode = 0
 		a.globalval = nil
 	}

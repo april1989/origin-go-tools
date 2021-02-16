@@ -12,7 +12,6 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"strings"
 	"time"
 
 	"github.tamu.edu/April1989/go_tools/container/intsets"
@@ -221,26 +220,29 @@ func (a *analysis) shouldTrack(T types.Type) bool {
 				break
 			}
 		}
-		if track { // bz: track == true here: if not return, the following code will toggle it again ...
-			return track
-		}
-		// bz: here track == false --> this will topple the true assignment at the function beginning ...
-		// BUT we track all types declared in app, since we cannot pre-populated them
-		if !strings.Contains(T.String(), "command-line-arguments.") {
+
+		if a.config.TrackMore {
+			// bz: here track == false --> this will topple the true assignment at the function beginning ...
+			// BUT we track all types declared in app, since we cannot pre-populated them
+			if a.withinScope(T.String()) {
+				a.trackTypes[T] = true
+				if a.log != nil && !track {
+					fmt.Fprintf(a.log, "\tforce type tracked: %s\n", T)
+				}
+				return true
+			} else { //bz: skip T types in lib
+				if a.log != nil && !track {
+					fmt.Fprintf(a.log, "\tforce type tracked: %s\n", T)
+				}
+				return true //bz: fake it to be true --> track it
+			}
+		} else {
+			//default
 			a.trackTypes[T] = track
 			if !track && a.log != nil {
 				fmt.Fprintf(a.log, "\ttype not tracked: %s\n", T)
 			}
-		} else { //bz: just log
-			if track && a.log != nil {
-				fmt.Fprintf(a.log, "\tforce type tracked: %s\n", T)
-			}
-			if a.config.DEBUG {
-				fmt.Println(" -- force type tracked: " + T.String())
-			}
-			return true //bz: fake it to be true --> track it
 		}
-
 	}
 	return track
 }

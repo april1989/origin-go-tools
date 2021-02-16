@@ -20,6 +20,12 @@ type solverState struct {
 }
 
 func (a *analysis) solve() {
+	if a.config.DoPerformance { //bz: performance dump info
+		a.num_constraints = 0
+		fmt.Println("#constraints (before solve()): ", len(a.constraints))
+		fmt.Println("#cgnodes (before solve()): ", len(a.cgnodes))
+	}
+
 	start("Solving")
 	if a.log != nil {
 		fmt.Fprintf(a.log, "\n\n==== Solving constraints\n\n")
@@ -51,8 +57,8 @@ func (a *analysis) solve() {
 			continue
 		}
 		if a.log != nil {
-			fmt.Fprintf(a.log, "\t\tpts(n%d : %s) = %s + %s\n",
-				id, n.typ, &delta, &n.solve.prevPTS)
+			//fmt.Fprintf(a.log, "\t\tpts(n%d : %s) = %s + %s\n", id, n.typ, &delta, &n.solve.prevPTS)  //bz: too verbose
+			fmt.Fprintf(a.log, "\t\tpts(n%d : %s) = %s + ... \n", id, n.typ, &delta)
 		}
 		n.solve.prevPTS.Copy(&n.solve.pts.Sparse)
 
@@ -96,9 +102,15 @@ func (a *analysis) solve() {
 func (a *analysis) processNewConstraints() {
 	// Take the slice of new constraints.
 	// (May grow during call to solveConstraints.)
+	if a.config.DoPerformance && len(a.constraints) > 0 {
+		a.num_constraints = a.num_constraints + len(a.constraints)
+	}
 	constraints := a.constraints
 	a.constraints = nil
 
+	if a.config.Log != nil {
+		fmt.Fprintf(a.log, "\t\tnew constraints...........\n")
+	}
 	// Initialize points-to sets from addr-of (base) constraints.
 	for _, c := range constraints {
 		if c, ok := c.(*addrConstraint); ok {
@@ -141,10 +153,17 @@ func (a *analysis) processNewConstraints() {
 			a.addWork(id)
 		}
 	}
+	if a.config.Log != nil {
+		fmt.Fprintf(a.log, "\t\t......................\n")
+	}
+
 	// Apply new constraints to pre-existing PTS labels.
 	var space [50]int
 	for _, id := range stale.AppendTo(space[:0]) {
 		n := a.nodes[nodeid(id)]
+		if a.config.Log != nil {
+			fmt.Fprintf(a.log, "\t\tstale %d: pts(%s) = %s + %s\n", id, n.typ, &n.solve.prevPTS, &n.solve.prevPTS)
+		}
 		a.solveConstraints(n, &n.solve.prevPTS)
 	}
 }
@@ -190,7 +209,7 @@ func (a *analysis) addLabel(ptr, label nodeid) bool {
 func (a *analysis) addWork(id nodeid) {
 	a.work.Insert(int(id))
 	if a.log != nil {
-		fmt.Fprintf(a.log, "\t\twork: n%d\n", id)
+		fmt.Fprintf(a.log, "\t\tadd to work: n%d\n", id)
 	}
 }
 
@@ -227,9 +246,6 @@ func (a *analysis) onlineCopyN(dst, src nodeid, sizeof uint32) uint32 {
 	for i := uint32(0); i < sizeof; i++ {
 		if a.onlineCopy(dst, src) {
 			a.addWork(dst)
-			if Online && a.log != nil { //bz: Online solving debug
-				fmt.Fprintf(a.log, "%s\n\n", " -> add Online constraint to worklist: "+dst.String()+" "+src.String())
-			}
 		}
 		src++
 		dst++
@@ -290,6 +306,7 @@ func (c *typeFilterConstraint) solve(a *analysis, delta *nodeset) {
 	}
 }
 
+//bz: panic always happens; hardcode to avoid this ...
 func (c *untagConstraint) solve(a *analysis, delta *nodeset) {
 	predicate := types.AssignableTo
 	if c.exact {
@@ -322,9 +339,8 @@ func (c *invokeConstraint) solve(a *analysis, delta *nodeset) {
 		ifaceObj := nodeid(x)
 		tDyn, v, indirect := a.taggedValue(ifaceObj)
 		if indirect {
-			// TODO(adonovan): we may need to implement this if
-			// we ever apply invokeConstraints to reflect.Value PTSs,
-			// e.g. for (reflect.Value).Call.
+			// TODO(adonovan): we'll need to implement this
+			// when we start creating indirect tagged objects.
 			panic("indirect tagged object")
 		}
 
@@ -339,34 +355,40 @@ func (c *invokeConstraint) solve(a *analysis, delta *nodeset) {
 		isOnline := false
 		if fnObj == 0 {
 			if a.log != nil { //debug
-				fmt.Fprintf(a.log, "\n\n------------- GENERATING INVOKE FUNC HERE: " + fn.String() + " ------------------------------ \n")
+				fmt.Fprintf(a.log, "\n\n------------- GENERATING INVOKE FUNC HERE: "+fn.String()+" ------------------------------ \n")
 			}
 			// a.objectNode(fn) was not called during gen phase.
 			if a.considerMyContext(fn.String()) {
 				if c.caller == nil && c.site == nil {
 					if a.config.DEBUG {
-						fmt.Println("!! Nil caller & site: " + fn.String() + " SKIP GENERATING INVOKE FUNC.")
+						fmt.Println("!! GENERATING INVOKE FUNC HERE (share contour): " + fn.String())
+					}
+					fnObj = a.genOnline(nil, nil, fn)
+				} else {
+					//bz: special handling of invoke targets, create here
+					if a.config.DEBUG {
+						fmt.Println("!! GENERATING INVOKE FUNC HERE (ctx-sensitive): " + fn.String())
+					}
+					fnObj = a.genOnline(c.caller, c.site, fn)
+				}
+			} else { //newly created app func invokes lib func: use share contour
+				if !a.createForLevelX(nil, fn) {
+					if a.config.DEBUG {
+						fmt.Println("Level excluded: " + fn.String())
 					}
 					continue
 				}
-				//bz: special handling of invoke targets, create here
-				if a.config.DEBUG {
-					fmt.Println("!! GENERATING INVOKE FUNC HERE: " + fn.String())
-				}
-				fnObj = a.genOnline(c.caller, c.site, fn)
-			}else{ //newly created app func invokes lib func: use share contour
 				fnObj = a.genOnline(nil, nil, fn)
 			}
 			isOnline = true
 			if a.log != nil { //debug
 				fmt.Fprintf(a.log, "------------------------------ ------------------------------ ---------------------------- \n")
 			}
-		}else{
+		} else {
 			if a.log != nil { //debug
-				fmt.Fprintf(a.log, "!! ALREADY EXIST INVOKE FUNC: " + fn.String() + "\n")
+				fmt.Fprintf(a.log, "!! ALREADY EXIST INVOKE FUNC: "+fn.String()+"\n")
 			}
 		}
-
 		// bz: back to normal workflow -> context-insensitive
 		c.eachSolve(a, fnObj, sig, v)
 

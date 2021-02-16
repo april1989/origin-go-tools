@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="BranchesTreeState">
+    <expand>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="LOCAL_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:origin" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+    </expand>
+    <select />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="02839b5a-55a2-4e24-b425-23255e76dae7" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/_local/console.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go/packages/golist.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/packages/golist.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go/pointer/analysis.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/analysis.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go/pointer/api.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/api.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go/pointer/callgraph.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/callgraph.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go/pointer/gen.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/gen.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go/pointer/solve.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/solve.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/main/main.go" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="GOROOT" path="/usr/local/Cellar/go/1.14.2_1/libexec" />
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+  </component>
+  <component name="GoLibraries">
+    <option name="indexEntireGoPath" value="false" />
+  </component>
+  <component name="ProjectId" id="1o7YXvUYvSZBd4BCyMmTNC7jCGk" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="go.import.settings.migrated" value="true" />
+    <property name="go.sdk.automatically.set" value="true" />
+    <property name="go.tried.to.enable.integration.vgo.integrator" value="true" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/_local" />
+    <property name="settings.editor.selected.configurable" value="preferences.keymap" />
+  </component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/_local" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
+      <recent name="$PROJECT_DIR$/_local" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Go Build.go build main in other dir">
+    <configuration name="go build main in other dir" type="GoApplicationRunConfiguration" factoryName="Go Application">
+      <module name="go_tools" />
+      <working_directory value="$PROJECT_DIR$/../../grpc-go" />
+      <go_parameters value="-i" />
+      <kind value="FILE" />
+      <filePath value="$PROJECT_DIR$/main/main.go" />
+      <package value="github.tamu.edu/April1989/go_tools" />
+      <directory value="$PROJECT_DIR$" />
+      <method v="2" />
+    </configuration>
+    <configuration name="go build main.go" type="GoApplicationRunConfiguration" factoryName="Go Application" nameIsGenerated="true">
+      <output_file path="$PROJECT_DIR$/_local/console.txt" is_save="true" />
+      <module name="go_tools" />
+      <working_directory value="$PROJECT_DIR$" />
+      <go_parameters value="-i" />
+      <parameters value="../race_checker/tests/cg.go  " />
+      <kind value="FILE" />
+      <filePath value="$PROJECT_DIR$/main/main.go" />
+      <package value="github.tamu.edu/April1989/go_tools" />
+      <directory value="$PROJECT_DIR$" />
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Go Build.go build main.go" />
+      <item itemvalue="Go Build.go build main in other dir" />
+    </list>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+    <option name="oldMeFiltersMigrated" value="true" />
+  </component>
+  <component name="VgoProject">
+    <integration-enabled>true</integration-enabled>
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="184" y="123" width="1071" height="772" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1613423334338">
+      <screen x="0" y="23" width="1440" height="877" />
+    </state>
+    <state x="184" y="123" width="1071" height="772" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.23.1440.877@0.23.1440.877" timestamp="1613423334338" />
+    <state x="760" y="294" width="680" height="579" key="#xdebugger.evaluate" timestamp="1612653330330">
+      <screen x="0" y="23" width="1440" height="877" />
+    </state>
+    <state x="760" y="294" width="680" height="579" key="#xdebugger.evaluate/0.23.1440.877@0.23.1440.877" timestamp="1612653330330" />
+    <state width="1398" height="286" key="GridCell.Tab.0.bottom" timestamp="1613442099688">
+      <screen x="0" y="23" width="1440" height="877" />
+    </state>
+    <state width="1398" height="286" key="GridCell.Tab.0.bottom/0.23.1440.877@0.23.1440.877" timestamp="1613442099688" />
+    <state width="1398" height="286" key="GridCell.Tab.0.center" timestamp="1613442099688">
+      <screen x="0" y="23" width="1440" height="877" />
+    </state>
+    <state width="1398" height="286" key="GridCell.Tab.0.center/0.23.1440.877@0.23.1440.877" timestamp="1613442099688" />
+    <state width="1398" height="286" key="GridCell.Tab.0.left" timestamp="1613442099687">
+      <screen x="0" y="23" width="1440" height="877" />
+    </state>
+    <state width="1398" height="286" key="GridCell.Tab.0.left/0.23.1440.877@0.23.1440.877" timestamp="1613442099687" />
+    <state width="1398" height="286" key="GridCell.Tab.0.right" timestamp="1613442099688">
+      <screen x="0" y="23" width="1440" height="877" />
+    </state>
+    <state width="1398" height="286" key="GridCell.Tab.0.right/0.23.1440.877@0.23.1440.877" timestamp="1613442099688" />
+    <state x="221" y="100" key="SettingsEditor" timestamp="1613423249730">
+      <screen x="0" y="23" width="1440" height="877" />
+    </state>
+    <state x="221" y="100" key="SettingsEditor/0.23.1440.877@0.23.1440.877" timestamp="1613423249730" />
+    <state x="385" y="213" width="670" height="676" key="search.everywhere.popup" timestamp="1613486117506">
+      <screen x="0" y="23" width="1440" height="877" />
+    </state>
+    <state x="385" y="213" width="670" height="676" key="search.everywhere.popup/0.23.1440.877@0.23.1440.877" timestamp="1613486117506" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/go/ssa/methods.go</url>
+          <line>47</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
+</project>

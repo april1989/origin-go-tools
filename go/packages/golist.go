@@ -192,17 +192,21 @@ extractQueries:
 	}
 
 	// See if we have any patterns to pass through to go list. Zero initial
-	// patterns also requires a go list call, since it's the equivalent of
-	// ".".
+	// patterns also requires a go list call, since it's the equivalent of ".".
+	// !! bz: when run race_checker under proj dir, it goes to here
+	//        hence we are going to make this recursively traverse the subdir under the initial cfg.Dir
 	if len(restPatterns) > 0 || len(patterns) == 0 {
-		dr, err := state.createDriverResponse(restPatterns...)
+		dr, err := state.createDriverResponse(restPatterns...) //bz: run go list cmd
 		if err != nil {
 			return nil, err
 		}
 		response.addAll(dr)
+
+		//bz: when run under proj dir, find all mains
+		handleDriverUnderDir(restPatterns, patterns, response, cfg, ctx)
 	}
 
-	if len(containFiles) != 0 {
+	if len(containFiles) != 0 { //bz: another option ？ not used now
 		if err := state.runContainsQueries(response, containFiles); err != nil {
 			return nil, err
 		}
@@ -240,7 +244,7 @@ extractQueries:
 			for _, f := range containFiles {
 				for _, g := range pkg.GoFiles {
 					if sameFile(f, g) {
-						response.addRoot(id)
+						response.addRoot(id) //main
 					}
 				}
 			}
@@ -252,6 +256,104 @@ extractQueries:
 		return nil, sizeserr
 	}
 	return response.dr, nil
+}
+
+//bz: when run under proj dir, find all mains
+func handleDriverUnderDir(restPatterns []string, patterns []string, response *responseDeduper, cfg *Config,
+	ctx context.Context) {
+	skip := false
+	//bz: EXCPETION: we will not traverse under proj dir if input is a specific go file
+	if len(restPatterns) == 1 && len(patterns) == 1 {
+		restPattern := restPatterns[0]
+		pattern := patterns[0]
+		if restPattern == pattern { //both point to the go file
+			if strings.LastIndex(pattern, ".go") == len(pattern) - 3 {
+				skip = true
+			}
+		}
+	}
+
+	if !skip {
+		//TODO: bz: tmp condition filter to do the list all main entry points
+		cmd := exec.Command("find", ".", "-type", "d") //bz: list this subdir recursively until none
+		cmd.Dir = cfg.Dir                              //set cmd dir
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		cmderr := cmd.Run()
+		if cmderr != nil { //bz: change to panic
+			panic(fmt.Sprintf("!!! cmd.Run() failed with %s\n", cmderr))
+		}
+		outStr, _ := string(stdout.Bytes()), string(stderr.Bytes())
+		//fmt.Printf("run ls cmd. out:\n%s\nerr:\n%s\n", outStr, errStr) //bz: for me to debug
+		subdirs := strings.Split(outStr, "\n") //bz: record the future dir we need to traverse
+		size := len(subdirs) - 2
+		if size > 0 {
+			goListDriverRecursive(subdirs, size, response, cfg, ctx, restPatterns)
+		}
+	}
+}
+
+//bz: do main search
+func goListDriverRecursive(subdirs []string, size int, response *responseDeduper, cfg *Config,
+	ctx context.Context, restPatterns []string) {
+	subdirs = removeDuplicateValues(subdirs)
+	var _wg sync.WaitGroup
+	results := make([]*driverResponse, size) //all results
+	for i := 1; i < len(subdirs)-1; i++ {    //bz: 1st element is ".", the last element is "", skip them
+		subdir := subdirs[i]
+		_cfg := &Config{
+			Mode:    LoadAllSyntax,
+			Context: cfg.Context,
+			Logf:    cfg.Logf,
+			Dir:     cfg.Dir + subdir[1:], // bz: we update this. remove the "." in subdir
+			Env:     cfg.Env,
+			Tests:   false,
+		}
+		_state := &golistState{
+			cfg:        _cfg,
+			ctx:        ctx,
+			vendorDirs: map[string]bool{},
+		}
+		_wg.Add(1)
+		go func(i int, _state *golistState, restPatterns []string) {
+			_dr, _err := _state.createDriverResponse(restPatterns...)
+			if _err != nil {
+				fmt.Printf("ERROR from _state.createDriverResponse: %s", _err)
+				results[i-1] = nil
+			} else {
+				results[i-1] = _dr
+			}
+			_wg.Done()
+		}(i, _state, restPatterns)
+	}
+	_wg.Wait()
+	//bz: sum up
+	for _, ret := range results {
+		if ret != nil {
+			response.addAll(ret)
+		}
+	}
+}
+
+//bz:
+func removeDuplicateValues(subdirs []string) []string {
+	keys := make(map[string]bool)
+	list := []string{}
+
+	// If the key(values of the slice) is not equal
+	// to the already present value in new slice (list)
+	// then we append it. else we jump on another element.
+	for _, entry := range subdirs {
+		if entry == "" {
+			continue
+		}
+		if _, value := keys[entry]; !value {
+			keys[entry] = true
+			list = append(list, entry)
+		}
+	}
+	return list
 }
 
 func (state *golistState) addNeededOverlayPackages(response *responseDeduper, pkgs []string) error {
@@ -433,8 +535,12 @@ func (state *golistState) createDriverResponse(words ...string) (*driverResponse
 	var response driverResponse
 	for dec := json.NewDecoder(buf); dec.More(); {
 		p := new(jsonPackage)
-		if err := dec.Decode(p); err != nil {
+		if err := dec.Decode(p); err != nil { //bz: decode
 			return nil, fmt.Errorf("JSON decoding failed: %v", err)
+		}
+
+		if p.Name == "" && p.ImportPath == "." {
+			continue //bz: this is the top dir when we run race_checker under a dir, ignore this.
 		}
 
 		if p.ImportPath == "" {
@@ -830,7 +936,7 @@ func (state *golistState) invokeGo(verb string, args ...string) (*bytes.Buffer, 
 		BuildFlags: cfg.BuildFlags,
 		Env:        cfg.Env,
 		Logf:       cfg.Logf,
-		WorkingDir: cfg.Dir,
+		WorkingDir: cfg.Dir, //bz: this is the key part
 	}
 	gocmdRunner := cfg.gocmdRunner
 	if gocmdRunner == nil {

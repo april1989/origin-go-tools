@@ -40,6 +40,26 @@ type cgnode struct {
 	// cannot update this actualCallerSite during the iteration (genConstraint <-> solve), since its genDynamicCall()
 	// -> I did not find a good way to fix this, so I attached the new go routine ctx here as actual_callersite
 	//    so that the pointer can use this to match the query ctx. This field is updated when finalizing call graph
+
+	localval   map[ssa.Value]nodeid  //bz: going to store things here and take away to get rid of queries
+	localobj   map[ssa.Value]nodeid  //bz: same as above
+}
+
+//bz: going to replace and store (borrow them a pointer) a.localval and a.localobj here when calling genFunc() (gen.go)
+//only copy if func is in analysis scope
+func (n *cgnode) initLocalMaps()  {
+	n.localval = make(map[ssa.Value]nodeid)
+	n.localobj = make(map[ssa.Value]nodeid)
+}
+
+//bz: if not use queries, do this renumbering
+func (n *cgnode) renumber(renumbering []nodeid) {
+	for v, oldID := range n.localval {
+		n.localval[v] = renumbering[oldID]
+	}
+	for obj, oldID := range n.localobj {
+		n.localobj[obj] = renumbering[oldID]
+	}
 }
 
 // contour returns a description of this node's contour.
@@ -109,6 +129,7 @@ func (n *cgnode) contourkActualFull() string {
 func (n *cgnode) String() string {
 	return fmt.Sprintf("cg%d:%s@%s", n.obj, n.fn, n.contourkFull())
 }
+
 
 // A callsite represents a single call site within a cgnode;
 // it is implicitly context-sensitive.
@@ -195,10 +216,24 @@ type Ctx2nodeid struct {
 	ctx2nodeid map[*callsite][]nodeid
 }
 
-
+//bz: renumbering func for opt
+func (r *Ctx2nodeid) renumber(renumbering []nodeid)  {
+	for cs, array := range r.ctx2nodeid {
+		objs := make([]nodeid, len(array))
+		for idx, ele := range array {
+			objs[idx] = renumbering[ele]
+		}
+		r.ctx2nodeid[cs] = objs
+	}
+}
 
 
 //////////////////////////////// call graph to users ////////////////////////////////
+var numEdges = 0   //bz: perforamnce, number of edges
+
+func GetNumEdges() int {
+	return numEdges
+}
 
 //bz: for user
 type GraphWCtx struct {
@@ -308,5 +343,6 @@ func AddEdge(caller *Node, site ssa.CallInstruction, callee *Node) {
 	e := &Edge{caller, site, callee}
 	callee.In = append(callee.In, e)
 	caller.Out = append(caller.Out, e)
+	numEdges++
 }
 
