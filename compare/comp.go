@@ -9,6 +9,13 @@ import (
 	"strings"
 )
 
+/**
+   This file compare the difference between my result and default go pta result,
+   including call graph, queries and indirect queries
+ */
+
+
+
 var cgDiffs []*CGDiff
 var queryDiffs []*QueryDiff
 
@@ -18,12 +25,17 @@ type CGDiff struct {
 }
 
 func (diff CGDiff) print() {
-	fmt.Println("My CG: ")
-	fmt.Println("  ", diff.mycaller.String())
-	for _, out := range diff.mycaller.Out {
-		fmt.Println("\t-> " + out.Callee.String())
+	if diff.mycaller == nil {
+		fmt.Println("My CG: nil")
+	}else{
+		fmt.Println("My CG: (#targets: ", len(diff.mycaller.Out), ")")
+		fmt.Println("  ", diff.mycaller.String())
+		for _, out := range diff.mycaller.Out {
+			fmt.Println("\t-> " + out.Callee.String())
+		}
 	}
-	fmt.Println("Default CG: ")
+
+	fmt.Println("Default CG: (#targets: ", len(diff.default_caller.Out), ")")
 	fmt.Println("  ", diff.default_caller.String())
 	for _, out := range diff.default_caller.Out {
 		fmt.Println("\t-> " + out.Callee.String())
@@ -34,14 +46,15 @@ type QueryDiff struct {
 	v              ssa.Value
 	defaultPointer *default_algo.Pointer
 	myPointers     []pointer.PointerWCtx
+	mySize         int
 }
 
 func (diff QueryDiff) print() {
-	fmt.Println("My Query: ")
+	fmt.Println("My Query: (#obj: ", diff.mySize, ")")
 	for _, p := range diff.myPointers {
 		fmt.Println("  ", p.String())
 	}
-	fmt.Println("Default Query: ")
+	fmt.Println("Default Query: (#obj: ", len(diff.defaultPointer.PointsTo().Labels()), ")")
 	fmt.Println("  ", diff.defaultPointer.String())
 }
 
@@ -60,6 +73,7 @@ func Compare(result_default *default_algo.Result, result_my *pointer.ResultWCtx)
 			cg_diff.print()
 		}
 	}
+
 	//output all query/indirect query diff
 	if len(queryDiffs) > 0 {
 		fmt.Println("QUERIES/INDIRECT QUERIES DIFFs: ")
@@ -103,6 +117,7 @@ func createDiffForCG(default_caller *callgraph.Node, mycaller *pointer.Node) {
 }
 
 func compareCG(default_cg *callgraph.Graph, my_cg *pointer.GraphWCtx) {
+	var traversed_callers []*callgraph.Node //default
 	callers := my_cg.Nodes
 	for _, caller := range callers { // my caller with ctx
 		mycaller := caller.GetFunc().String()
@@ -115,9 +130,14 @@ func compareCG(default_cg *callgraph.Graph, my_cg *pointer.GraphWCtx) {
 
 		outs := caller.Out   // caller --> callee
 		if len(default_outs) == 0 && len(outs) == 0 {
+			continue // no callee
+		}else if len(default_outs) != len(outs) {
+			//different num of callees
+			createDiffForCG(default_caller, caller)
 			continue
 		}
 
+		//len(default_outs) == len(outs)
 		hasDiff := false
 		for _, out := range outs { //my callees with ctx
 			mycallee := out.Callee.GetFunc().String()
@@ -132,7 +152,32 @@ func compareCG(default_cg *callgraph.Graph, my_cg *pointer.GraphWCtx) {
 		if hasDiff {
 			createDiffForCG(default_caller, caller)
 		}
+
+		//bz: i want to know if any in default are not in mine later
+		traversed_callers = append(traversed_callers, default_caller)
 	}
+
+	if len(traversed_callers) == len(default_cg.Nodes) {
+		return
+	}
+
+	//let's further check
+	for _, default_caller := range default_cg.Nodes {
+		if existTraversed(traversed_callers, default_caller) {
+			continue
+		}else{
+			createDiffForCG(default_caller, nil)
+		}
+	}
+}
+
+func existTraversed(traversed_callers []*callgraph.Node, caller *callgraph.Node) bool {
+	for _, traversed_caller := range traversed_callers {
+		if traversed_caller == caller {
+			return true
+		}
+	}
+	return false
 }
 
 func existQKey(default_queries map[ssa.Value]default_algo.Pointer, v ssa.Value) *default_algo.Pointer {
@@ -151,18 +196,19 @@ func existQVal(default_pts []string, obj string) bool {
 	return false
 }
 
-func createDiffForQuery(v ssa.Value, default_pts *default_algo.Pointer, my_pts []pointer.PointerWCtx) {
+func createDiffForQuery(v ssa.Value, default_pts *default_algo.Pointer, my_pts []pointer.PointerWCtx, my_size int) {
 	diff := &QueryDiff{
 		v:              v,
 		defaultPointer: default_pts,
 		myPointers:     my_pts,
+		mySize:         my_size,
 	}
 	queryDiffs = append(queryDiffs, diff)
 }
 
 func compareQueries(default_queries map[ssa.Value]default_algo.Pointer, my_queries map[ssa.Value][]pointer.PointerWCtx) {
 	for v, ps := range my_queries {
-		//bz: we need to do like default: merge them to a canonical node
+		//bz: we need to do like default: merge them to a canonical node/pts here
 		var my_pts []string
 		for _, p := range ps { //p -> types.Pointer: includes its context; SSA here is your *ssa.Value
 			_pts := p.PointsTo().String()
@@ -176,7 +222,7 @@ func compareQueries(default_queries map[ssa.Value]default_algo.Pointer, my_queri
 		default_pointer := existQKey(default_queries, v)
 		if default_pointer == nil {
 			//no such key in default
-			createDiffForQuery(v, default_pointer, ps)
+			createDiffForQuery(v, default_pointer, ps, len(my_pts))
 			continue
 		}
 
@@ -186,6 +232,13 @@ func compareQueries(default_queries map[ssa.Value]default_algo.Pointer, my_queri
 		objs := strings.Split(_pts, ",")
 		for _, obj := range objs {
 			default_pts = append(default_pts, obj)
+		}
+
+		if len(default_pts) == 0 && len(my_pts) == 0 {
+			continue //empty pts
+		}else if len(default_pts) != len(my_pts) {
+			createDiffForQuery(v, default_pointer, ps, len(my_pts))
+			continue
 		}
 
 		hasDiff := false
@@ -199,7 +252,7 @@ func compareQueries(default_queries map[ssa.Value]default_algo.Pointer, my_queri
 		}
 
 		if hasDiff {
-			createDiffForQuery(v, default_pointer, ps)
+			createDiffForQuery(v, default_pointer, ps, len(my_pts))
 		}
 	}
 }

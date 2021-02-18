@@ -18,7 +18,7 @@ import (
 
 var doLog = false
 var doPerforamnce = true
-var doCompare = true
+var doCompare = false
 
 var excludedPkgs = []string{ //bz: excluded a lot of default constraints
 	//"runtime",
@@ -37,10 +37,19 @@ var default_elapsed time.Duration
 
 func main() {
 	path := flag.String("path", "", "Designated project filepath. ")
+	_doLog := flag.Bool("doLog", false, "Do log. ")
+	_doComp := flag.Bool("doCompare", false, "Do compare with default pta. ")
 	flag.Parse()
 	if *path != "" {
 		projPath = *path
 	}
+	if *_doLog {
+		doLog = true
+	}
+	if *_doComp {
+		doCompare = true
+	}
+
 	args := flag.Args()
 	cfg := &packages.Config{
 		Mode:  packages.LoadAllSyntax, // the level of information returned for each package
@@ -118,23 +127,29 @@ func main() {
 		fmt.Println("Total: ", default_elapsed.String()+".")
 		fmt.Println("Max: ", default_maxTime.String()+".")
 		fmt.Println("Min: ", default_minTime.String()+".")
-		fmt.Println("Avg: ", (float32(default_elapsed.Milliseconds()) / float32(len(mains)-1) / float32(1000)), "s.")
+		fmt.Println("Avg: ", float32(default_elapsed.Milliseconds()) / float32(len(mains)-1) / float32(1000), "s.")
 	}
 
 	fmt.Println("My Algo:")
 	fmt.Println("Total: ", my_elapsed.String()+".")
 	fmt.Println("Max: ", my_maxTime.String()+".")
 	fmt.Println("Min: ", my_minTime.String()+".")
-	fmt.Println("Avg: ", (float32(my_elapsed.Milliseconds()) / float32(len(mains)-1) / float32(1000)), "s.")
+	fmt.Println("Avg: ", float32(my_elapsed.Milliseconds()) / float32(len(mains)-1) / float32(1000), "s.")
 }
 
 func doEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 	var logfile *os.File
+	var err error
 	if doLog { //create my log file
-		logfile, _ = os.Create("/Users/Bozhen/Documents/GO2/go_tools/_logs/full_log_" + strconv.Itoa(i))
+		logfile, err = os.Create("/Users/bozhen/Documents/GO2/go_tools/_logs/my_log_" + strconv.Itoa(i))
 	} else {
 		logfile = nil
 	}
+
+	if err != nil {
+		panic(fmt.Sprintln(err))
+	}
+
 	var scope []string
 	if projPath != "" {
 		scope = []string{projPath}
@@ -198,11 +213,17 @@ func doEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 
 func doEachMainDefault(i int, main *ssa.Package) *default_algo.Result {
 	var logfile *os.File
+	var err error
 	if doLog { //create my log file
-		logfile, _ = os.Create("/Users/Bozhen/Documents/GO2/tools/_logs/full_log_" + strconv.Itoa(i))
+		logfile, err = os.Create("/Users/bozhen/Documents/GO2/go_tools/_logs/default_log_" + strconv.Itoa(i))
 	} else {
 		logfile = nil
 	}
+
+	if err != nil {
+		panic(fmt.Sprintln(err))
+	}
+
 
 	var mains []*ssa.Package
 	mains = append(mains, main)
