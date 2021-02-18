@@ -27,7 +27,7 @@ var (
 	tUnsafePtr = types.Typ[types.UnsafePointer]
 
 	withinScope = false //bz: whether the current genInstr() is working on a method within our scope
-	Online      = false //bz: whether a constraint is from genOnline()
+	Online      = false //bz: whether a constraint is from genInvokeOnline()
 )
 
 // ---------- Node creation ----------
@@ -692,7 +692,7 @@ func (a *analysis) addressOf(T types.Type, id, obj nodeid) {
 		if withinScope || a.shouldTrack(T) {
 			a.addConstraint(&addrConstraint{id, obj})
 		}
-	}else{ //default
+	} else { //default
 		if a.shouldTrack(T) {
 			a.addConstraint(&addrConstraint{id, obj})
 		}
@@ -747,11 +747,11 @@ func (a *analysis) store(dst, src nodeid, offset uint32, sizeof uint32) {
 //
 func (a *analysis) offsetAddr(T types.Type, dst, src nodeid, offset uint32) {
 	if a.config.TrackMore {
-		if !withinScope && !a.shouldTrack(T)  {
+		if !withinScope && !a.shouldTrack(T) {
 			return
 		}
-	}else{ //default
-		if !a.shouldTrack(T)  {
+	} else { //default
+		if !a.shouldTrack(T) {
 			return
 		}
 	}
@@ -1173,10 +1173,10 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 			//for kcfa: we need a new contour
 			//for origin: whatever left, we use caller context
 			obj, _ = a.makeFunctionObjectWithContext(caller, fn, site, nil, -1)
-		}else{
+		} else {
 			obj = a.objectNode(nil, fn) // shared contour
 		}
-	}else { //default: context-insensitive
+	} else {                        //default: context-insensitive
 		if a.shouldUseContext(fn) { // default
 			obj = a.makeFunctionObject(fn, site) // new contour
 		} else {
@@ -1268,9 +1268,13 @@ func (a *analysis) genDynamicCall(caller *cgnode, site *callsite, call *ssa.Call
 }
 
 //bz: Online iteratively doing genFunc <-> genInstr iteratively
-func (a *analysis) genOnline(caller *cgnode, site *callsite, fn *ssa.Function) nodeid {
+func (a *analysis) genInvokeOnline(caller *cgnode, site *callsite, fn *ssa.Function) nodeid {
 	//set status
 	Online = true
+	if caller != nil {
+		a.localval = caller.localval
+		a.localobj = caller.localobj
+	}
 
 	//start point
 	fnObj := a.valueNodeInvoke(caller, site, fn)
@@ -1296,10 +1300,10 @@ func (a *analysis) genConstraintsOnline() {
 func (a *analysis) valueNodeInvoke(caller *cgnode, site *callsite, fn *ssa.Function) nodeid {
 	if caller == nil && site == nil { //requires shared contour
 		obj := a.valueNode(fn)
-		return obj + 1 //bz: why obj is not the right one? not tagged with otFunction ??
+		return obj + 1 //addr vs obj
 	}
 
-	//similar with valueNode(),  created on demand. Instead of a.globalval[], we use a.fn2cgnodeid[]
+	//similar with valueNode(), created on demand. Instead of a.globalval[], we use a.fn2cgnodeid[]
 	_, _, obj, isNew := a.existContextForComb(fn, site, caller)
 	if isNew {
 		var comment string
@@ -1310,11 +1314,16 @@ func (a *analysis) valueNodeInvoke(caller *cgnode, site *callsite, fn *ssa.Funct
 		if obj = a.objectNodeSpecial(caller, nil, site, fn, -1); obj != 0 {
 			a.addressOf(fn.Type(), id, obj)
 		}
-		//a.setValueNode(m, id, nil) //bz: do we need this?? for now, no since we will not use it
-		a.atFuncs[fn] = true // Methods of concrete types are address-taken functions.
-		return obj
+		a.setValueNode(fn, id, nil) //bz: do we need this?? for now, no since we will not use it
+
+		itf := isInterface(fn.Type()) //bz: not sure ...
+		if !itf {
+			a.atFuncs[fn] = true // Methods of concrete types are address-taken functions.
+		}
+
+		return obj + 1
 	}
-	return obj
+	return obj + 1
 }
 
 // genInvoke generates constraints for a dynamic method invocation.
@@ -1521,8 +1530,8 @@ func (a *analysis) existClosure(fn *ssa.Function, callersite *callsite) ([]nodei
 
 //bz: special handling for objectNode()
 func (a *analysis) objectNodeSpecial(cgn *cgnode, closure *ssa.MakeClosure, site *callsite, v ssa.Value, loopID int) nodeid {
-	fn, _ := v.(*ssa.Function)      // must be Global object.
-	if a.withinScope(fn.String()) { //create cgnode/constraints here;
+	fn, _ := v.(*ssa.Function)            // must be Global object.
+	if a.considerMyContext(fn.String()) { //create cgnode/constraints here;
 		if closure != nil {
 			//make closure: this has NO ssa.CallInstruction as callsite
 			//this existance check has done already and is separated using a.closure[]; if reach here, must be new one and create one
@@ -2182,7 +2191,7 @@ func (a *analysis) generate() {
 			a.genMethodsOf(T)
 		} else {
 			if a.log != nil {
-				fmt.Fprintf(a.log, "EXCLUDE genMethodsOf() offline for type: " + T.String()+"\n")
+				fmt.Fprintf(a.log, "EXCLUDE genMethodsOf() offline for type: "+T.String()+"\n")
 			}
 			skip++
 		}

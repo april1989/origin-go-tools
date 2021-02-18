@@ -62,6 +62,25 @@ func (n *cgnode) renumber(renumbering []nodeid) {
 	}
 }
 
+//bz: renumber used for hvn
+func (n *cgnode) renumberHVN(mapping []nodeid) {
+	for v, oldID := range n.localval {
+		nid := mapping[oldID]
+		if nid == 0 || nid == oldID { //bz: not updated or not re-mapped
+			continue
+		}
+		n.localval[v] = nid
+	}
+	for obj, oldID := range n.localobj {
+		nid := mapping[oldID]
+		if nid == 0 || nid == oldID  { //bz: not updated or not re-mapped
+			continue
+		}
+		n.localobj[obj] = nid
+	}
+}
+
+
 // contour returns a description of this node's contour.
 //bz: only used for log
 func (n *cgnode) contour(isKcfa bool) string {
@@ -129,7 +148,6 @@ func (n *cgnode) contourkActualFull() string {
 func (n *cgnode) String() string {
 	return fmt.Sprintf("cg%d:%s@%s", n.obj, n.fn, n.contourkFull())
 }
-
 
 // A callsite represents a single call site within a cgnode;
 // it is implicitly context-sensitive.
@@ -218,15 +236,29 @@ type Ctx2nodeid struct {
 
 //bz: renumbering func for opt
 func (r *Ctx2nodeid) renumber(renumbering []nodeid)  {
+	for cs, oldIDs := range r.ctx2nodeid {
+		newIDs := make([]nodeid, len(oldIDs))
+		for idx, oldID := range oldIDs {
+			newIDs[idx] = renumbering[oldID]
+		}
+		r.ctx2nodeid[cs] = newIDs
+	}
+}
+
+//bz: renumbering func for hvn
+func (r *Ctx2nodeid) renumberHVN(mapping []nodeid)  {
 	for cs, array := range r.ctx2nodeid {
 		objs := make([]nodeid, len(array))
 		for idx, ele := range array {
-			objs[idx] = renumbering[ele]
+			nid := mapping[ele]
+			if nid == 0 || nid == ele { //bz: not updated or not re-mapped
+				continue
+			}
+			objs[idx] = nid
 		}
 		r.ctx2nodeid[cs] = objs
 	}
 }
-
 
 //////////////////////////////// call graph to users ////////////////////////////////
 var numEdges = 0   //bz: perforamnce, number of edges
