@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.tamu.edu/April1989/go_tools/compare"
+	"github.tamu.edu/April1989/go_tools/go/callgraph"
 	"github.tamu.edu/April1989/go_tools/go/packages"
 	"github.tamu.edu/April1989/go_tools/go/pointer"
 	default_algo "github.tamu.edu/April1989/go_tools/go/pointer_default"
@@ -256,6 +257,11 @@ func doEachMainDefault(i int, main *ssa.Package) *default_algo.Result {
 		fmt.Println(err)
 	}
 	defer logfile.Close()
+
+	unreaches := countUnreachFunctions(result)
+	fmt.Println("#Unreach Nodes: ", len(unreaches)) //bz: exclude root, init and main has root as caller
+	fmt.Println("#Reach Nodes: ", len(result.CallGraph.Nodes) - len(unreaches)) //bz: exclude root, init and main has root as caller
+
 	fmt.Println("\nDone  -- PTA/CG Build; Using ", elapsed.String(), ". \nGo check gologfile for detail. ")
 
 	if default_maxTime < elapsed {
@@ -285,4 +291,38 @@ func findMainPackages(pkgs []*ssa.Package) ([]*ssa.Package, error) {
 		return nil, fmt.Errorf("no main packages")
 	}
 	return mains, nil
+}
+
+func countUnreachFunctions(result *default_algo.Result) map[*ssa.Function]*ssa.Function {
+	unreaches := make(map[*ssa.Function]*ssa.Function)
+	var checks []*callgraph.Edge
+	for _, node := range result.CallGraph.Nodes {
+		if len(node.In) == 0 {
+			if node == result.CallGraph.Root {
+				continue
+			}
+			unreaches[node.Func] = node.Func
+			//recursively check
+			for _, out := range node.Out {
+				checks = append(checks, out)
+			}
+			for len(checks) > 0 {
+				var tmp []*callgraph.Edge
+				for _, check := range checks {
+					callee := check.Callee.Func
+					if _, ok := unreaches[callee]; ok {
+						continue //skip existing checks
+					}
+
+					unreaches[callee] = callee
+					for _, out := range check.Callee.Out {
+						tmp = append(tmp, out)
+					}
+				}
+				checks = tmp
+			}
+			checks = make([]*callgraph.Edge, 0) //clear
+		}
+	}
+	return unreaches
 }

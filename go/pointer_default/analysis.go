@@ -371,41 +371,9 @@ func Analyze(config *Config) (result *Result, err error) {
 				numTyp++
 			}
 		}
-		unreaches := make(map[*ssa.Function]*ssa.Function)
-		var checks []*callgraph.Edge
-		for _, node := range a.result.CallGraph.Nodes {
-			if len(node.In) == 0 {
-				if node == a.result.CallGraph.Root {
-					continue
-				}
-				unreaches[node.Func] = node.Func
-				//recursively check
-				for _, out := range node.Out {
-					checks = append(checks, out)
-				}
-				for len(checks) > 0 {
-					var tmp []*callgraph.Edge
-					for _, check := range checks {
-						callee := check.Callee.Func
-						if _, ok := unreaches[callee]; ok {
-							continue //skip existing checks
-						}
-
-						unreaches[callee] = callee
-						for _, out := range check.Callee.Out {
-							tmp = append(tmp, out)
-						}
-					}
-					checks = tmp
-				}
-				checks = make([]*callgraph.Edge, 0) //clear
-			}
-		}
 		fmt.Println("#tracked types (totol num): ", numTyp)
 		fmt.Println("\nCall Graph: \n#Nodes: ", len(a.result.CallGraph.Nodes)) //bz: this might be n cgnode <-> 1 callgraph.Node
 		fmt.Println("#Edges: ", callgraph.GetNumEdges())
-		fmt.Println("#Unreach Nodes: ", len(unreaches)) //bz: exclude root, init and main has root as caller
-		fmt.Println("#Reach Nodes: ", len(a.result.CallGraph.Nodes) - len(unreaches)) //bz: exclude root, init and main has root as caller
 	}
 
 	return a.result, nil
