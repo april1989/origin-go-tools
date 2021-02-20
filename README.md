@@ -44,7 +44,107 @@ we start from the reachable cgnodes ```init``` and ```main``` and gradually comp
 - Currently, skip the creation of reflection and dynamic calls due to the huge number
 
 
-## Why are the cgs from default and my pta different?
+========================================================================
+## Major differences between the results of mine and default
+
+#### 1. Queries and Points-to Set (pts)
+All example below based on race_checker/tests/cg.go
+
+#### Why my query has two pointers for one ssa.Value:
+There are two pointers involved in one constraint, both of which are stored under the same ssa.Value in my queries.
+
+#### Why default query is empty but mines is not:
+Default has tracked less types than mine, of which constraints and invoke calls are missing in the default result.
+Hence, it has empty pts while mine has non-empty pts. For example,
+```
+SSA:  &t57[41:int]
+My Query: (#obj:  1 )
+   n597&[0:shared contour; ] : [slicelit[*]]
+   n2266&[0:shared contour; ] : []
+Default Query: (#obj:  0 )
+   n36563 : []
+
+In default log:
+; t181 = &t57[41:int]
+	localobj[t181] = n37034
+	type not tracked: *strconv.leftCheat
+
+In my log:
+; t181 = &t57[41:int]
+	localobj[t181] = n2266
+	addr n597 <- {&n2266}
+```
+
+#### Why my query is empty but default is not:
+Due to the default algorithm (pre-compute all constraints for all functions),
+it generates a lot of unreachable functions/cgnodes (they have no callers), as well as their constraints.
+This also affect the pts of the reachable part in cg and pts, since they may be polluted.
+For example,
+```
+SSA:  (*internal/reflectlite.rtype).Size  //-> (*internal/reflectlite.rtype).Size is not reachable function
+My Query: (#obj:  0 )
+   n8971&(Global/Local) : []
+Default Query: (#obj:  1 )
+   n6354 : [(*internal/reflectlite.rtype).Size]
+```
+
+#### Why my query is non-empty but no corresponding pointer in default:
+Default does not create queries for those types (not tracked types).
+For example,
+```
+654.
+SSA:  io.ErrClosedPipe
+My Query: (#obj:  1 )
+   n4448&(Global/Local) : [makeinterface:*errors.errorString]
+Default Query: nil)
+
+In default log:
+; *ErrClosedPipe = t10
+	copy n19413 <- n39471
+
+In my log:
+; *ErrClosedPipe = t10
+	create n4448 error for global
+	globalobj[io.ErrClosedPipe] = n4448
+	copy n4448 <- n4431
+```
+
+
+#### Why default query is empty but no corresponding pointer in mine:
+IDK.
+For example,
+```
+SSA:  &r.peekRune [#4]
+My Query: nil
+Default Query: (#obj:  0 )
+   n44378 : []
+and
+SSA:  ssa:wrapnilchk(v, "internal/reflectl...":string, "IsNil":string)
+My Query: nil)
+Default Query: (#obj:  0 )
+   n44378 : []
+and
+	val[t115] = n44377  (*ssa.FieldAddr)
+	create n44378 *[16]byte for query
+	copy n44378 <- n44377
+```
+
+#### Why my query has less objs in pts than the default:
+All missing objs in my pts are due to objs and constraints introduced by unreachable functions.
+This is the pollution we mentioned before.
+For example,
+```
+SSA:  *t49
+My Query: (#obj:  27 )
+   n11815&[0:shared contour; ] : [makeinterface:int makeinterface:[]int makeinterface:int makeinterface:*internal/reflectlite.ValueError makeinterface:*internal/reflectlite.ValueError makeinterface:string makeinterface:string makeinterface:*internal/reflectlite.ValueError makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string]
+Default Query: (#obj:  79 )
+   n18076 : [makeinterface:int makeinterface:[]int makeinterface:string makeinterface:*internal/reflectlite.ValueError makeinterface:*internal/reflectlite.ValueError makeinterface:*internal/reflectlite.ValueError makeinterface:*internal/reflectlite.ValueError makeinterface:string makeinterface:*internal/reflectlite.ValueError makeinterface:string makeinterface:string makeinterface:string makeinterface:fmt.scanError makeinterface:fmt.scanError makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:*internal/reflectlite.ValueError makeinterface:string makeinterface:string makeinterface:*internal/reflectlite.ValueError makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:int makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:*internal/reflectlite.ValueError makeinterface:fmt.scanError makeinterface:fmt.scanError makeinterface:fmt.scanError makeinterface:fmt.scanError makeinterface:fmt.scanError makeinterface:fmt.scanError makeinterface:fmt.scanError makeinterface:fmt.scanError makeinterface:fmt.scanError makeinterface:fmt.scanError makeinterface:fmt.scanError makeinterface:fmt.scanError makeinterface:fmt.scanError makeinterface:fmt.scanError makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:*errors.errorString makeinterface:string makeinterface:string makeinterface:*internal/reflectlite.ValueError makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string makeinterface:string]
+```
+
+
+#### 2. CG
+
+#### *Why are the cgs from default and my pta different?*
 
 The default algorithm create cgnodes for functions that are not reachable from the main entry.
 For example, when analyzing the main entry ```google.golang.org/grpc/benchmark/server```,
@@ -55,19 +155,31 @@ the default algorithm pre-generate constraints and cgnodes for function:
 which is not reachable from the main entry (it has no caller in cg).
 
 This can be reflected in the analysis data: 
+``` 
+Call Graph: 
+    #Nodes:  14740
+    #Edges:  45550
+    #Unreach Nodes:  14158
+    #Reach Nodes:  582
 ```
-#cgnodes (totol num):  20932
-#Nodes:  14401 (Call Graph)
-```
-it generates 20932 cgnodes and their constraints, however, only 14401 of them can be reachable from the main.
+it generates 14740 functions and their constraints, however, only 582 of them can be reachable from the main.
 
-All CG DIFFs from comparing my with default result are due to this reason.
+This not only introduce differences in cg, but also unreachable constraints and objs, which can be 
+propagated to the cgnodes and constraints that can be reached from the main entry. This causes false 
+call edges and callees in default cg.
+
+Most CG DIFFs from comparing mine with default result are due to this reason. 
 
 
-## Why the unreachable function/cgnode will be generated?
-
+#### Why the unreachable function/cgnode will be generated?
 This is because the default algorithm creates nodes and constraints for all methods of all types
 that are dynamically accessible via reflection or interfaces ().
 
 
+#### Why the cgnodes from default not include some callees as mine?
+Because default algo has less type tracked than mine (no constraints generated for them and hence
+no propagation), Hence, some invoke calls has no base instance that will exist if we track those types.
+Consequently, no callee functions/cgs generated as well as constraints.
+   
+ 
 

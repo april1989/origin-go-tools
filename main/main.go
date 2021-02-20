@@ -18,7 +18,7 @@ import (
 
 var doLog = false
 var doPerforamnce = true
-var doCompare = false
+var doCompare = false //bz: this is super long
 
 var excludedPkgs = []string{ //bz: excluded a lot of default constraints
 	//"runtime",
@@ -115,7 +115,11 @@ func main() {
 		my_elapsed = my_elapsed + t.Sub(start)
 
 		if doCompare {
+			start = time.Now()
 			compare.Compare(r_default, r_my)
+			t := time.Now()
+			comp_elapsed := t.Sub(start)
+			fmt.Println("Compare Total Time: ", comp_elapsed.String()+".")
 		}
 		fmt.Println("=============================================================================")
 	}
@@ -208,7 +212,14 @@ func doEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 		result.DumpAll()
 	}
 
-	return result.GetResult()
+	if doCompare {
+		_r := result.GetResult()
+		_r.Queries = result.Queries
+		_r.IndirectQueries = result.IndirectQueries
+		return _r //bz: we only need this when comparing results
+	}
+
+	return nil
 }
 
 func doEachMainDefault(i int, main *ssa.Package) *default_algo.Result {
@@ -223,7 +234,6 @@ func doEachMainDefault(i int, main *ssa.Package) *default_algo.Result {
 	if err != nil {
 		panic(fmt.Sprintln(err))
 	}
-
 
 	var mains []*ssa.Package
 	mains = append(mains, main)
