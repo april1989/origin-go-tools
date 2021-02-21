@@ -154,15 +154,37 @@ the default algorithm pre-generate constraints and cgnodes for function:
 ``` 
 which is not reachable from the main entry (it has no caller in cg).
 
-This can be reflected in the analysis data: 
+This can be reflected in the default analysis data: 
 ``` 
-Call Graph: 
-    #Nodes:  14740
-    #Edges:  45550
-    #Unreach Nodes:  14158
-    #Reach Nodes:  582
+Call Graph: (function based) 
+#Nodes:  14740
+#Edges:  45550
+#Unreach Nodes:  7698
+#Reach Nodes:  7042
+#Unreach Functions:  7698
+#Reach Functions:  7042
+
+Done  -- PTA/CG Build; Using  5m13.058385739s . 
 ```
-it generates 14740 functions and their constraints, however, only 582 of them can be reachable from the main.
+Default generates 14740 functions and their constraints, however, only 7042 (at most) of them can be reachable from the main.
+
+While my analysis data is:
+```
+Call Graph: (cgnode based: function + context) 
+#Nodes:  6306
+#Edges:  23291
+#Unreach Nodes:  39
+#Reach Nodes:  6267
+#Unreach Functions:  39
+#Reach Functions:  5870
+
+#Unreach Nodes from Pre-Gen Nodes:  39
+#Unreach Functions from Pre-Gen Nodes:  39
+#(Pre-Gen are created for reflections)
+
+Done  -- PTA/CG Build; Using 10.279403083s. 
+```
+My analysis traverse 6267 functions that can be reached after extended the traced types.
 
 This not only introduce differences in cg, but also unreachable constraints and objs, which can be 
 propagated to the cgnodes and constraints that can be reached from the main entry. This causes false 
@@ -173,7 +195,7 @@ Most CG DIFFs from comparing mine with default result are due to this reason.
 
 #### Why the unreachable function/cgnode will be generated?
 This is because the default algorithm creates nodes and constraints for all methods of all types
-that are dynamically accessible via reflection or interfaces ().
+that are dynamically accessible via reflection or interfaces (no matter it will be reached or not).
 
 
 #### Why the cgnodes from default not include some callees as mine?
