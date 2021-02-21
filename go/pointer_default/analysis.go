@@ -372,7 +372,7 @@ func Analyze(config *Config) (result *Result, err error) {
 			}
 		}
 		fmt.Println("#tracked types (totol num): ", numTyp)
-		fmt.Println("\nCall Graph: \n#Nodes: ", len(a.result.CallGraph.Nodes)) //bz: this might be n cgnode <-> 1 callgraph.Node
+		fmt.Println("\nCall Graph: (function based) \n#Nodes: ", len(a.result.CallGraph.Nodes)) //bz: this might be n cgnode <-> 1 callgraph.Node
 		fmt.Println("#Edges: ", callgraph.GetNumEdges())
 	}
 
