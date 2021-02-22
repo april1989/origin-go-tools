@@ -17,8 +17,11 @@ import (
 )
 
 var doLog = false
-var doPerforamnce = true
 var doCompare = false //bz: this is super long
+var timeLimit time.Duration //bz: time limit, unit: ?hour?min
+
+//my use
+var doPerforamnce = true
 var doDetail = false //bz: print out all data from countReachUnreachXXX
 
 var excludedPkgs = []string{ //bz: excluded a lot of default constraints
@@ -39,6 +42,7 @@ func main() {
 	path := flag.String("path", "", "Designated project filepath. ")
 	_doLog := flag.Bool("doLog", false, "Do log. ")
 	_doComp := flag.Bool("doCompare", false, "Do compare with default pta. ")
+	_time := flag.String("timeLimit", "", "Set time limit to ?h?m?s or ?m?s or ?s, e.g. 1h15m30.918273645s. ")
 	flag.Parse()
 	if *path != "" {
 		projPath = *path
@@ -48,6 +52,9 @@ func main() {
 	}
 	if *_doComp {
 		doCompare = true
+	}
+	if *_time != "" {
+		timeLimit, _ = time.ParseDuration(*_time)
 	}
 
 	args := flag.Args()
@@ -115,11 +122,15 @@ func main() {
 		my_elapsed = my_elapsed + t.Sub(start)
 
 		if doCompare {
-			start = time.Now()
-			compare.Compare(r_default, r_my)
-			t := time.Now()
-			comp_elapsed := t.Sub(start)
-			fmt.Println("Compare Total Time: ", comp_elapsed.String()+".")
+			if r_default != nil && r_my != nil {
+				start = time.Now()
+				compare.Compare(r_default, r_my)
+				t := time.Now()
+				comp_elapsed := t.Sub(start)
+				fmt.Println("Compare Total Time: ", comp_elapsed.String()+".")
+			}else {
+				fmt.Println("\n\n!! Cannot compare results due to OOT.")
+			}
 		}
 		fmt.Println("=============================================================================")
 	}
@@ -192,11 +203,33 @@ func doEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 
 	//*** compute pta here
 	start := time.Now()                       //performance
-	result, err := pointer.Analyze(ptaConfig) // conduct pointer analysis
+	var result *pointer.Result
+	var r_err error
+	if timeLimit != 0 { //we set time limit
+		c := make(chan string, 1)
+
+		// Run the pta in it's own goroutine and pass back it's
+		// response into our channel.
+		go func() {
+			result, err = pointer.Analyze(ptaConfig) // conduct pointer analysis
+			c <- "done"
+		}()
+
+		// Listen on our channel AND a timeout channel - which ever happens first.
+		select {
+		case res := <-c:
+			fmt.Println(res)
+		case <-time.After(timeLimit):
+			fmt.Println("\n!! Out of time (", timeLimit,"). Kill it :(")
+			return nil
+		}
+	}else{
+		result, err = pointer.Analyze(ptaConfig) // conduct pointer analysis
+	}
 	t := time.Now()
 	elapsed := t.Sub(start)
-	if err != nil {
-		fmt.Println(err)
+	if r_err != nil {
+		panic(fmt.Sprintln(r_err))
 	}
 	defer logfile.Close()
 
@@ -261,11 +294,33 @@ func doEachMainDefault(i int, main *ssa.Package) *default_algo.Result {
 
 	//*** compute pta here
 	start := time.Now()                            //performance
-	result, err := default_algo.Analyze(ptaConfig) // conduct pointer analysis
+	var result *default_algo.Result
+	var r_err error //bz: result error
+	if timeLimit != 0 { //we set time limit
+		c := make(chan string, 1)
+
+		// Run the pta in it's own goroutine and pass back it's
+		// response into our channel.
+		go func() {
+			result, r_err = default_algo.Analyze(ptaConfig) // conduct pointer analysis
+			c <- "done"
+		}()
+
+		// Listen on our channel AND a timeout channel - which ever happens first.
+		select {
+		case res := <-c:
+			fmt.Println(res)
+		case <-time.After(timeLimit):
+			fmt.Println("\n!! Out of time (", timeLimit,"). Kill it :(")
+			return nil
+		}
+	}else{
+		result, r_err = default_algo.Analyze(ptaConfig) // conduct pointer analysis
+	}
 	t := time.Now()
 	elapsed := t.Sub(start)
-	if err != nil {
-		fmt.Println(err)
+	if r_err != nil {
+		panic(fmt.Sprintln(r_err))
 	}
 	defer logfile.Close()
 
