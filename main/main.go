@@ -159,7 +159,7 @@ func doEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 		scope = []string{projPath}
 	}
 	//scope = append(scope, "istio.io/istio/")
-	//scope = append(scope, "google.golang.org/grpc")
+	scope = append(scope, "google.golang.org/grpc")
 	//scope = append(scope, "github.com/pingcap/tidb")
 	if strings.EqualFold(main.String(), "package command-line-arguments") { //default
 		scope = append(scope, "command-line-arguments")
@@ -211,7 +211,7 @@ func doEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 		fmt.Println("#(Pre-Gen are created for reflections)")
 	}
 
-	fmt.Println("\nDone  -- PTA/CG Build; Using " + elapsed.String() + ". \nGo check gologfile for detail. ")
+	fmt.Println("\nDone  -- PTA/CG Build; Using " + elapsed.String() + ". \nGo check gologfile for detail.\n ")
 
 	if my_maxTime < elapsed {
 		my_maxTime = elapsed
