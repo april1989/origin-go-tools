@@ -13,11 +13,13 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 var doLog = false
 var doCompare = false //bz: this is super long
+var doParallel = false //bz: do default and mine in parallel for one main then join
 var timeLimit time.Duration //bz: time limit, unit: ?hour?min
 
 //my use
@@ -42,6 +44,7 @@ func main() {
 	path := flag.String("path", "", "Designated project filepath. ")
 	_doLog := flag.Bool("doLog", false, "Do log. ")
 	_doComp := flag.Bool("doCompare", false, "Do compare with default pta. ")
+	_doPara := flag.Bool("doParallel", false, "Do my and default in parallel for only one main, then join. ")
 	_time := flag.String("timeLimit", "", "Set time limit to ?h?m?s or ?m?s or ?s, e.g. 1h15m30.918273645s. ")
 	flag.Parse()
 	if *path != "" {
@@ -52,6 +55,9 @@ func main() {
 	}
 	if *_doComp {
 		doCompare = true
+	}
+	if *_doPara {
+		doParallel = true
 	}
 	if *_time != "" {
 		timeLimit, _ = time.ParseDuration(*_time)
@@ -108,18 +114,49 @@ func main() {
 	for i, main := range mains {
 		fmt.Println(i, " ", main.String())
 		var r_default *default_algo.Result
-		if doCompare {
-			fmt.Println("Default Algo: ")
-			r_default = doEachMainDefault(i, main) //default pta
+		var r_my *pointer.ResultWCtx
+
+		if doParallel {
+			var _wg sync.WaitGroup
+			//default
+			_wg.Add(1)
+			go func() {
+				fmt.Println("Default Algo: ")
+				r_default = doEachMainDefault(i, main) //default pta
+				t := time.Now()
+				default_elapsed = default_elapsed + t.Sub(start)
+				start = time.Now()
+				fmt.Println("........................................\n........................................")
+				_wg.Done()
+			}()
+
+			//my
+			_wg.Add(1)
+			go func() {
+				fmt.Println("My Algo: ")
+				r_my = doEachMainMy(i, main) //mypta
+				t := time.Now()
+				my_elapsed = my_elapsed + t.Sub(start)
+				_wg.Done()
+			}()
+
+			//wait
+			_wg.Wait()
+		}else{ //sequential
+			if doCompare {
+				fmt.Println("Default Algo: ")
+				r_default = doEachMainDefault(i, main) //default pta
+				t := time.Now()
+				default_elapsed = default_elapsed + t.Sub(start)
+				start = time.Now()
+				fmt.Println("........................................\n........................................")
+			}
+			fmt.Println("My Algo: ")
+			r_my = doEachMainMy(i, main) //mypta
 			t := time.Now()
-			default_elapsed = default_elapsed + t.Sub(start)
-			start = time.Now()
-			fmt.Println("........................................\n........................................")
+			my_elapsed = my_elapsed + t.Sub(start)
+
 		}
-		fmt.Println("My Algo: ")
-		r_my := doEachMainMy(i, main) //mypta
-		t := time.Now()
-		my_elapsed = my_elapsed + t.Sub(start)
 
 		if doCompare {
 			if r_default != nil && r_my != nil {
