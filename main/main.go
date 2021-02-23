@@ -35,11 +35,11 @@ var excludedPkgs = []string{ //bz: excluded a lot of default constraints
 var projPath = "" // interested packages are those located at this path
 var my_maxTime time.Duration
 var my_minTime time.Duration
-var my_elapsed time.Duration
+var my_elapsed int64
 
 var default_maxTime time.Duration
 var default_minTime time.Duration
-var default_elapsed time.Duration
+var default_elapsed int64
 
 
 func parseFlags() {
@@ -134,7 +134,7 @@ func main() {
 				fmt.Println("Default Algo: ")
 				r_default = doEachMainDefault(i, main) //default pta
 				t := time.Now()
-				default_elapsed = default_elapsed + t.Sub(start)
+				default_elapsed = default_elapsed + t.Sub(start).Milliseconds()
 				start = time.Now()
 				fmt.Println("........................................\n........................................")
 				_wg.Done()
@@ -146,7 +146,7 @@ func main() {
 				fmt.Println("My Algo: ")
 				r_my = doEachMainMy(i, main) //mypta
 				t := time.Now()
-				my_elapsed = my_elapsed + t.Sub(start)
+				my_elapsed = my_elapsed + t.Sub(start).Milliseconds()
 				_wg.Done()
 			}()
 
@@ -157,7 +157,7 @@ func main() {
 				fmt.Println("Default Algo: ")
 				r_default = doEachMainDefault(i, main) //default pta
 				t := time.Now()
-				default_elapsed = default_elapsed + t.Sub(start)
+				default_elapsed = default_elapsed + t.Sub(start).Milliseconds()
 				start = time.Now()
 				fmt.Println("........................................\n........................................")
 			}
@@ -169,7 +169,7 @@ func main() {
 			fmt.Println("My Algo: ")
 			r_my = doEachMainMy(i, main) //mypta
 			t := time.Now()
-			my_elapsed = my_elapsed + t.Sub(start)
+			my_elapsed = my_elapsed + t.Sub(start).Milliseconds()
 		}
 
 		if doCompare {
@@ -190,17 +190,17 @@ func main() {
 
 	if doCompare {
 		fmt.Println("Default Algo:")
-		fmt.Println("Total: ", default_elapsed.String()+".")
+		fmt.Println("Total: ", (time.Duration(default_elapsed) * time.Millisecond).String() +".")
 		fmt.Println("Max: ", default_maxTime.String()+".")
 		fmt.Println("Min: ", default_minTime.String()+".")
-		fmt.Println("Avg: ", float32(default_elapsed.Milliseconds())/float32(len(mains)-1)/float32(1000), "s.")
+		fmt.Println("Avg: ", float32(default_elapsed)/float32(len(mains))/float32(1000), "s.")
 	}
 
 	fmt.Println("My Algo:")
-	fmt.Println("Total: ", my_elapsed.String()+".")
+	fmt.Println("Total: ", (time.Duration(my_elapsed) * time.Millisecond).String()+".")
 	fmt.Println("Max: ", my_maxTime.String()+".")
 	fmt.Println("Min: ", my_minTime.String()+".")
-	fmt.Println("Avg: ", float32(my_elapsed.Milliseconds())/float32(len(mains)-1)/float32(1000), "s.")
+	fmt.Println("Avg: ", float32(my_elapsed)/float32(len(mains))/float32(1000), "s.")
 }
 
 func doEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
