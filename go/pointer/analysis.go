@@ -18,6 +18,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.tamu.edu/April1989/go_tools/go/ssa"
 	"github.tamu.edu/April1989/go_tools/go/types/typeutil"
@@ -25,14 +26,13 @@ import (
 
 const (
 	// optimization options; enable all when committing
-	// TODO: bz: optHVN mess up my constraints ...
-	//       tmp turn them off ....
-	optRenumber = false // enable renumbering optimization (makes logs hard to read)
-	optHVN      = true // enable pointer equivalence via Hash-Value Numbering
+	// TODO: bz: optHVN mess up my constraints, tmp turn it off ....
+	optRenumber = true  // enable renumbering optimization (makes logs hard to read)
+	optHVN      = false // enable pointer equivalence via Hash-Value Numbering
 
 	// debugging options; disable all when committing
-	debugHVN           = true // enable assertions in HVN
-	debugHVNVerbose    = true // enable extra HVN logging
+	debugHVN           = false  // enable assertions in HVN
+	debugHVNVerbose    = false  // enable extra HVN logging
 	debugHVNCrossCheck = false // run solver with/without HVN and compare (caveats below)
 	debugTimers        = false // show running time of each phase
 )
@@ -153,7 +153,9 @@ type analysis struct {
 	result      *ResultWCtx                   //bz: our result, dump all
 	closureWOGo map[nodeid]nodeid             //bz: solution@field actualCallerSite []*callsite of cgnode type
 
-	num_constraints int //bz:  performance
+	num_constraints int             //bz:  performance
+	numOrigins      int             //bz: number of origins
+	preGens         []*ssa.Function //bz: number of pregenerated functions/cgs/constraints for reflection, os, runtime
 }
 
 // enclosingObj returns the first node of the addressable memory
@@ -422,11 +424,16 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 	} else {
 		fmt.Println(" *** Default Type Tracking *** ")
 	}
-	//if optRenumber {
-	//	fmt.Println(" *** optRenumber ON *** ")
-	//} else {
-	//	fmt.Println(" *** optRenumber OFF *** ")
-	//}
+	if optRenumber {
+		fmt.Println(" *** optRenumber ON *** ")
+	} else {
+		fmt.Println(" *** optRenumber OFF *** ")
+	}
+	if optHVN {
+		fmt.Println(" *** optHVN ON *** ")
+	} else {
+		fmt.Println(" *** optHVN OFF *** ")
+	}
 
 	if a.log != nil {
 		fmt.Fprintln(a.log, "==== Starting analysis and logging: ")
@@ -498,7 +505,10 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 			a.rtypes.SetHasher(a.hasher)
 		}
 
+		start := time.Now()
 		a.hvn() //default: do this hvn
+		elapsed := time.Now().Sub(start)
+		fmt.Println("HVN using ", elapsed) //bz: i want to know how slow it is ...
 	}
 
 	if debugHVNCrossCheck {
@@ -554,7 +564,7 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 
 	if a.config.DoPerformance { //bz: performance test; dump info
 		fmt.Println("--------------------- Performance ------------------------")
-		fmt.Println("#Pre-generated cgnodes: ", len(preGens))
+		fmt.Println("#Pre-generated cgnodes: ", len(a.preGens))
 		fmt.Println("#pts: ", len(a.nodes))
 		fmt.Println("#constraints (totol num): ", a.num_constraints)
 		fmt.Println("#cgnodes (totol num): ", len(a.cgnodes))
@@ -566,7 +576,7 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 			}
 		}
 		fmt.Println("#tracked types (totol num): ", numTyp)
-		fmt.Println("#origins (totol num): ", numOrigins+1) //bz: main is not included here
+		fmt.Println("#origins (totol num): ", a.numOrigins+1) //bz: main is not included here
 		fmt.Println("\nCall Graph: (cgnode based: function + context) \n#Nodes: ", len(a.result.CallGraph.Nodes))
 		fmt.Println("#Edges: ", GetNumEdges())
 	}

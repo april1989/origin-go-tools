@@ -598,7 +598,7 @@ func (r *ResultWCtx) CountMyReachUnreachFunctions(doDetail bool) (map[*ssa.Funct
 	cg := r.CallGraph
 	prenodes := make(map[int]int)
 	preFuncs := make(map[*ssa.Function]*ssa.Function) //& how many of functions are there in prenodes?
-	for _, preGen := range preGens {
+	for _, preGen := range r.a.preGens {
 		precgnodes := cg.Fn2CGNode[preGen]
 		for _, precgn := range precgnodes {
 			if precgn.callersite[0] != nil { //this is not shared contour, not from pregen, but from origin call chain

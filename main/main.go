@@ -40,7 +40,8 @@ var default_maxTime time.Duration
 var default_minTime time.Duration
 var default_elapsed time.Duration
 
-func main() {
+
+func parseFlags() {
 	path := flag.String("path", "", "Designated project filepath. ")
 	_doLog := flag.Bool("doLog", false, "Do log. ")
 	_doComp := flag.Bool("doCompare", false, "Do compare with default pta. ")
@@ -62,6 +63,10 @@ func main() {
 	if *_time != "" {
 		timeLimit, _ = time.ParseDuration(*_time)
 	}
+}
+
+func main() {
+	parseFlags()
 
 	args := flag.Args()
 	cfg := &packages.Config{

@@ -951,9 +951,44 @@ func (h *hvn) simplify() {
 	}
 	h.a.constraints = cc
 
-	// bz: this above part sneakily renumbers constraints, if they renumbered constraints
-	// they also needs to renumber others things in mapping as opt.go does
-	// I AM GOING TO RENUMBER THEM >>>
+	//h.doMyRenumber(mapping)//bz: sneaky renumber
+	
+	if h.log != nil {
+		fmt.Fprintf(h.log, "#constraints: was %d, now %d\n", nbefore, len(h.a.constraints))
+	}
+}
+
+// find returns the canonical onodeid for x.
+// (The onodes form a disjoint set forest.)
+func (h *hvn) find(x onodeid) onodeid {
+	// TODO(adonovan): opt: this is a CPU hotspot.  Try "union by rank".
+	xo := h.onodes[x]
+	rep := xo.rep
+	if rep != x {
+		rep = h.find(rep) // simple path compression
+		xo.rep = rep
+	}
+	return rep
+}
+
+func (h *hvn) checkCanonical(x onodeid) {
+	if debugHVN {
+		assert(x == h.find(x), "not canonical")
+	}
+}
+
+func assert(p bool, msg string) {
+	if debugHVN && !p {
+		panic("assertion failed: " + msg)
+	}
+}
+
+
+
+// bz: this above part sneakily renumbers constraints, if they renumbered constraints
+// they also needs to renumber others things in mapping as opt.go does
+// I AM GOING TO RENUMBER THEM >>>
+func (h *hvn) doMyRenumber(mapping []nodeid) {
 	a := h.a
 	for v, id := range a.globalobj {
 		nid := mapping[id]
@@ -1006,33 +1041,4 @@ func (h *hvn) simplify() {
 		val.renumberHVN(mapping)
 	}
 	//bz: my renumbering is done
-
-	if h.log != nil {
-		fmt.Fprintf(h.log, "#constraints: was %d, now %d\n", nbefore, len(h.a.constraints))
-	}
-}
-
-// find returns the canonical onodeid for x.
-// (The onodes form a disjoint set forest.)
-func (h *hvn) find(x onodeid) onodeid {
-	// TODO(adonovan): opt: this is a CPU hotspot.  Try "union by rank".
-	xo := h.onodes[x]
-	rep := xo.rep
-	if rep != x {
-		rep = h.find(rep) // simple path compression
-		xo.rep = rep
-	}
-	return rep
-}
-
-func (h *hvn) checkCanonical(x onodeid) {
-	if debugHVN {
-		assert(x == h.find(x), "not canonical")
-	}
-}
-
-func assert(p bool, msg string) {
-	if debugHVN && !p {
-		panic("assertion failed: " + msg)
-	}
 }

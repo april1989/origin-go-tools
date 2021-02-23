@@ -26,20 +26,25 @@ var (
 	tInvalid   = types.Typ[types.Invalid]
 	tUnsafePtr = types.Typ[types.UnsafePointer]
 
-	withinScope  = false                    //bz: whether the current genInstr() is working on a method within our scope
-	Online       = false                    //bz: whether a constraint is from genInvokeOnline()
-	/**
-	bz: we do have panics when turn on hvn optimization. panics are due to that hvn wrongly computes sccs.
+	withinScope  = false //bz: whether the current genInstr() is working on a method within our scope
+	Online       = false //bz: whether a constraint is from genInvokeOnline()
+	recordPreGen = false //bz: when to record preGens
+
+	/** bz:
+	    we do have panics when turn on hvn optimization. panics are due to that hvn wrongly computes sccs.
 	    wrong sccs is because some pointers are not marked as indirect (but marked in default).
 	    This not-marked behavior is because we do not create function pointers for those functions that
 	    we skip their cgnode/func/constraints creation in offline generate(). So we keep a record here.
-	HOWEVER, why is this a must?
-	 */
-	skipTypes    = make(map[string] string) //bz: a record of skiped methods in generate() off-line
 
-	numOrigins   = 0                        //bz: number of origins
-	recordPreGen = false                    //bz: when to record preGens
-	preGens      = make([]*ssa.Function, 0) //bz: number of pregenerated functions/cgs/constraints for reflection, os, runtime
+	HOWEVER, we still have panics ... e.g., google.golang.org/grpc/benchmark/worker
+	OR maybe we need to do this for all functions?
+	HOWEVER, why is this a must?
+
+	MOREOVER, this makes the analysis even slower, since hvn uses a lot of time (it has nothing to do with my renumbering code)
+	do we really need this?
+	MAYBE this favors large programs? but the performance on tidb cannot stop ...
+	*/
+	skipTypes = make(map[string]string) //bz: a record of skiped methods in generate() off-line
 )
 
 // ---------- Node creation ----------
@@ -418,7 +423,7 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 		single := a.createSingleCallSite(callersite)
 		cgn = &cgnode{fn: fn, obj: obj, callersite: single}
 
-	} else {    // other functions
+	} else {                 // other functions
 		if a.config.Origin { //bz: for origin-sensitive
 			if callersite == nil { //we only create new context for make closure and go instruction
 				var fnkcs []*callsite
@@ -430,7 +435,7 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 					}
 					fnkcs = a.createKCallSite(caller.callersite, special)
 
-					numOrigins++
+					a.numOrigins++
 				} else { // use parent context, since no go invoke afterwards (currently reachable);
 					//update: we will update the parent ctx (including loopID) later
 					a.closureWOGo[obj] = obj //record
@@ -446,7 +451,7 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 				fnkcs := a.createKCallSite(caller.callersite, special)
 				cgn = &cgnode{fn: fn, obj: obj, callersite: fnkcs}
 
-				numOrigins++
+				a.numOrigins++
 			} else { //use caller context
 				cgn = &cgnode{fn: fn, obj: obj, callersite: caller.callersite}
 			}
@@ -1162,7 +1167,7 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 
 	// Ascertain the context (contour/cgnode) for a particular call.
 	var obj nodeid //bz: only used in some cases below
-	var id nodeid //bz: only used if fn is in skips
+	var id nodeid  //bz: only used if fn is in skips
 
 	//bz: check if in skip; only if we have not create it before
 	if _, ok := a.globalobj[fn]; !ok {
@@ -1170,7 +1175,7 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 		name := fn.String()
 		name = name[0:strings.LastIndex(name, ".")] //remove func name
 		if strings.Contains(name, "(") {
-			name = name[1:len(name)-1] //remove brackets
+			name = name[1 : len(name)-1] //remove brackets
 		}
 		if _type, ok := skipTypes[name]; ok {
 			//let's make a id here
@@ -1344,7 +1349,7 @@ func (a *analysis) valueNodeInvoke(caller *cgnode, site *callsite, fn *ssa.Funct
 		id := a.valueNode(fn) //bz: we use this to generate fn, cgn and their constraints, no other uses
 		if Online {
 			return id + 1 // cgn vs func
-		}else{
+		} else {
 			return id
 		}
 	}
@@ -1356,7 +1361,7 @@ func (a *analysis) valueNodeInvoke(caller *cgnode, site *callsite, fn *ssa.Funct
 		if a.log != nil {
 			comment = fn.String()
 		}
-		var id = a.addNodes(fn.Type(), comment)  //bz: id + 1 = obj
+		var id = a.addNodes(fn.Type(), comment) //bz: id + 1 = obj
 		if obj = a.objectNodeSpecial(caller, nil, site, fn, -1); obj != 0 {
 			a.addressOf(fn.Type(), id, obj)
 		}
@@ -1369,13 +1374,13 @@ func (a *analysis) valueNodeInvoke(caller *cgnode, site *callsite, fn *ssa.Funct
 
 		if Online {
 			return obj
-		}else{
+		} else {
 			return id
 		}
 	}
 	if Online {
 		return obj
-	}else{
+	} else {
 		return obj - 1 //== id : fn
 	}
 }
@@ -2194,7 +2199,7 @@ func (a *analysis) genMethodsOf(T types.Type) {
 		a.valueNode(m)
 
 		if recordPreGen {
-			preGens = append(preGens, m)
+			a.preGens = append(a.preGens, m)
 		}
 
 		if !itf {
@@ -2244,9 +2249,9 @@ func (a *analysis) generate() {
 		if a.considerMyContext(_type) {
 			//bz: we want to make function (called by interfaces) later for context. here uses share contour
 			if a.log != nil {
-				fmt.Fprintf(a.log, "SKIP genMethodsOf() offline for type: " + T.String()+"\n")
+				fmt.Fprintf(a.log, "SKIP genMethodsOf() offline for type: "+T.String()+"\n")
 			}
-			skipTypes[_type] =_type
+			skipTypes[_type] = _type
 			skip++
 			continue
 		}
@@ -2256,7 +2261,7 @@ func (a *analysis) generate() {
 			a.genMethodsOf(T)
 		} else {
 			if a.log != nil {
-				fmt.Fprintf(a.log, "EXCLUDE genMethodsOf() offline for type: " + T.String()+"\n")
+				fmt.Fprintf(a.log, "EXCLUDE genMethodsOf() offline for type: "+T.String()+"\n")
 			}
 			skipTypes[_type] = _type
 			skip++
@@ -2268,7 +2273,7 @@ func (a *analysis) generate() {
 
 		fmt.Fprintf(a.log, "\nDump out skipped types:  \n")
 		for _, _type := range skipTypes {
-			fmt.Fprintf(a.log, _type + "\n")
+			fmt.Fprintf(a.log, _type+"\n")
 		}
 	}
 
