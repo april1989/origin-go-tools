@@ -12,7 +12,6 @@ the directory of the go project that you want to analyze.
 It will go through all of your main files and analyze them one by one.
 
 #### Flags
-
 - *path*: default value = "", Designated project filepath. 
 - *doLog*: default value = false, Do a log to record all procedure, so verbose. 
 - *doCompare*: default value = false, Do comparison with default pta about performance and result.
@@ -23,6 +22,8 @@ For example,
 
 This will run the origin-sensitive pointer analysis on all main files under directory ```../grpc-go/benchmark/server```,
 as well as generate a full log and a comparison with the default algorithm about performance and result.
+
+*Note* that ```-doLog``` is very verbose and significantly slowdown the analysis.
 
 ## User APIs (for detector) 
 Go to https://github.tamu.edu/April1989/go_tools/main/main.go, check how to use the callgraph and queries. 
@@ -43,6 +44,17 @@ we start from the reachable cgnodes ```init``` and ```main``` and gradually comp
 - Generate constraints/cgnode online for invoke calls and targets when it is necessary
 - Currently, skip the creation of reflection and dynamic calls due to the huge number
 
+
+========================================================================
+## Doc of Default Algorithm
+
+The most recent doc is https://pkg.go.dev/golang.org/x/tools/go/pointer#pkg-overview, quoted:
+
+"SOUNDNESS
+
+The analysis is fully sound when invoked on pure Go programs that do not use reflection or unsafe.Pointer conversions. In other words, if there is any possible execution of the program in which pointer P may point to object O, the analysis will report that fact."
+
+However, over soundness is unnecessary. 
 
 ========================================================================
 ## Major differences between the results of mine and default
@@ -204,3 +216,4 @@ no propagation), Hence, some invoke calls has no base instance that will exist i
 Consequently, no callee functions/cgs generated as well as constraints.
    
  
+
