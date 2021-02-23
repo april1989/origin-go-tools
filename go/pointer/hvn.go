@@ -163,12 +163,10 @@ package pointer
 
 import (
 	"fmt"
+	"github.tamu.edu/April1989/go_tools/container/intsets"
 	"go/types"
 	"io"
 	"reflect"
-	"strings"
-
-	"github.tamu.edu/April1989/go_tools/container/intsets"
 )
 
 // A peLabel is a pointer-equivalence label: two nodes with the same
@@ -292,9 +290,6 @@ func (a *analysis) hvn() {
 		if debugHVNVerbose && h.log != nil {
 			fmt.Fprintf(h.log, "; %s\n", c)
 		}
-		if strings.Contains(c.String(), "load n519801 <- n438581[0]") {
-			fmt.Println()
-		}
 		c.presolve(&h)
 	}
 
@@ -304,7 +299,7 @@ func (a *analysis) hvn() {
 	}
 	h.index = 1
 	for id, o := range h.onodes {
-		if id > 0 && o.index == 0 {
+		if id > 0 && o.index == 0  {
 			// Start depth-first search at each unvisited node.
 			h.visit(onodeid(id))
 		}
@@ -818,6 +813,14 @@ func (h *hvn) simplify() {
 		}
 
 		mapping[id] = canonID
+	}
+
+	//bz: Log the remapping table. verbose
+	if h.a.log != nil {
+		fmt.Fprintf(h.a.log, "HVN Renumbering nodes:\n")
+		for old, new := range mapping {
+			fmt.Fprintf(h.a.log, "\tn%d -> n%d\n", old, new)
+		}
 	}
 
 	// Renumber the constraints, eliminate duplicates, and eliminate

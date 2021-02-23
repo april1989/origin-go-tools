@@ -21,8 +21,12 @@
   <component name="ChangeListManager">
     <list default="true" id="02839b5a-55a2-4e24-b425-23255e76dae7" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go/pointer/analysis.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/analysis.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/go/pointer/gen.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/gen.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/main/main.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go/pointer/hvn.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/hvn.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go/pointer/solve.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/solve.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go/pointer_default/analysis.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer_default/analysis.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -59,29 +63,31 @@
     <property name="go.import.settings.migrated" value="true" />
     <property name="go.sdk.automatically.set" value="true" />
     <property name="go.tried.to.enable.integration.vgo.integrator" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
-    <property name="settings.editor.selected.configurable" value="preferences.keymap" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/_logs" />
+    <property name="settings.editor.selected.configurable" value="editor.preferences.tabs" />
   </component>
   <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/_logs" />
+      <recent name="$PROJECT_DIR$" />
+      <recent name="$PROJECT_DIR$/_myresult" />
+      <recent name="$PROJECT_DIR$/main" />
+      <recent name="$PROJECT_DIR$/_local" />
+    </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/_myresult" />
       <recent name="$PROJECT_DIR$/_local" />
       <recent name="$PROJECT_DIR$/defaultmain" />
       <recent name="$PROJECT_DIR$" />
     </key>
-    <key name="CopyFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$" />
-      <recent name="$PROJECT_DIR$/_myresult" />
-      <recent name="$PROJECT_DIR$/main" />
-      <recent name="$PROJECT_DIR$/_local" />
-    </key>
   </component>
   <component name="RunManager" selected="Go Build.go build main in other dir">
     <configuration name="go build main in other dir" type="GoApplicationRunConfiguration" factoryName="Go Application">
       <output_file path="$PROJECT_DIR$/_local/console.txt" is_save="true" />
       <module name="go_tools" />
-      <working_directory value="$PROJECT_DIR$/../grpc-go" />
+      <working_directory value="$PROJECT_DIR$/../grpc-go/benchmark/server" />
       <go_parameters value="-i" />
+      <parameters value="-doLog" />
       <kind value="FILE" />
       <filePath value="$PROJECT_DIR$/main/main.go" />
       <package value="github.tamu.edu/April1989/go_tools" />
@@ -93,7 +99,7 @@
       <module name="go_tools" />
       <working_directory value="$PROJECT_DIR$" />
       <go_parameters value="-i" />
-      <parameters value="-doLog ../go2/race_checker/tests/GoBench/Etcd/9446/main.go" />
+      <parameters value="-doCompare ../go2/race_checker/tests/GoBench/Etcd/9446/main.go" />
       <kind value="FILE" />
       <filePath value="$PROJECT_DIR$/main/main.go" />
       <package value="github.tamu.edu/April1989/go_tools" />
@@ -135,50 +141,59 @@
     </state>
     <state x="506" y="398" key="#GOROOT/0.23.1440.877@0.23.1440.877" timestamp="1613772177428" />
     <state x="675" y="475" key="#GOROOT/0.23.1920.1057@0.23.1920.1057" timestamp="1613918757915" />
-    <state x="761" y="92" width="1071" height="799" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1613922314847">
+    <state x="761" y="92" width="1071" height="823" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1614093203129">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state x="184" y="23" width="1071" height="877" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.23.1440.877@0.23.1440.877" timestamp="1613879118058" />
-    <state x="761" y="92" width="1071" height="799" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.23.1920.1057@0.23.1920.1057" timestamp="1613922314847" />
-    <state x="593" y="371" width="733" height="502" key="#xdebugger.evaluate" timestamp="1613883650553">
-      <screen x="0" y="23" width="1440" height="877" />
+    <state x="761" y="92" width="1071" height="823" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.23.1920.1057@0.23.1920.1057" timestamp="1614093203129" />
+    <state x="1165" y="434" width="710" height="579" key="#xdebugger.evaluate" timestamp="1614093196613">
+      <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state x="593" y="371" width="733" height="502" key="#xdebugger.evaluate/0.23.1440.877@0.23.1440.877" timestamp="1613883650553" />
-    <state width="1033" height="466" key="DebuggerActiveHint" timestamp="1613881922898">
-      <screen x="0" y="23" width="1440" height="877" />
+    <state x="1165" y="434" width="710" height="579" key="#xdebugger.evaluate/0.23.1920.1057@0.23.1920.1057" timestamp="1614093196613" />
+    <state width="883" height="562" key="DebuggerActiveHint" timestamp="1614063973488">
+      <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1033" height="466" key="DebuggerActiveHint/0.23.1440.877@0.23.1440.877" timestamp="1613881922898" />
-    <state width="683" height="562" key="DebuggerActiveHint/0.23.1920.1057@0.23.1920.1057" timestamp="1613672195522" />
-    <state width="1878" height="320" key="GridCell.Tab.0.bottom" timestamp="1613922317100">
+    <state width="883" height="562" key="DebuggerActiveHint/0.23.1920.1057@0.23.1920.1057" timestamp="1614063973488" />
+    <state width="1878" height="268" key="GridCell.Tab.0.bottom" timestamp="1614094279163">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="151" key="GridCell.Tab.0.bottom/0.23.1440.877@0.23.1440.877" timestamp="1613885010181" />
-    <state width="1878" height="320" key="GridCell.Tab.0.bottom/0.23.1920.1057@0.23.1920.1057" timestamp="1613922317100" />
-    <state width="1878" height="320" key="GridCell.Tab.0.center" timestamp="1613922317100">
+    <state width="1878" height="268" key="GridCell.Tab.0.bottom/0.23.1920.1057@0.23.1920.1057" timestamp="1614094279163" />
+    <state width="1878" height="268" key="GridCell.Tab.0.center" timestamp="1614094279162">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="151" key="GridCell.Tab.0.center/0.23.1440.877@0.23.1440.877" timestamp="1613885010180" />
-    <state width="1878" height="320" key="GridCell.Tab.0.center/0.23.1920.1057@0.23.1920.1057" timestamp="1613922317100" />
-    <state width="1878" height="320" key="GridCell.Tab.0.left" timestamp="1613922317099">
+    <state width="1878" height="268" key="GridCell.Tab.0.center/0.23.1920.1057@0.23.1920.1057" timestamp="1614094279162" />
+    <state width="1878" height="268" key="GridCell.Tab.0.left" timestamp="1614094279161">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="151" key="GridCell.Tab.0.left/0.23.1440.877@0.23.1440.877" timestamp="1613885010179" />
-    <state width="1878" height="320" key="GridCell.Tab.0.left/0.23.1920.1057@0.23.1920.1057" timestamp="1613922317099" />
-    <state width="1878" height="320" key="GridCell.Tab.0.right" timestamp="1613922317100">
+    <state width="1878" height="268" key="GridCell.Tab.0.left/0.23.1920.1057@0.23.1920.1057" timestamp="1614094279161" />
+    <state width="1878" height="268" key="GridCell.Tab.0.right" timestamp="1614094279162">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="151" key="GridCell.Tab.0.right/0.23.1440.877@0.23.1440.877" timestamp="1613885010180" />
-    <state width="1878" height="320" key="GridCell.Tab.0.right/0.23.1920.1057@0.23.1920.1057" timestamp="1613922317100" />
-    <state x="221" y="100" key="SettingsEditor" timestamp="1613772861267">
-      <screen x="0" y="23" width="1440" height="877" />
+    <state width="1878" height="268" key="GridCell.Tab.0.right/0.23.1920.1057@0.23.1920.1057" timestamp="1614094279162" />
+    <state x="295" y="116" key="SettingsEditor" timestamp="1614003620527">
+      <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state x="221" y="100" key="SettingsEditor/0.23.1440.877@0.23.1440.877" timestamp="1613772861267" />
-    <state x="295" y="116" key="SettingsEditor/0.23.1920.1057@0.23.1920.1057" timestamp="1613662747221" />
-    <state x="513" y="252" width="894" height="815" key="search.everywhere.popup" timestamp="1613921660906">
+    <state x="295" y="116" key="SettingsEditor/0.23.1920.1057@0.23.1920.1057" timestamp="1614003620527" />
+    <state x="500" y="287" key="com.intellij.xdebugger.impl.breakpoints.ui.BreakpointsDialogFactory$2" timestamp="1614093058519">
+      <screen x="0" y="23" width="1920" height="1057" />
+    </state>
+    <state x="500" y="287" key="com.intellij.xdebugger.impl.breakpoints.ui.BreakpointsDialogFactory$2/0.23.1920.1057@0.23.1920.1057" timestamp="1614093058519" />
+    <state x="849" y="155" width="858" height="806" key="dock-window-1" timestamp="1614028072540">
+      <screen x="0" y="23" width="1920" height="1057" />
+    </state>
+    <state x="849" y="155" width="858" height="806" key="dock-window-1/0.23.1920.1057@0.23.1920.1057" timestamp="1614028072540" />
+    <state x="513" y="252" width="894" height="815" key="search.everywhere.popup" timestamp="1614095032282">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state x="385" y="213" width="670" height="676" key="search.everywhere.popup/0.23.1440.877@0.23.1440.877" timestamp="1613881190753" />
-    <state x="513" y="252" width="894" height="815" key="search.everywhere.popup/0.23.1920.1057@0.23.1920.1057" timestamp="1613921660906" />
+    <state x="513" y="252" width="894" height="815" key="search.everywhere.popup/0.23.1920.1057@0.23.1920.1057" timestamp="1614095032282" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -193,16 +208,12 @@
           <line>203</line>
           <option name="timeStamp" value="36" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
-          <url>file://$PROJECT_DIR$/go/pointer/gen.go</url>
-          <line>639</line>
-          <option name="timeStamp" value="98" />
-        </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
     <watches-manager>
       <configuration name="GoApplicationRunConfiguration">
-        <watch expression="node.GetFunc().String()" language="go" />
+        <watch expression="fn.String()" language="go" />
+        <watch expression="name" language="go" />
       </configuration>
     </watches-manager>
   </component>

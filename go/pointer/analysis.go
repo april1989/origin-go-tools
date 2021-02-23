@@ -25,14 +25,14 @@ import (
 
 const (
 	// optimization options; enable all when committing
-	// TODO: bz: these optimizations are good ... but it mess up my constraints ...
+	// TODO: bz: optHVN mess up my constraints ...
 	//       tmp turn them off ....
 	optRenumber = false // enable renumbering optimization (makes logs hard to read)
-	optHVN      = false // enable pointer equivalence via Hash-Value Numbering
+	optHVN      = true // enable pointer equivalence via Hash-Value Numbering
 
 	// debugging options; disable all when committing
-	debugHVN           = false // enable assertions in HVN
-	debugHVNVerbose    = false // enable extra HVN logging
+	debugHVN           = true // enable assertions in HVN
+	debugHVNVerbose    = true // enable extra HVN logging
 	debugHVNCrossCheck = false // run solver with/without HVN and compare (caveats below)
 	debugTimers        = false // show running time of each phase
 )

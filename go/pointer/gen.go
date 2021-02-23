@@ -28,6 +28,15 @@ var (
 
 	withinScope  = false                    //bz: whether the current genInstr() is working on a method within our scope
 	Online       = false                    //bz: whether a constraint is from genInvokeOnline()
+	/**
+	bz: we do have panics when turn on hvn optimization. panics are due to that hvn wrongly computes sccs.
+	    wrong sccs is because some pointers are not marked as indirect (but marked in default).
+	    This not-marked behavior is because we do not create function pointers for those functions that
+	    we skip their cgnode/func/constraints creation in offline generate(). So we keep a record here.
+	HOWEVER, why is this a must?
+	 */
+	skipTypes    = make(map[string] string) //bz: a record of skiped methods in generate() off-line
+
 	numOrigins   = 0                        //bz: number of origins
 	recordPreGen = false                    //bz: when to record preGens
 	preGens      = make([]*ssa.Function, 0) //bz: number of pregenerated functions/cgs/constraints for reflection, os, runtime
@@ -673,12 +682,9 @@ func (a *analysis) copy(dst, src nodeid, sizeof uint32) {
 	for i := uint32(0); i < sizeof; i++ {
 		a.addConstraint(&copyConstraint{dst, src})
 
-		if Online { //bz: Online solving
-			a.addWork(dst)
-			if a.log != nil {
-				fmt.Fprintf(a.log, "%s\n", " -> add Online constraint to worklist: "+dst.String()+" "+src.String())
-			}
-		}
+		//if Online { //bz: Online solving
+		//	a.addWork(dst)
+		//}
 
 		src++
 		dst++
@@ -1156,12 +1162,33 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 
 	// Ascertain the context (contour/cgnode) for a particular call.
 	var obj nodeid //bz: only used in some cases below
-	//var isNew bool //bz: whether obj is a new cgnode
+	var id nodeid //bz: only used if fn is in skips
+
+	//bz: check if in skip; only if we have not create it before
+	if _, ok := a.globalobj[fn]; !ok {
+		//TODO: bz: this name matching is not perfect ...
+		name := fn.String()
+		name = name[0:strings.LastIndex(name, ".")] //remove func name
+		if strings.Contains(name, "(") {
+			name = name[1:len(name)-1] //remove brackets
+		}
+		if _type, ok := skipTypes[name]; ok {
+			//let's make a id here
+			id = a.addNodes(fn.Type(), _type)
+
+			if a.log != nil {
+				fmt.Fprintf(a.log, "Capture skipped type & function: %s\n", fn.String())
+			}
+		}
+	}
 
 	if a.config.K > 0 {
 		//bz: for origin-sensitive, we have two cases:
 		//case 1: no closure, directly invoke static function: e.g., go Producer(t0, t1, t3), we create a new context for it
-		//case 2: has closure: make closure has been created earlier, here find the çreated obj and use its context
+		//case 2: has closure: make closure has been created earlier, here find the çreated obj and use its context;
+		//        to be specific, a go routine requires a make closure: e.g.,
+		//              t37 = make closure (*B).RunParallel$1 [t35, t29, t6, t0, t1]
+		//              go t37()
 		//case 3: no closure, but invoke virtual function: e.g., go (*ccBalancerWrapper).watcher(t0), we create a new context for it
 		if a.considerMyContext(fn.String()) {
 			//bz: simple brute force solution; start to be kcfa from main.main.go
@@ -1192,6 +1219,11 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 	}
 
 	if obj != 0 {
+		if id != 0 { //bz: we need to make up this missing constraints
+			a.addressOf(fn.Type(), id, obj)
+			//but do we set value in a.globalobj?
+		}
+
 		a.genStaticCallCommon(caller, obj, site, call, result)
 	}
 }
@@ -1302,32 +1334,35 @@ func (a *analysis) genConstraintsOnline() {
 	Online = false //set back
 }
 
-//bz: special handling for invoke, doing something like genMethodsOf() and valueNode() for invoke calls; called Online
-//must be global
+//bz: special handling for invoke (online solving), doing something like genMethodsOf() and valueNode() for invoke calls;
+//called Online must be global
+//UPDATE: the id and obj are confusing: offline we need the id (which is created func node, or mostly represents a pointer),
+//        while online we need the obj (which is the cgnode and its params/return values)
+//        THIS previously causes panics, should not have panics any more now
 func (a *analysis) valueNodeInvoke(caller *cgnode, site *callsite, fn *ssa.Function) nodeid {
 	if caller == nil && site == nil { //requires shared contour
-		id := a.valueNode(fn)
+		id := a.valueNode(fn) //bz: we use this to generate fn, cgn and their constraints, no other uses
 		if Online {
-			return id + 1 //addr vs obj
+			return id + 1 // cgn vs func
 		}else{
 			return id
 		}
 	}
 
-	//similar with valueNode(), created on demand. Instead of a.globalval[], we use a.fn2cgnodeid[]
+	//similar with valueNode(), created on demand. Instead of a.globalval[], we use a.fn2cgnodeid[] due to contexts
 	_, _, obj, isNew := a.existContextForComb(fn, site, caller)
 	if isNew {
 		var comment string
 		if a.log != nil {
 			comment = fn.String()
 		}
-		var id = a.addNodes(fn.Type(), comment)
+		var id = a.addNodes(fn.Type(), comment)  //bz: id + 1 = obj
 		if obj = a.objectNodeSpecial(caller, nil, site, fn, -1); obj != 0 {
 			a.addressOf(fn.Type(), id, obj)
 		}
 		a.setValueNode(fn, id, nil) //bz: do we need this?? for now, no since we will not use it
 
-		itf := isInterface(fn.Type()) //bz: not sure ...
+		itf := isInterface(fn.Type()) //bz: not sure if this is equivalent to the one in genMethodOf()
 		if !itf {
 			a.atFuncs[fn] = true // Methods of concrete types are address-taken functions.
 		}
@@ -2209,8 +2244,10 @@ func (a *analysis) generate() {
 		if a.considerMyContext(_type) {
 			//bz: we want to make function (called by interfaces) later for context. here uses share contour
 			if a.log != nil {
-				fmt.Fprintf(a.log, "SKIP genMethodsOf() offline for type: "+T.String()+"\n")
+				fmt.Fprintf(a.log, "SKIP genMethodsOf() offline for type: " + T.String()+"\n")
 			}
+			skipTypes[_type] =_type
+			skip++
 			continue
 		}
 
@@ -2219,14 +2256,20 @@ func (a *analysis) generate() {
 			a.genMethodsOf(T)
 		} else {
 			if a.log != nil {
-				fmt.Fprintf(a.log, "EXCLUDE genMethodsOf() offline for type: "+T.String()+"\n")
+				fmt.Fprintf(a.log, "EXCLUDE genMethodsOf() offline for type: " + T.String()+"\n")
 			}
+			skipTypes[_type] = _type
 			skip++
 		}
 	}
-	fmt.Println("#EXCLUDE genMethodsOf() offline: ", skip)
+	fmt.Println("#Excluded types in genMethodsOf() offline (not function): ", skip)
 	if a.log != nil {
-		fmt.Fprintf(a.log, "\n Done genMethodsOf() offline. \n")
+		fmt.Fprintf(a.log, "\nDone genMethodsOf() offline. \n\n")
+
+		fmt.Fprintf(a.log, "\nDump out skipped types:  \n")
+		for _, _type := range skipTypes {
+			fmt.Fprintf(a.log, _type + "\n")
+		}
 	}
 
 	// Generate constraints for functions as they become reachable
