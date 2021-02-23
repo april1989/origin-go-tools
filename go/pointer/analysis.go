@@ -27,7 +27,7 @@ import (
 const (
 	// optimization options; enable all when committing
 	// TODO: bz: optHVN mess up my constraints, tmp turn it off ....
-	optRenumber = true  // enable renumbering optimization (makes logs hard to read)
+	optRenumber = false  // enable renumbering optimization (makes logs hard to read)
 	optHVN      = false // enable pointer equivalence via Hash-Value Numbering
 
 	// debugging options; disable all when committing
@@ -376,7 +376,7 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 		mode = "CONTEXT-INSENSITIVE"
 	}
 
-	UpdateDEBUG(a.config.DEBUG) //in pointer/callgraph
+	UpdateDEBUG(a.config.DEBUG) //in pointer/callgraph, print out info changes
 
 	//update analysis scope: +
 	imports := a.config.Mains[0].Pkg.Imports()

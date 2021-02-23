@@ -18,8 +18,9 @@ import (
 )
 
 var doLog = false
+var doDefault = false //bz: only do default
 var doCompare = false //bz: this is super long
-var doParallel = false //bz: do default and mine in parallel for one main then join
+var doParallel = false //bz: do default and mine in parallel for one main then join ---> bad option ...
 var timeLimit time.Duration //bz: time limit, unit: ?hour?min
 
 //my use
@@ -42,8 +43,9 @@ var default_elapsed time.Duration
 
 
 func parseFlags() {
-	path := flag.String("path", "", "Designated project filepath. ")
+	path := flag.String("path", "", "Designated project filepath. e.g., grpc-go")
 	_doLog := flag.Bool("doLog", false, "Do log. ")
+	_doDefault := flag.Bool("doDefault", false, "Do default algo only. ")
 	_doComp := flag.Bool("doCompare", false, "Do compare with default pta. ")
 	_doPara := flag.Bool("doParallel", false, "Do my and default in parallel for only one main, then join. ")
 	_time := flag.String("timeLimit", "", "Set time limit to ?h?m?s or ?m?s or ?s, e.g. 1h15m30.918273645s. ")
@@ -53,6 +55,9 @@ func parseFlags() {
 	}
 	if *_doLog {
 		doLog = true
+	}
+	if *_doDefault {
+		doDefault = true
 	}
 	if *_doComp {
 		doCompare = true
@@ -148,7 +153,7 @@ func main() {
 			//wait
 			_wg.Wait()
 		}else{ //sequential
-			if doCompare {
+			if doCompare || doDefault {
 				fmt.Println("Default Algo: ")
 				r_default = doEachMainDefault(i, main) //default pta
 				t := time.Now()
@@ -156,11 +161,15 @@ func main() {
 				start = time.Now()
 				fmt.Println("........................................\n........................................")
 			}
+			if doDefault {
+				continue //skip running mine
+			}
+
+			//my
 			fmt.Println("My Algo: ")
 			r_my = doEachMainMy(i, main) //mypta
 			t := time.Now()
 			my_elapsed = my_elapsed + t.Sub(start)
-
 		}
 
 		if doCompare {
@@ -214,10 +223,10 @@ func doEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 	//scope = append(scope, "istio.io/istio/")
 	scope = append(scope, "google.golang.org/grpc")
 	//scope = append(scope, "github.com/pingcap/tidb")
-	if strings.EqualFold(main.String(), "package command-line-arguments") { //default
+	if strings.EqualFold(main.String(), "package command-line-arguments") { //default .go input
 		scope = append(scope, "command-line-arguments")
 	} else {
-		scope = append(scope, main.String())
+		scope = append(scope, main.Pkg.Path())
 	}
 
 	var mains []*ssa.Package
