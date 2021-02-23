@@ -220,8 +220,8 @@ func doEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 	if projPath != "" {
 		scope = []string{projPath}
 	}
-	//scope = append(scope, "istio.io/istio/")
-	scope = append(scope, "google.golang.org/grpc")
+	scope = append(scope, "istio.io/istio/")
+	//scope = append(scope, "google.golang.org/grpc")
 	//scope = append(scope, "github.com/pingcap/tidb")
 	if strings.EqualFold(main.String(), "package command-line-arguments") { //default .go input
 		scope = append(scope, "command-line-arguments")
