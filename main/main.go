@@ -82,7 +82,7 @@ func main() {
 	fmt.Println("Loading input packages...")
 	initial, err := packages.Load(cfg, args...)
 	if err != nil {
-		return
+		panic(fmt.Sprintln(err))
 	}
 	if packages.PrintErrors(initial) > 0 {
 		errSize, errPkgs := packages.PrintErrorsAndMore(initial) //bz: errPkg will be nil in initial
