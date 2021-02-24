@@ -9,6 +9,7 @@ package pointer
 
 import (
 	"fmt"
+	"github.tamu.edu/April1989/go_tools/flags"
 	"go/types"
 )
 
@@ -24,6 +25,13 @@ func (a *analysis) solve() {
 		a.num_constraints = 0
 		fmt.Println("#constraints (before solve()): ", len(a.constraints))
 		fmt.Println("#cgnodes (before solve()): ", len(a.cgnodes))
+
+		if flags.PrintCGNodes {//bz: debug
+			fmt.Println("\nDump cgnodes (before solve()): ")
+			for i, cgn := range a.cgnodes {
+				fmt.Println(i, ". ", cgn.String())
+			}
+		}
 	}
 
 	start("Solving")
