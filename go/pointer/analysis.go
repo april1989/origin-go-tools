@@ -407,7 +407,8 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 		fmt.Println(" *********************************** ")
 	}
 	fmt.Println(" *** Level: " + strconv.Itoa(a.config.Level) + " *** ")
-	fmt.Println(" *** Use Queries/IndirectQueries *** ") //bz: change to default, remove flags
+	//bz: change to default, remove flags
+	fmt.Println(" *** Use Queries/IndirectQueries *** ")
 	fmt.Println(" *** Use Default Queries API *** ")
 	if a.config.TrackMore {
 		fmt.Println(" *** Track Types in Scope *** ")

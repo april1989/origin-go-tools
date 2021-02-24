@@ -18,15 +18,17 @@ import (
 )
 
 var doLog = false
+var Main = "" //bz: run for a specific main in this pkg; start from 0
 var doDefault = false //bz: only do default
 var doCompare = false //bz: this is super long
 var doParallel = false //bz: do default and mine in parallel for one main then join ---> bad option ...
-var timeLimit time.Duration //bz: time limit, unit: ?hour?min
+var timeLimit time.Duration //bz: time limit, unit: ?h?m?s
 
 //my use
 var doPerforamnce = true
 var doDetail = false //bz: print out all data from countReachUnreachXXX
 
+var scope []string   //bz: now extract from pkgs
 var excludedPkgs = []string{ //bz: excluded a lot of default constraints
 	//"runtime",
 	//"reflect",
@@ -44,6 +46,7 @@ var default_elapsed int64
 
 func parseFlags() {
 	path := flag.String("path", "", "Designated project filepath. e.g., grpc-go")
+	_main := flag.String("main", "", "Run for a specific main in this pkg.")
 	_doLog := flag.Bool("doLog", false, "Do log. ")
 	_doDefault := flag.Bool("doDefault", false, "Do default algo only. ")
 	_doComp := flag.Bool("doCompare", false, "Do compare with default pta. ")
@@ -52,6 +55,9 @@ func parseFlags() {
 	flag.Parse()
 	if *path != "" {
 		projPath = *path
+	}
+	if *_main != "" {
+		Main = *_main
 	}
 	if *_doLog {
 		doLog = true
@@ -116,6 +122,17 @@ func main() {
 	}
 
 	fmt.Println("#TOTAL MAIN: " + strconv.Itoa(len(mains)) + "\n")
+	if Main != "" {
+		fmt.Println("Capture -- ", Main, "\n")
+	}
+
+	//extract scope from pkgs
+	if projPath != "" {
+		scope = []string{projPath}
+	}
+	if len(pkgs) > 1 { //run under proj dir
+		scope = append(scope, pkgs[0].Pkg.Path()) //bz: the 1st pkg has the scope info == the root pkg
+	} //else: default input .go file
 
 	my_maxTime = 0
 	default_maxTime = 0
@@ -125,6 +142,10 @@ func main() {
 	//baseline: foreach
 	start := time.Now() //performance
 	for i, main := range mains {
+		if Main != "" && Main != main.Pkg.Path() { //run for IDX only
+			continue
+		}
+
 		fmt.Println(i, " ", main.String())
 		var r_default *default_algo.Result
 		var r_my *pointer.ResultWCtx
@@ -219,18 +240,8 @@ func doEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 		panic(fmt.Sprintln(err))
 	}
 
-	var scope []string
-	if projPath != "" {
-		scope = []string{projPath}
-	}
-	scope = append(scope,"go.etcd.io/etcd")
-	//scope = append(scope, "istio.io/istio/")
-	//scope = append(scope, "google.golang.org/grpc")
-	//scope = append(scope, "github.com/pingcap/tidb")
 	if strings.EqualFold(main.String(), "package command-line-arguments") { //default .go input
 		scope = append(scope, "command-line-arguments")
-	} else {
-		scope = append(scope, main.Pkg.Path())
 	}
 
 	var mains []*ssa.Package
@@ -247,7 +258,7 @@ func doEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 		K:              1,
 		LimitScope:     true,          //bz: only consider app methods now -> no import will be considered
 		DEBUG:          false,         //bz: rm all printed out info in console
-		Scope:          scope,         //bz: analyze scope + include
+		Scope:          scope,         //bz: analyze scope + input path
 		Exclusion:      excludedPkgs,  //bz: copied from race_checker if any
 		TrackMore:      true,          //bz: track pointers with types declared in Analyze Scope
 		Level:          0,             //bz: see pointer.Config
