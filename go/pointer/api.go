@@ -81,8 +81,6 @@ type Config struct {
 	DEBUG          bool     //print out debug info
 	Scope          []string //analyzed scope -> from user input: -path
 	Exclusion      []string //excluded packages from this analysis -> from race_checker if any
-	DiscardQueries bool     //bz: do not use queries, but keep every pts info in *cgnode
-	UseQueriesAPI  bool     //bz: change the api the same as default pta
 	TrackMore      bool     //bz: track pointers with types declared in Analyze Scope
 
 	imports       []string //bz: internal use: store all import pkgs in a main
@@ -212,8 +210,6 @@ type ResultWCtx struct {
 	Warnings        []Warning // warnings of unsoundness
 
 	DEBUG          bool // bz: print out debug info ...
-	DiscardQueries bool // bz: do not use queries, but keep every pts info in *cgnode
-	UseQueriesAPI  bool //bz: change the api the same as default pta
 }
 
 //bz:
@@ -650,47 +646,43 @@ func (r *ResultWCtx) DumpAll() {
 		}
 	}
 
-	if r.DiscardQueries {
-		return //nothing in queries
-	}
-
-	fmt.Println("\nWe are going to print out queries. If not desired, turn off DEBUG.")
-	queries := r.Queries
-	inQueries := r.IndirectQueries
-	exQueries := r.ExtendedQueries
-	globalQueries := r.GlobalQueries
-	fmt.Println("#Queries: " + strconv.Itoa(len(queries)) + "  #Indirect Queries: " + strconv.Itoa(len(inQueries)) +
-		"  #Extended Queries: " + strconv.Itoa(len(exQueries)) +
-		"  #Global Queries: " + strconv.Itoa(len(globalQueries)))
-
-	fmt.Println("Queries Detail: ")
-	for v, ps := range queries {
-		for _, p := range ps { //p -> types.Pointer: includes its context
-			//SSA here is your *ssa.Value
-			fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
-		}
-	}
-
-	fmt.Println("\nIndirect Queries Detail: ")
-	for v, ps := range inQueries {
-		for _, p := range ps { //p -> types.Pointer: includes its context
-			fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
-		}
-	}
-
-	fmt.Println("\nExtended Queries Detail: ")
-	for v, ps := range exQueries {
-		for _, p := range ps { //p -> types.Pointer: includes its context
-			fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
-		}
-	}
-
-	fmt.Println("\nGlobal Queries Detail: ")
-	for v, ps := range globalQueries {
-		for _, p := range ps { //p -> types.Pointer: includes its context
-			fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
-		}
-	}
+	//fmt.Println("\nWe are going to print out queries. If not desired, turn off DEBUG.")
+	//queries := r.Queries
+	//inQueries := r.IndirectQueries
+	//exQueries := r.ExtendedQueries
+	//globalQueries := r.GlobalQueries
+	//fmt.Println("#Queries: " + strconv.Itoa(len(queries)) + "  #Indirect Queries: " + strconv.Itoa(len(inQueries)) +
+	//	"  #Extended Queries: " + strconv.Itoa(len(exQueries)) +
+	//	"  #Global Queries: " + strconv.Itoa(len(globalQueries)))
+	//
+	//fmt.Println("Queries Detail: ")
+	//for v, ps := range queries {
+	//	for _, p := range ps { //p -> types.Pointer: includes its context
+	//		//SSA here is your *ssa.Value
+	//		fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
+	//	}
+	//}
+	//
+	//fmt.Println("\nIndirect Queries Detail: ")
+	//for v, ps := range inQueries {
+	//	for _, p := range ps { //p -> types.Pointer: includes its context
+	//		fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
+	//	}
+	//}
+	//
+	//fmt.Println("\nExtended Queries Detail: ")
+	//for v, ps := range exQueries {
+	//	for _, p := range ps { //p -> types.Pointer: includes its context
+	//		fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
+	//	}
+	//}
+	//
+	//fmt.Println("\nGlobal Queries Detail: ")
+	//for v, ps := range globalQueries {
+	//	for _, p := range ps { //p -> types.Pointer: includes its context
+	//		fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
+	//	}
+	//}
 }
 
 //bz: user API, return nil if cannot find corresponding pts for v

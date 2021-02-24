@@ -31,8 +31,8 @@ const (
 	optHVN      = false // enable pointer equivalence via Hash-Value Numbering
 
 	// debugging options; disable all when committing
-	debugHVN           = false  // enable assertions in HVN
-	debugHVNVerbose    = false  // enable extra HVN logging
+	debugHVN           = false // enable assertions in HVN
+	debugHVNVerbose    = false // enable extra HVN logging
 	debugHVNCrossCheck = false // run solver with/without HVN and compare (caveats below)
 	debugTimers        = false // show running time of each phase
 )
@@ -353,8 +353,6 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 			GlobalQueries:   make(map[ssa.Value][]PointerWCtx),
 			ExtendedQueries: make(map[ssa.Value][]PointerWCtx),
 			DEBUG:           config.DEBUG,
-			DiscardQueries:  config.DiscardQueries,
-			UseQueriesAPI:   config.UseQueriesAPI,
 		},
 		deltaSpace: make([]int, 0, 100),
 		//bz: i did not clear the following two after offline TODO: do I ?
@@ -409,16 +407,8 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 		fmt.Println(" *********************************** ")
 	}
 	fmt.Println(" *** Level: " + strconv.Itoa(a.config.Level) + " *** ")
-	if a.config.DiscardQueries && !a.config.UseQueriesAPI {
-		fmt.Println(" *** No Queries *** ")
-	} else {
-		fmt.Println(" *** Use Queries/IndirectQueries *** ")
-	}
-	if a.config.UseQueriesAPI {
-		fmt.Println(" *** Use Default Queries API *** ")
-	} else {
-		fmt.Println(" *** Use My API *** ")
-	}
+	fmt.Println(" *** Use Queries/IndirectQueries *** ") //bz: change to default, remove flags
+	fmt.Println(" *** Use Default Queries API *** ")
 	if a.config.TrackMore {
 		fmt.Println(" *** Track Types in Scope *** ")
 	} else {

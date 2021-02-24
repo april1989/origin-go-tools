@@ -101,58 +101,57 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 		fmt.Fprintf(a.log, "\tval[%s] = n%d  (%T)\n", v.Name(), id, v)
 	}
 
-	if a.config.DiscardQueries {
-		return //bz: skip recording queries
-	}
+	return //bz: skip recording queries
 
-	// Default: Due to context-sensitivity, we may encounter the same Value
-	// in many contexts. We merge them to a canonical node, since
-	// that's what all clients want.
-	// Record the (v, id) relation if the client has queried pts(v).
-	//!!!! bz : this part is evil ... they may considered the performance issue,
-	// BUT we want to directly query after running pointer analysis, not run after each query...
-	// from the code@https://github.tamu.edu/jeffhuang/go2/blob/master/race_checker/pointerAnalysis.go
-	// seems like we only query pointers, so CURRENTLY only record for pointers in app methods
-	// -> go to commit@acb4db0349f131f8d10ddbec6d4fb686258becca (or comment out below for now)
-	// to check original code
-	t := v.Type()
-	if cgn == nil {
-		if !withinScope {
-			return // not interested
-		}
-		//bz: this might be the root cgn, interface, from global, etc.
-		//NOW, put the a.globalobj[] also into query, since a lot of thing is stored there, e.g.,
-		//*ssa.FreeVar (but I PERSONALLY do not want *ssa.Function, *ssa.Global, *ssa.Function, *ssa.Const,
-		//exclude now)
-		if a.log != nil {
-			fmt.Fprintf(a.log, "nil cgn in setValueNode(): v:"+v.Type().String()+" "+v.String()+"\n")
-		}
-		switch v.(type) {
-		case *ssa.FreeVar:
-			//bz: Global object. But are they unique mapping/replaced when put into a.globalval[]?
-			// a.globalobj[v] = n0  --> nothing stored, do not use this
-			a.recordGlobalQueries(t, cgn, v, id)
-		case *ssa.Global:
-			//Updated: bz: capture global var, e.g., race_checker/tests/runc_simple.go:31
-			a.recordGlobalQueries(t, cgn, v, id)
-		}
-		return //else: nothing to record
-	}
-
-	if a.withinScope(cgn.fn.String()) { //record queries
-		//if a.config.DEBUG {
-		//	fmt.Println("query (in): " + t.String())
-		//}
-		if CanPoint(t) {
-			a.recordQueries(t, cgn, v, id)
-		} else
-		//bz: this condition is copied from go2: indirect queries
-		if underType, ok := v.Type().Underlying().(*types.Pointer); ok && CanPoint(underType.Elem()) {
-			a.recordIndirectQueries(t, cgn, v, id)
-		} else { //bz: extended queries for debug --> might be global (cgn == nil) or local (cgn != nil)
-			a.recordExtendedQueries(t, cgn, v, id)
-		}
-	}
+	//// Default: Due to context-sensitivity, we may encounter the same Value
+	//// in many contexts. We merge them to a canonical node, since
+	//// that's what all clients want.
+	//// Record the (v, id) relation if the client has queried pts(v).
+	////!!!! bz : this part is evil ... they may considered the performance issue,
+	//// BUT we want to directly query after running pointer analysis, not run after each query...
+	//// from the code@https://github.tamu.edu/jeffhuang/go2/blob/master/race_checker/pointerAnalysis.go
+	//// seems like we only query pointers, so CURRENTLY only record for pointers in app methods
+	//// -> go to commit@acb4db0349f131f8d10ddbec6d4fb686258becca (or comment out below for now)
+	//// to check original code
+	////HOWEVER, it is too heavy to create each query another copy constraint, discarded.
+	//t := v.Type()
+	//if cgn == nil {
+	//	if !withinScope {
+	//		return // not interested
+	//	}
+	//	//bz: this might be the root cgn, interface, from global, etc.
+	//	//NOW, put the a.globalobj[] also into query, since a lot of thing is stored there, e.g.,
+	//	//*ssa.FreeVar (but I PERSONALLY do not want *ssa.Function, *ssa.Global, *ssa.Function, *ssa.Const,
+	//	//exclude now)
+	//	if a.log != nil {
+	//		fmt.Fprintf(a.log, "nil cgn in setValueNode(): v:"+v.Type().String()+" "+v.String()+"\n")
+	//	}
+	//	switch v.(type) {
+	//	case *ssa.FreeVar:
+	//		//bz: Global object. But are they unique mapping/replaced when put into a.globalval[]?
+	//		// a.globalobj[v] = n0  --> nothing stored, do not use this
+	//		a.recordGlobalQueries(t, cgn, v, id)
+	//	case *ssa.Global:
+	//		//Updated: bz: capture global var, e.g., race_checker/tests/runc_simple.go:31
+	//		a.recordGlobalQueries(t, cgn, v, id)
+	//	}
+	//	return //else: nothing to record
+	//}
+	//
+	//if a.withinScope(cgn.fn.String()) { //record queries
+	//	//if a.config.DEBUG {
+	//	//	fmt.Println("query (in): " + t.String())
+	//	//}
+	//	if CanPoint(t) {
+	//		a.recordQueries(t, cgn, v, id)
+	//	} else
+	//	//bz: this condition is copied from go2: indirect queries
+	//	if underType, ok := v.Type().Underlying().(*types.Pointer); ok && CanPoint(underType.Elem()) {
+	//		a.recordIndirectQueries(t, cgn, v, id)
+	//	} else { //bz: extended queries for debug --> might be global (cgn == nil) or local (cgn != nil)
+	//		a.recordExtendedQueries(t, cgn, v, id)
+	//	}
+	//}
 }
 
 func (a *analysis) recordExtendedQueries(t types.Type, cgn *cgnode, v ssa.Value, id nodeid) {
@@ -2117,15 +2116,13 @@ func (a *analysis) genFunc(cgn *cgnode) {
 		fmt.Fprintln(a.log, "; Creating nodes for local values")
 	}
 
-	if a.config.DiscardQueries {
-		//bz: we do replace a.localval and a.localobj by cgn's
-		cgn.initLocalMaps()
-		a.localval = cgn.localval
-		a.localobj = cgn.localobj
-	} else {
-		a.localval = make(map[ssa.Value]nodeid)
-		a.localobj = make(map[ssa.Value]nodeid)
-	}
+	//bz: we do replace a.localval and a.localobj by cgn's
+	cgn.initLocalMaps()
+	a.localval = cgn.localval
+	a.localobj = cgn.localobj
+	////bz: default code below
+	//a.localval = make(map[ssa.Value]nodeid)
+	//a.localobj = make(map[ssa.Value]nodeid)
 
 	// The value nodes for the params are in the func object block.
 	params := a.funcParams(cgn.obj)

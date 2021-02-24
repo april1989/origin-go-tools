@@ -299,7 +299,7 @@ func (a *analysis) hvn() {
 	}
 	h.index = 1
 	for id, o := range h.onodes {
-		if id > 0 && o.index == 0  {
+		if id > 0 && o.index == 0 {
 			// Start depth-first search at each unvisited node.
 			h.visit(onodeid(id))
 		}
@@ -952,7 +952,7 @@ func (h *hvn) simplify() {
 	h.a.constraints = cc
 
 	//h.doMyRenumber(mapping)//bz: sneaky renumber
-	
+
 	if h.log != nil {
 		fmt.Fprintf(h.log, "#constraints: was %d, now %d\n", nbefore, len(h.a.constraints))
 	}
@@ -983,8 +983,6 @@ func assert(p bool, msg string) {
 	}
 }
 
-
-
 // bz: this above part sneakily renumbers constraints, if they renumbered constraints
 // they also needs to renumber others things in mapping as opt.go does
 // I AM GOING TO RENUMBER THEM >>>
@@ -992,7 +990,7 @@ func (h *hvn) doMyRenumber(mapping []nodeid) {
 	a := h.a
 	for v, id := range a.globalobj {
 		nid := mapping[id]
-		if nid == 0 || nid == id {  //bz: not updated or not re-mapped
+		if nid == 0 || nid == id { //bz: not updated or not re-mapped
 			continue
 		}
 		a.globalobj[v] = nid
@@ -1015,9 +1013,7 @@ func (h *hvn) doMyRenumber(mapping []nodeid) {
 				site.targets = tid
 			}
 		}
-		if a.config.DiscardQueries {
-			cgn.renumberHVN(mapping)
-		}
+		cgn.renumberHVN(mapping)
 	}
 	tmp := make(map[nodeid]nodeid)
 	for key, val := range a.closureWOGo {
@@ -1025,13 +1021,13 @@ func (h *hvn) doMyRenumber(mapping []nodeid) {
 		vid := mapping[val]
 		if kid == 0 && vid == 0 { //not re-mapped
 			tmp[key] = val
-		}else if kid == 0 && vid != val {
+		} else if kid == 0 && vid != val {
 			tmp[key] = vid
-		}else if vid == 0 && kid != key {
+		} else if vid == 0 && kid != key {
 			tmp[kid] = val
-		}else if kid != key && vid != val { //neither is 0
+		} else if kid != key && vid != val { //neither is 0
 			tmp[kid] = vid
-		}else {
+		} else {
 			tmp[key] = val
 		}
 	}

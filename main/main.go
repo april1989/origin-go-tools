@@ -96,6 +96,9 @@ func main() {
 	} else if len(initial) == 0 {
 		fmt.Println("Package list empty")
 		return
+	} else if initial[0] == nil {
+		fmt.Println("Nil package in list")
+		return
 	}
 	fmt.Println("Done  -- " + strconv.Itoa(len(initial)) + " packages loaded")
 
@@ -245,9 +248,7 @@ func doEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 		LimitScope:     true,          //bz: only consider app methods now -> no import will be considered
 		DEBUG:          false,         //bz: rm all printed out info in console
 		Scope:          scope,         //bz: analyze scope + include
-		Exclusion:      excludedPkgs,  //bz: copied from race_checker
-		DiscardQueries: true,          //bz: do not use query any more
-		UseQueriesAPI:  true,          //bz: change the api the same as default pta
+		Exclusion:      excludedPkgs,  //bz: copied from race_checker if any
 		TrackMore:      true,          //bz: track pointers with types declared in Analyze Scope
 		Level:          0,             //bz: see pointer.Config
 		DoPerformance:  doPerforamnce, //bz: if we output performance related info
@@ -296,7 +297,7 @@ func doEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 		fmt.Println("#(Pre-Gen are created for reflections)")
 	}
 
-	fmt.Println("\nDone  -- PTA/CG Build; Using " + elapsed.String() + ". \nGo check gologfile for detail.\n ")
+	fmt.Println("\nDone  -- PTA/CG Build; Using " + elapsed.String() + ".\n ")
 
 	if my_maxTime < elapsed {
 		my_maxTime = elapsed
@@ -378,13 +379,13 @@ func doEachMainDefault(i int, main *ssa.Package) *default_algo.Result {
 
 	if doPerforamnce {
 		reaches, unreaches := countReachUnreachFunctions(result)
-		fmt.Println("#Unreach Nodes: ", len(unreaches)) //bz: exclude root, init and main has root as caller
-		fmt.Println("#Reach Nodes: ", len(reaches))     //bz: exclude root, init and main has root as caller
+		fmt.Println("#Unreach Nodes: ", len(unreaches))
+		fmt.Println("#Reach Nodes: ", len(reaches))
 		fmt.Println("#Unreach Functions: ", len(unreaches))
 		fmt.Println("#Reach Functions: ", len(reaches))
 	}
 
-	fmt.Println("\nDone  -- PTA/CG Build; Using ", elapsed.String(), ". \nGo check gologfile for detail. ")
+	fmt.Println("\nDone  -- PTA/CG Build; Using ", elapsed.String(), ".\n")
 
 	if default_maxTime < elapsed {
 		default_maxTime = elapsed
@@ -416,6 +417,7 @@ func findMainPackages(pkgs []*ssa.Package) ([]*ssa.Package, error) {
 }
 
 //bz: for default
+//    exclude root, init and main has root as caller
 func countReachUnreachFunctions(result *default_algo.Result) (map[*ssa.Function]*ssa.Function, map[*ssa.Function]*ssa.Function) {
 	r := result
 	//fn
