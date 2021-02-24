@@ -154,6 +154,7 @@ type analysis struct {
 	closureWOGo map[nodeid]nodeid             //bz: solution@field actualCallerSite []*callsite of cgnode type
 
 	num_constraints int             //bz:  performance
+	numObjs         int             //bz: number of objects allocated
 	numOrigins      int             //bz: number of origins
 	preGens         []*ssa.Function //bz: number of pregenerated functions/cgs/constraints for reflection, os, runtime
 }
@@ -556,7 +557,7 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 	if a.config.DoPerformance { //bz: performance test; dump info
 		fmt.Println("--------------------- Performance ------------------------")
 		fmt.Println("#Pre-generated cgnodes: ", len(a.preGens))
-		fmt.Println("#pts: ", len(a.nodes))
+		fmt.Println("#pts: ", len(a.nodes)) //this includes all kinds of pointers, e.g., cgnode, func, pointer
 		fmt.Println("#constraints (totol num): ", a.num_constraints)
 		fmt.Println("#cgnodes (totol num): ", len(a.cgnodes))
 		//fmt.Println("#func (totol num): ", len(a.fn2cgnodeIdx))
@@ -568,6 +569,7 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 		}
 		fmt.Println("#tracked types (totol num): ", numTyp)
 		fmt.Println("#origins (totol num): ", a.numOrigins+1) //bz: main is not included here
+		fmt.Println("#objs (totol num): ", a.numObjs)
 		fmt.Println("\nCall Graph: (cgnode based: function + context) \n#Nodes: ", len(a.result.CallGraph.Nodes))
 		fmt.Println("#Edges: ", GetNumEdges())
 	}

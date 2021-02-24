@@ -179,6 +179,10 @@ func main() {
 	fmt.Println("Max: ", my_maxTime.String()+".")
 	fmt.Println("Min: ", my_minTime.String()+".")
 	fmt.Println("Avg: ", float32(my_elapsed)/float32(len(mains))/float32(1000), "s.")
+
+	if flags.DoCommonPath {
+		compare.ComputeCommonParts()
+	}
 }
 
 func doEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
@@ -279,6 +283,11 @@ func doEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 		_r := result.GetResult()
 		_r.Queries = result.Queries
 		_r.IndirectQueries = result.IndirectQueries
+
+		if flags.DoCommonPath {
+			compare.AddCandidate(_r)
+		}
+
 		return _r //bz: we only need this when comparing results
 	}
 

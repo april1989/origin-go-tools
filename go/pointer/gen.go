@@ -230,7 +230,7 @@ func (a *analysis) endObject(obj nodeid, cgn *cgnode, data interface{}) *object 
 	objNode := a.nodes[obj]
 	o := &object{
 		size: size, // excludes padding
-		cgn:  cgn,
+		cgn:  cgn,  //here has the context if needed
 		data: data,
 	}
 	objNode.obj = o //bz: points-to heap ? this is the only place that assigned to node.obj
@@ -1214,7 +1214,7 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 		} else {
 			obj = a.objectNode(nil, fn) // shared contour
 		}
-	} else {                        //default: context-insensitive
+	} else {  //default: context-insensitive
 		if a.shouldUseContext(fn) { // default
 			obj = a.makeFunctionObject(fn, site) // new contour
 		} else {
@@ -1694,16 +1694,19 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 			obj = a.nextNode()
 			a.addNodes(mustDeref(v.Type()), "alloc")
 			a.endObject(obj, cgn, v)
+			a.numObjs++
 
 		case *ssa.MakeSlice:
 			obj = a.nextNode()
 			a.addNodes(sliceToArray(v.Type()), "makeslice")
 			a.endObject(obj, cgn, v)
+			a.numObjs++
 
 		case *ssa.MakeChan:
 			obj = a.nextNode()
 			a.addNodes(v.Type().Underlying().(*types.Chan).Elem(), "makechan")
 			a.endObject(obj, cgn, v)
+			a.numObjs++
 
 		case *ssa.MakeMap:
 			obj = a.nextNode()
@@ -1719,6 +1722,7 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 				a.mapValues = append(a.mapValues, id)
 			}
 			a.endObject(obj, cgn, v)
+			a.numObjs++
 
 		case *ssa.MakeInterface:
 			tConc := v.X.Type()
@@ -1877,7 +1881,7 @@ func (a *analysis) genInstr(cgn *cgnode, instr ssa.Instruction) {
 	case *ssa.Store:
 		a.genStore(cgn, instr.Addr, a.valueNode(instr.Val), 0, a.sizeof(instr.Val.Type()))
 
-	case *ssa.Alloc, *ssa.MakeSlice, *ssa.MakeChan, *ssa.MakeMap, *ssa.MakeInterface:
+	case *ssa.Alloc, *ssa.MakeSlice, *ssa.MakeChan, *ssa.MakeMap, *ssa.MakeInterface: //bz: all are creating objs
 		v := instr.(ssa.Value)
 		a.addressOf(v.Type(), a.valueNode(v), a.objectNode(cgn, v))
 

@@ -45,6 +45,11 @@ type cgnode struct {
 	localobj   map[ssa.Value]nodeid  //bz: same as above
 }
 
+//bz: do i have a shared contour as context?
+func (n *cgnode) IsSharedContour() bool {
+	return n.callersite == nil || len(n.callersite) == 0 || n.callersite[0] == nil
+}
+
 //bz: going to replace and store (borrow them a pointer) a.localval and a.localobj here when calling genFunc() (gen.go)
 //only copy if func is in analysis scope
 func (n *cgnode) initLocalMaps()  {
@@ -82,7 +87,7 @@ func (n *cgnode) renumberHVN(mapping []nodeid) {
 
 
 // contour returns a description of this node's contour.
-//bz: only used for log
+//bz: default but with adjustment. only used for log
 func (n *cgnode) contour(isKcfa bool) string {
 	if isKcfa { //bz: print out info for kcfa
 		return n.contourkFull()
