@@ -26,7 +26,7 @@ func (a *analysis) solve() {
 		fmt.Println("#constraints (before solve()): ", len(a.constraints))
 		fmt.Println("#cgnodes (before solve()): ", len(a.cgnodes))
 
-		if flags.PrintCGNodes {//bz: debug
+		if flags.PrintCGNodes { //bz: debug
 			fmt.Println("\nDump cgnodes (before solve()): ")
 			for i, cgn := range a.cgnodes {
 				fmt.Println(i, ". ", cgn.String())
@@ -219,7 +219,7 @@ func (a *analysis) addWork(id nodeid) {
 	if a.log != nil {
 		if Online {
 			fmt.Fprintf(a.log, "\t\tadd to work (online): n%d\n", id)
-		}else{
+		} else {
 			fmt.Fprintf(a.log, "\t\tadd to work: n%d\n", id)
 		}
 	}
@@ -364,7 +364,7 @@ func (c *invokeConstraint) solve(a *analysis, delta *nodeset) {
 		sig := fn.Signature
 		fnObj := a.globalobj[fn] // dynamic calls use shared contour  ---> bz: fnObj is nodeid
 
-		if fnObj == 0 {//bz: because a.objectNode(fn) was not called during gen phase.
+		if fnObj == 0 { //bz: because a.objectNode(fn) was not called during gen phase.
 			if a.log != nil { //debug
 				fmt.Fprintf(a.log, "\n\n------------- GENERATING INVOKE FUNC HERE: "+fn.String()+" ------------------------------ \n")
 			}
@@ -375,7 +375,7 @@ func (c *invokeConstraint) solve(a *analysis, delta *nodeset) {
 						fmt.Println("!! GENERATING INVOKE FUNC ONLINE (share contour): " + fn.String())
 					}
 					fnObj = a.genInvokeOnline(nil, nil, fn)
-				} else { 	//bz: special handling of invoke targets, create here
+				} else { //bz: special handling of invoke targets, create here
 					if a.config.DEBUG {
 						fmt.Println("!! GENERATING INVOKE FUNC ONLINE (ctx-sensitive): " + fn.String())
 					}
@@ -406,7 +406,7 @@ func (c *invokeConstraint) solve(a *analysis, delta *nodeset) {
 			}
 		} else {
 			if a.log != nil { //debug
-				fmt.Fprintf(a.log, "!! ALREADY EXIST INVOKE FUNC: " + fn.String()+"\n")
+				fmt.Fprintf(a.log, "!! ALREADY EXIST INVOKE FUNC: "+fn.String()+"\n")
 			}
 		}
 		// bz: back to normal workflow -> context-insensitive
