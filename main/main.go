@@ -139,7 +139,7 @@ func main() {
 
 	fmt.Println("\n\nBASELINE All Done  -- PTA/CG Build. \n")
 
-	if flags.DoCompare {
+	if flags.DoCompare || flags.DoDefault {
 		fmt.Println("Default Algo:")
 		fmt.Println("Total: ", (time.Duration(default_elapsed) * time.Millisecond).String() +".")
 		fmt.Println("Max: ", default_maxTime.String()+".")
