@@ -14,7 +14,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -104,51 +103,23 @@ func main() {
 		var r_default *default_algo.Result
 		var r_my *pointer.ResultWCtx
 
-		if flags.DoParallel {
-			var _wg sync.WaitGroup
-			//default
-			_wg.Add(1)
-			go func() {
-				fmt.Println("Default Algo: ")
-				r_default = doEachMainDefault(i, main) //default pta
-				t := time.Now()
-				default_elapsed = default_elapsed + t.Sub(start).Milliseconds()
-				start = time.Now()
-				fmt.Println("........................................\n........................................")
-				_wg.Done()
-			}()
-
-			//my
-			_wg.Add(1)
-			go func() {
-				fmt.Println("My Algo: ")
-				r_my = doEachMainMy(i, main) //mypta
-				t := time.Now()
-				my_elapsed = my_elapsed + t.Sub(start).Milliseconds()
-				_wg.Done()
-			}()
-
-			//wait
-			_wg.Wait()
-		}else{ //sequential
-			if flags.DoCompare || flags.DoDefault {
-				fmt.Println("Default Algo: ")
-				r_default = doEachMainDefault(i, main) //default pta
-				t := time.Now()
-				default_elapsed = default_elapsed + t.Sub(start).Milliseconds()
-				start = time.Now()
-				fmt.Println("........................................\n........................................")
-			}
-			if flags.DoDefault {
-				continue //skip running mine
-			}
-
-			//my
-			fmt.Println("My Algo: ")
-			r_my = doEachMainMy(i, main) //mypta
+		if flags.DoCompare || flags.DoDefault {
+			fmt.Println("Default Algo: ")
+			r_default = doEachMainDefault(i, main) //default pta
 			t := time.Now()
-			my_elapsed = my_elapsed + t.Sub(start).Milliseconds()
+			default_elapsed = default_elapsed + t.Sub(start).Milliseconds()
+			start = time.Now()
+			fmt.Println("........................................\n........................................")
 		}
+		if flags.DoDefault {
+			continue //skip running mine
+		}
+
+		//my
+		fmt.Println("My Algo: ")
+		r_my = doEachMainMy(i, main) //mypta
+		t := time.Now()
+		my_elapsed = my_elapsed + t.Sub(start).Milliseconds()
 
 		if flags.DoCompare {
 			if r_default != nil && r_my != nil {

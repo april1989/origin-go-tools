@@ -12,7 +12,6 @@ var DoLog = false
 var Main = "" //bz: run for a specific main in this pkg; start from 0
 var DoDefault = false //bz: only Do default
 var DoCompare = false //bz: this is super long
-var DoParallel = false //bz: Do default and mine in parallel for one main then join ---> bad option ...
 var TimeLimit time.Duration //bz: time limit, unit: ?h?m?s
 
 //my use
@@ -28,7 +27,6 @@ func ParseFlags() {
 	_doLog := flag.Bool("doLog", false, "Do log. ")
 	_doDefault := flag.Bool("doDefault", false, "Do default algo only. ")
 	_doComp := flag.Bool("doCompare", false, "Do compare with default pta. ")
-	_doPara := flag.Bool("doParallel", false, "Do my and default in parallel for only one main, then join. ")
 	_time := flag.String("timeLimit", "", "Set time limit to ?h?m?s or ?m?s or ?s, e.g. 1h15m30.918273645s. ")
 	//my use
 	_printCGNodes := flag.Bool("printCGNodes", false, "Print #cgnodes (before solve()).")
@@ -45,9 +43,6 @@ func ParseFlags() {
 	}
 	if *_doComp {
 		DoCompare = true
-	}
-	if *_doPara {
-		DoParallel = true
 	}
 	if *_time != "" {
 		TimeLimit, _ = time.ParseDuration(*_time)
