@@ -277,6 +277,8 @@ type GraphWCtx struct {
 	Root      *Node                       // the distinguished root node
 	Nodes     map[*cgnode]*Node           // all nodes by cgnode
 	Fn2CGNode map[*ssa.Function][]*cgnode // a map
+
+	fn2nodes  map[*ssa.Function][]*Node //bz: used in commonpart.go, comment off if not used
 }
 
 // bz: New returns a new Graph with the specified root node.
@@ -437,4 +439,24 @@ func removeInEdge(edge *Edge) {
 		}
 	}
 	panic("edge not found: " + edge.String())
+}
+
+//bz: used in commonpart.go
+func (g *GraphWCtx) getFn2Nodes() {
+	g.fn2nodes = make(map[*ssa.Function][]*Node)
+	for fn, cgns := range g.Fn2CGNode {
+		nodes := make([]*Node, len(cgns))
+		for _, cgn := range cgns {
+			nodes = append(nodes, g.GetNodeWCtx(cgn))
+		}
+		g.fn2nodes[fn] = nodes
+	}
+}
+
+//bz: used in commonpart.go
+func (g *GraphWCtx) GetNodesForFn(fn *ssa.Function) []*Node {
+	if g.fn2nodes == nil {
+		g.getFn2Nodes()
+	}
+	return g.fn2nodes[fn]
 }
