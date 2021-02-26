@@ -137,7 +137,7 @@ func main() {
 
 	fmt.Println("\n\nBASELINE All Done  -- PTA/CG Build. \n")
 
-	if flags.DoCompare {
+	if flags.DoCompare || flags.DoDefault {
 		fmt.Println("Default Algo:")
 		fmt.Println("Total: ", (time.Duration(default_elapsed) * time.Millisecond).String() +".")
 		fmt.Println("Max: ", default_maxTime.String()+".")
@@ -145,11 +145,13 @@ func main() {
 		fmt.Println("Avg: ", float32(default_elapsed)/float32(len(mains))/float32(1000), "s.")
 	}
 
-	fmt.Println("My Algo:")
-	fmt.Println("Total: ", (time.Duration(my_elapsed) * time.Millisecond).String()+".")
-	fmt.Println("Max: ", my_maxTime.String()+".")
-	fmt.Println("Min: ", my_minTime.String()+".")
-	fmt.Println("Avg: ", float32(my_elapsed)/float32(len(mains))/float32(1000), "s.")
+	if !flags.DoDefault { //skip printing out mine if default only
+		fmt.Println("My Algo:")
+		fmt.Println("Total: ", (time.Duration(my_elapsed) * time.Millisecond).String()+".")
+		fmt.Println("Max: ", my_maxTime.String()+".")
+		fmt.Println("Min: ", my_minTime.String()+".")
+		fmt.Println("Avg: ", float32(my_elapsed)/float32(len(mains))/float32(1000), "s.")
+	}
 
 	if flags.DoCommonPath {
 		compare.ComputeCommonParts()
@@ -255,7 +257,7 @@ func doEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 		_r.Queries = result.Queries
 		_r.IndirectQueries = result.IndirectQueries
 
-		if flags.DoCommonPath {
+		if flags.DoCommonPath { //add to compare candidate
 			compare.AddCandidate(_r)
 		}
 

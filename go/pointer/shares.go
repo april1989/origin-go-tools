@@ -6,8 +6,8 @@ import "github.tamu.edu/April1989/go_tools/go/ssa"
 // i want to share func/cgnode/enclosing pointers, objs and constraints
 // that are created with context @[0:shared contour; ]; since they are frequently
 // called by different mains in the same pkg
-// TODO: What to do for renumbering ?
-// TODO: I also want to borrow their pts if possible
+// TODO: What to do for renumbering ? this cannot be skipped ...
+// TODO: I also want to borrow their pts if possible, how?
 //       for a specific callee in this pool, if we compare its callers with pts(actual param),
 //       if no diff with the info we stored, we can borrow pts and call chains inside this callee.
 //       if later new callers appear, we can do diff ?

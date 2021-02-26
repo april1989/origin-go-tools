@@ -22,6 +22,6 @@ func AddCandidate(res *pointer.ResultWCtx) {
 
 //compute common parts among all candidates
 func ComputeCommonParts() {
-	fmt.Println("\n\nCompute Common part ... ") //only shared contours
+	fmt.Println("\n\nCompute Common parts ... ") //only shared contours
 
 }
