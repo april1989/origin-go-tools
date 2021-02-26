@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.tamu.edu/April1989/go_tools/compare"
 	"github.tamu.edu/April1989/go_tools/flags"
 	"github.tamu.edu/April1989/go_tools/go/callgraph"
+	"github.tamu.edu/April1989/go_tools/go/compare"
 	"github.tamu.edu/April1989/go_tools/go/packages"
 	"github.tamu.edu/April1989/go_tools/go/pointer"
 	default_algo "github.tamu.edu/April1989/go_tools/go/pointer_default"
@@ -92,8 +92,165 @@ func main() {
 	my_minTime = 10000000000000
 	default_minTime = 10000000000000
 
-	//baseline: foreach
-	start := time.Now() //performance
+	if flags.DoTogether {
+		doTogether(mains)
+	}else{
+		doEach(mains)
+	}
+
+	fmt.Println("\n\nBASELINE All Done  -- PTA/CG Build. \n")
+
+	if flags.DoCompare || flags.DoDefault {
+		fmt.Println("Default Algo:")
+		fmt.Println("Total: ", (time.Duration(default_elapsed) * time.Millisecond).String() +".")
+		fmt.Println("Max: ", default_maxTime.String()+".")
+		fmt.Println("Min: ", default_minTime.String()+".")
+		fmt.Println("Avg: ", float32(default_elapsed)/float32(len(mains))/float32(1000), "s.")
+	}
+
+	fmt.Println("My Algo:")
+	fmt.Println("Total: ", (time.Duration(my_elapsed) * time.Millisecond).String()+".")
+	fmt.Println("Max: ", my_maxTime.String()+".")
+	fmt.Println("Min: ", my_minTime.String()+".")
+	fmt.Println("Avg: ", float32(my_elapsed)/float32(len(mains))/float32(1000), "s.")
+}
+
+//baseline: all main together
+func doTogether(mains []*ssa.Package)  {
+	if flags.DoCompare || flags.DoDefault {
+		doMainDefault(mains)
+		fmt.Println("........................................\n........................................")
+	}
+	if flags.DoDefault {
+		return
+	}
+
+	doMainMy(mains)
+}
+
+func doMainMy(mains []*ssa.Package) *[]pointer.Result {
+	// Configure pointer analysis to build call-graph
+	ptaConfig := &pointer.Config{
+		Mains:          mains, //bz: NOW assume only one main
+		Reflection:     false,
+		BuildCallGraph: true,
+		Log:            nil,
+		//CallSiteSensitive: true, //kcfa
+		Origin: true, //origin
+		//shared config
+		K:              1,
+		LimitScope:     true,          //bz: only consider app methods now -> no import will be considered
+		DEBUG:          false,         //bz: rm all printed out info in console
+		Scope:          scope,         //bz: analyze scope + input path
+		Exclusion:      excludedPkgs,  //bz: copied from race_checker if any
+		TrackMore:      true,          //bz: track pointers with types declared in Analyze Scope
+		Level:          0,             //bz: see pointer.Config
+		DoPerformance:  flags.DoPerforamnce, //bz: if we output performance related info
+	}
+
+	//*** compute pta here
+	start := time.Now()                       //performance
+	var result *pointer.Result
+	var r_err error
+	if flags.TimeLimit != 0 { //we set time limit
+		c := make(chan string, 1)
+
+		// Run the pta in it's own goroutine and pass back it's
+		// response into our channel.
+		go func() {
+			result, r_err = pointer.Analyze(ptaConfig) // conduct pointer analysis
+			c <- "done"
+		}()
+
+		// Listen on our channel AND a timeout channel - which ever happens first.
+		select {
+		case res := <-c:
+			fmt.Println(res)
+		case <-time.After(flags.TimeLimit):
+			fmt.Println("\n!! Out of time (", flags.TimeLimit,"). Kill it :(")
+			return nil
+		}
+	}else{
+		result, r_err = pointer.Analyze(ptaConfig) // conduct pointer analysis
+	}
+	t := time.Now()
+	elapsed := t.Sub(start)
+	if r_err != nil {
+		panic(fmt.Sprintln(r_err))
+	}
+
+	fmt.Println("\nDone  -- PTA/CG Build; Using " + elapsed.String() + ".\n ")
+
+	if my_maxTime < elapsed {
+		my_maxTime = elapsed
+	}
+	if my_minTime > elapsed {
+		my_minTime = elapsed
+	}
+
+	return nil
+}
+
+func doMainDefault(mains []*ssa.Package) []*default_algo.Result {
+	// Configure pointer analysis to build call-graph
+	ptaConfig := &default_algo.Config{
+		Mains:           mains, //one main per time
+		Reflection:      false,
+		BuildCallGraph:  true,
+		Log:             nil,
+		DoPerformance:   flags.DoPerforamnce, //bz: I add to output performance for comparison
+		DoRecordQueries: flags.DoCompare,     //bz: record all queries to compare result
+	}
+
+	//*** compute pta here
+	start := time.Now()                            //performance
+	var result *default_algo.Result
+	var r_err error //bz: result error
+	if flags.TimeLimit != 0 { //we set time limit
+		c := make(chan string, 1)
+
+		// Run the pta in it's own goroutine and pass back it's
+		// response into our channel.
+		go func() {
+			result, r_err = default_algo.Analyze(ptaConfig) // conduct pointer analysis
+			c <- "done"
+		}()
+
+		// Listen on our channel AND a timeout channel - which ever happens first.
+		select {
+		case res := <-c:
+			fmt.Println(res)
+		case <-time.After(flags.TimeLimit):
+			fmt.Println("\n!! Out of time (", flags.TimeLimit,"). Kill it :(")
+			return nil
+		}
+	}else{
+		result, r_err = default_algo.Analyze(ptaConfig) // conduct pointer analysis
+	}
+	t := time.Now()
+	elapsed := t.Sub(start)
+	if r_err != nil {
+		panic(fmt.Sprintln(r_err))
+	}
+
+	fmt.Println("\nDone  -- PTA/CG Build; Using ", elapsed.String(), ".\n")
+
+	if default_maxTime < elapsed {
+		default_maxTime = elapsed
+	}
+	if default_minTime > elapsed {
+		default_minTime = elapsed
+	}
+
+	if len(result.Warnings) > 0 {
+		fmt.Println("Warning: ", len(result.Warnings)) //bz: just do not report not used var on result
+	}
+
+	return nil
+}
+
+//baseline: foreach
+func doEach(mains []*ssa.Package) {
 	for i, main := range mains {
 		if flags.Main != "" && flags.Main != main.Pkg.Path() { //run for IDX only
 			continue
@@ -103,6 +260,7 @@ func main() {
 		var r_default *default_algo.Result
 		var r_my *pointer.ResultWCtx
 
+		start := time.Now() //performance
 		if flags.DoCompare || flags.DoDefault {
 			//default
 			fmt.Println("Default Algo: ")
@@ -136,22 +294,6 @@ func main() {
 		}
 		fmt.Println("=============================================================================")
 	}
-
-	fmt.Println("\n\nBASELINE All Done  -- PTA/CG Build. \n")
-
-	if flags.DoCompare || flags.DoDefault {
-		fmt.Println("Default Algo:")
-		fmt.Println("Total: ", (time.Duration(default_elapsed) * time.Millisecond).String() +".")
-		fmt.Println("Max: ", default_maxTime.String()+".")
-		fmt.Println("Min: ", default_minTime.String()+".")
-		fmt.Println("Avg: ", float32(default_elapsed)/float32(len(mains))/float32(1000), "s.")
-	}
-
-	fmt.Println("My Algo:")
-	fmt.Println("Total: ", (time.Duration(my_elapsed) * time.Millisecond).String()+".")
-	fmt.Println("Max: ", my_maxTime.String()+".")
-	fmt.Println("Min: ", my_minTime.String()+".")
-	fmt.Println("Avg: ", float32(my_elapsed)/float32(len(mains))/float32(1000), "s.")
 }
 
 func doEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
@@ -202,7 +344,7 @@ func doEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 		// Run the pta in it's own goroutine and pass back it's
 		// response into our channel.
 		go func() {
-			result, err = pointer.Analyze(ptaConfig) // conduct pointer analysis
+			result, r_err = pointer.Analyze(ptaConfig) // conduct pointer analysis
 			c <- "done"
 		}()
 
@@ -215,7 +357,7 @@ func doEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 			return nil
 		}
 	}else{
-		result, err = pointer.Analyze(ptaConfig) // conduct pointer analysis
+		result, r_err = pointer.Analyze(ptaConfig) // conduct pointer analysis
 	}
 	t := time.Now()
 	elapsed := t.Sub(start)

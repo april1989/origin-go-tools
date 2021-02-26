@@ -18,6 +18,7 @@ var TimeLimit time.Duration //bz: time limit, unit: ?h?m?s
 var PrintCGNodes = false //bz: print #cgnodes (before solve())
 var DoPerforamnce = true
 var DoDetail = false //bz: print out all data from countReachUnreachXXX
+var DoTogether = false //bz: do all main in a pkg together from the same root
 
 
 //bz: analyze all flags from input
@@ -30,6 +31,7 @@ func ParseFlags() {
 	_time := flag.String("timeLimit", "", "Set time limit to ?h?m?s or ?m?s or ?s, e.g. 1h15m30.918273645s. ")
 	//my use
 	_printCGNodes := flag.Bool("printCGNodes", false, "Print #cgnodes (before solve()).")
+	_doTogether := flag.Bool("doTogether", false, "Do all main together from the same root in one pkg.")
 
 	flag.Parse()
 	if *_main != "" {
@@ -51,5 +53,8 @@ func ParseFlags() {
 	//my use
 	if *_printCGNodes {
 		PrintCGNodes = true
+	}
+	if *_doTogether {
+		DoTogether = true
 	}
 }
