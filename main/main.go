@@ -144,6 +144,11 @@ func doTogether(mains []*ssa.Package) {
 
 //bz: test usesage in race checker
 func doRaceReq(mains []*ssa.Package) {
+	level := 0
+	if flags.DoLevel != -1 {
+		level = flags.DoLevel //bz: reset the analysis scope
+	}
+
 	ptaConfig := &pointer.Config{
 		Mains:          mains,
 		Reflection:     false,
@@ -158,8 +163,8 @@ func doRaceReq(mains []*ssa.Package) {
 		Scope:      scope,        //bz: analyze scope + input path
 		Exclusion:  excludedPkgs, //bz: copied from race_checker if any
 		TrackMore:  true,         //bz: track pointers with all types
-		Level:      0,            //bz: see pointer.Config
-		DoPerformance:  false,     //bz: i want to see this performance
+		Level:      level,        //bz: see pointer.Config
+		DoPerformance:  flags.DoPerforamnce,     //bz: i want to see this performance
 	}
 
 	start := time.Now()                                    //performance
