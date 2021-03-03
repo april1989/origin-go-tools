@@ -221,7 +221,7 @@ func (a *analysis) addLabel(ptr, label nodeid) bool {
 func (a *analysis) addWork(id nodeid) {
 	a.work.Insert(int(id))
 	if a.log != nil {
-		if Online {
+		if a.online {
 			fmt.Fprintf(a.log, "\t\tadd to work (online): n%d\n", id)
 		} else {
 			fmt.Fprintf(a.log, "\t\tadd to work: n%d\n", id)

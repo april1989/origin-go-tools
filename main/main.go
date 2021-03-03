@@ -592,7 +592,7 @@ func countReachUnreachFunctions(result *default_algo.Result) (map[*ssa.Function]
 }
 
 //baseline: all main in parallel
-//TODO: fatal error: concurrent map writes!! discarded
+//Update: fatal error: concurrent map writes!! --> change to a.track = trackall, no more panic
 func doParallel(mains []*ssa.Package) map[*ssa.Package]*pointer.ResultWCtx {
 	ret := make(map[*ssa.Package]*pointer.ResultWCtx) //record of result
 	var _wg sync.WaitGroup
@@ -600,15 +600,18 @@ func doParallel(mains []*ssa.Package) map[*ssa.Package]*pointer.ResultWCtx {
 	for i, main := range mains {
 		_wg.Add(1)
 		go func(i int, main *ssa.Package) {
-			fmt.Println(i, ". ", main.String())
+			fmt.Println("Spawn ", i, ". ", main.String())
 			start := time.Now()
 			fmt.Println("My Algo: ")
 			r_my := doEachMainMy(i, main) //mypta
 			t := time.Now()
 			my_elapsed = my_elapsed + t.Sub(start).Milliseconds()
+
 			//update
 			ret[main] = r_my
 			_wg.Done()
+
+			fmt.Println("Join ", i, ". ", main.String())
 		}(i, main)
 	}
 	_wg.Wait()

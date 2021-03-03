@@ -162,6 +162,29 @@ type analysis struct {
 	num_constraints int             //bz:  performance
 	numOrigins      int             //bz: number of origins
 	preGens         []*ssa.Function //bz: number of pregenerated functions/cgs/constraints for reflection, os, runtime
+
+	//bz: make the following from var to here, to keep thread safe
+	isWithinScope     bool        //bz: whether the current genInstr() is working on a method within our scope
+	online          bool        //bz: whether a constraint is from genInvokeOnline()
+	recordPreGen    bool        //bz: when to record preGens
+
+	/** bz:
+	    we do have panics when turn on hvn optimization. panics are due to that hvn wrongly computes sccs.
+	    wrong sccs is because some pointers are not marked as indirect (but marked in default).
+	    This not-marked behavior is because we do not create function pointers for those functions that
+	    we skip their cgnode/func/constraints creation in offline generate(). So we keep a record here.
+
+	HOWEVER, we still have panics ... e.g., google.golang.org/grpc/benchmark/worker
+	OR maybe we need to do this for all functions?
+	HOWEVER, why is this a must?
+
+	MOREOVER, this makes the analysis even slower, since hvn uses a lot of time (it has nothing to do with my renumbering code)
+	do we really need this?
+	MAYBE this favors large programs? but the performance on tidb cannot stop ...
+
+	Update: we only record this skipTypes when optHVN is on
+	*/
+	skipTypes     map[string]string  //bz: a record of skiped methods in generate() off-line
 }
 
 // enclosingObj returns the first node of the addressable memory
@@ -430,10 +453,11 @@ func AnalyzeWCtx(config *Config, printConfig bool) (result *ResultWCtx, err erro
 			DEBUG:           config.DEBUG,
 		},
 		deltaSpace: make([]int, 0, 100),
-		//bz: i did not clear the following two after offline TODO: do I ?
+		//bz: i did not clear the following two after offline
 		fn2cgnodeIdx: make(map[*ssa.Function][]int),
 		closures:     make(map[*ssa.Function]*Ctx2nodeid),
 		closureWOGo:  make(map[nodeid]nodeid),
+		skipTypes:    make(map[string]string),
 	}
 
 	if false {
@@ -651,7 +675,7 @@ func AnalyzeWCtx(config *Config, printConfig bool) (result *ResultWCtx, err erro
 		fmt.Println("#tracked types (totol num): ", numTyp)
 		fmt.Println("#origins (totol num): ", a.numOrigins+1) //bz: main is not included here
 		fmt.Println("\nCall Graph: (cgnode based: function + context) \n#Nodes: ", len(a.result.CallGraph.Nodes))
-		fmt.Println("#Edges: ", GetNumEdges())
+		fmt.Println("#Edges: ", a.result.CallGraph.GetNumEdges())
 	}
 
 	return a.result, nil
@@ -761,7 +785,7 @@ func (a *analysis) callEdge(caller *cgnode, site *callsite, calleeid nodeid) {
 		// (to wrappers) to arise due to the elimination of
 		// context information, but I haven't observed any.
 		// Understand this better.
-		AddEdge(cg.CreateNodeWCtx(caller), site.instr, cg.CreateNodeWCtx(callee)) //bz: changed
+		cg.AddEdge(cg.CreateNodeWCtx(caller), site.instr, cg.CreateNodeWCtx(callee)) //bz: changed
 	}
 
 	if a.log != nil {

@@ -261,20 +261,22 @@ func (r *Ctx2nodeid) renumberHVN(mapping []nodeid)  {
 }
 
 //////////////////////////////// call graph to users ////////////////////////////////
-var numEdges = 0   //bz: perforamnce, number of edges
-
-func GetNumEdges() int {
-	return numEdges
-}
 
 //bz: for user
 type GraphWCtx struct {
 	Root      *Node                       // the distinguished root node
 	Nodes     map[*cgnode]*Node           // all nodes by cgnode
 	Fn2CGNode map[*ssa.Function][]*cgnode // a map
+
+	numEdges  int  //bz: perforamnce, number of edges
+}
+
+func (g *GraphWCtx) GetNumEdges() int {
+	return g.numEdges
 }
 
 // bz: New returns a new Graph with the specified root node.
+// TODO: bz: do we need lock here if run in parallel?
 func NewWCtx(root *cgnode) *GraphWCtx {
 	g := &GraphWCtx{Nodes: make(map[*cgnode]*Node), Fn2CGNode: make(map[*ssa.Function][]*cgnode)}
 	g.Root = g.CreateNodeWCtx(root)
@@ -371,11 +373,11 @@ func (e Edge) Pos() token.Pos {
 
 // AddEdge adds the edge (caller, site, callee) to the call graph.
 // Elimination of duplicate edges is the caller's responsibility.
-func AddEdge(caller *Node, site ssa.CallInstruction, callee *Node) {
+func (g *GraphWCtx) AddEdge(caller *Node, site ssa.CallInstruction, callee *Node) {
 	e := &Edge{caller, site, callee}
 	callee.In = append(callee.In, e)
 	caller.Out = append(caller.Out, e)
-	numEdges++
+	g.numEdges++
 }
 
 // DeleteNode removes node n and its edges from the graph g.
@@ -386,10 +388,11 @@ func (g *GraphWCtx) DeleteNode(n *Node) {
 	delete(g.Nodes, n.GetCGNode())
 }
 
+//bz: make the following methods be obj-oriented to make it thread safe
 // deleteIns deletes all incoming edges to n.
 func (n *Node) deleteIns() {
 	for _, e := range n.In {
-		removeOutEdge(e)
+		n.removeOutEdge(e)
 	}
 	n.In = nil
 }
@@ -397,13 +400,13 @@ func (n *Node) deleteIns() {
 // deleteOuts deletes all outgoing edges from n.
 func (n *Node) deleteOuts() {
 	for _, e := range n.Out {
-		removeInEdge(e)
+		n.removeInEdge(e)
 	}
 	n.Out = nil
 }
 
 // removeOutEdge removes edge.Caller's outgoing edge 'edge'.
-func removeOutEdge(edge *Edge) {
+func (node *Node) removeOutEdge(edge *Edge) {
 	caller := edge.Caller
 	n := len(caller.Out)
 	for i, e := range caller.Out {
@@ -419,7 +422,7 @@ func removeOutEdge(edge *Edge) {
 }
 
 // removeInEdge removes edge.Callee's incoming edge 'edge'.
-func removeInEdge(edge *Edge) {
+func (node *Node) removeInEdge(edge *Edge) {
 	caller := edge.Callee
 	n := len(caller.In)
 	for i, e := range caller.In {
