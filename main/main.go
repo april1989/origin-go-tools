@@ -92,15 +92,15 @@ func main() {
 	my_minTime = 10000000000000
 	default_minTime = 10000000000000
 
-	if flags.DoRaceReq {
+	if flags.DoSeq {
 		doRaceReq(mains)
 		return
 	}else{
-		//DoTogether and DoParallel cannot both be true
+		//DoSameRoot and DoParallel cannot both be true
 		if flags.DoParallel {
 			doParallel(mains) //bz: --> fatal error: concurrent map writes!! discarded
 		} else {
-			if flags.DoTogether {
+			if flags.DoSameRoot {
 				doTogether(mains)
 			} else {
 				doEach(mains)
