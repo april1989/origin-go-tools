@@ -202,7 +202,7 @@ func (a *analysis) warnf(pos token.Pos, format string, args ...interface{}) {
 func (a *analysis) computeTrackBits() {
 	if len(a.config.extendedQueries) != 0 {
 		// TODO(dh): only track the types necessary for the query.
-		a.track = trackAll //bz: we want this trackAll, but we do not set this
+		a.track = trackAll //bz: we want this trackAll, but we do not set this  --> update: set it
 		return
 	}
 	var queryTypes []types.Type
@@ -543,7 +543,9 @@ func AnalyzeWCtx(config *Config, printConfig bool) (result *ResultWCtx, err erro
 	if runtime := a.prog.ImportedPackage("runtime"); runtime != nil {
 		a.runtimeSetFinalizer = runtime.Func("SetFinalizer")
 	}
-	a.computeTrackBits() //bz: use when there is input queries before running this analysis; we do not need this for now?
+
+	//a.computeTrackBits() //bz: use when there is input queries before running this analysis; -> update: we do not need this. just update a.track here
+	a.track = trackAll
 
 	a.generate()   //bz: a preprocess for reflection/runtime/import libs
 	a.showCounts() //bz: print out size ...
@@ -576,7 +578,7 @@ func AnalyzeWCtx(config *Config, printConfig bool) (result *ResultWCtx, err erro
 			a.rtypes.SetHasher(a.hasher)
 		}
 
-		start := time.Now()
+		start := time.Now() //bz: i add performance
 		a.hvn() //default: do this hvn
 		elapsed := time.Now().Sub(start)
 		fmt.Println("HVN using ", elapsed) //bz: i want to know how slow it is ...

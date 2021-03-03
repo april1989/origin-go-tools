@@ -591,10 +591,12 @@ func countReachUnreachFunctions(result *default_algo.Result) (map[*ssa.Function]
 	return reaches, unreaches
 }
 
-//baseline: all main in parallel --> fatal error: concurrent map writes!! discarded
+//baseline: all main in parallel
+//TODO: fatal error: concurrent map writes!! discarded
 func doParallel(mains []*ssa.Package) map[*ssa.Package]*pointer.ResultWCtx {
 	ret := make(map[*ssa.Package]*pointer.ResultWCtx) //record of result
 	var _wg sync.WaitGroup
+	start := time.Now()
 	for i, main := range mains {
 		_wg.Add(1)
 		go func(i int, main *ssa.Package) {
@@ -610,6 +612,15 @@ func doParallel(mains []*ssa.Package) map[*ssa.Package]*pointer.ResultWCtx {
 		}(i, main)
 	}
 	_wg.Wait()
+
+	elapsed := time.Now().Sub(start)
+	fmt.Println("\nDone  -- PTA/CG Build; Using " + elapsed.String() + ".\n ")
+
+	//check
+	fmt.Println("#Receive Result: ", len(ret))
+	for main, result := range ret {
+		fmt.Println("Receive result (#Queries: ", len(result.Queries), ", #IndirectQueries: ", len(result.IndirectQueries), ") for main: ", main.String())
+	}
 
 	return ret
 }
