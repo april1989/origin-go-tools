@@ -1084,14 +1084,16 @@ func (a *analysis) createForLevelX(caller *ssa.Function, callee *ssa.Function) b
 			}
 			return true
 		}
-		//parentcaller -> app; caller -> lib; callee -> lib  => 2 level
+
 		parentCaller := caller.Parent()
 		if parentCaller == nil { //bz: pkg initializer, no parent or other cases
-			if a.withinScope(callee.String()) || a.fromImports(callee.String()) || a.withinScope(caller.String()) || a.fromImports(caller.String()) {
+			if a.withinScope(callee.String()) || a.fromImports(callee.String()) ||
+				a.withinScope(caller.String()) || a.fromImports(caller.String()) {
 				return true
 			}
 			return false
 		}
+		//parentcaller -> app; caller -> lib; callee -> lib  => 2 level
 		if a.withinScope(parentCaller.String()) || a.withinScope(caller.String()) || a.withinScope(callee.String()) {
 			return true
 		}
@@ -1103,12 +1105,13 @@ func (a *analysis) createForLevelX(caller *ssa.Function, callee *ssa.Function) b
 			}
 			return false
 		}
-		if a.withinScope(callee.String()) || a.fromImports(callee.String()) || a.withinScope(caller.String()) || a.fromImports(caller.String()) {
+		if a.withinScope(callee.String()) || a.fromImports(callee.String()) ||
+			a.withinScope(caller.String()) || a.fromImports(caller.String()) {
 			return true
 		}
 	}
 
-	//bz: this is really considering all, including lib's lib, lib's lib's lib, etc.
+	//bz: default 0: this is really considering all, including lib's lib, lib's lib's lib, etc.
 	return true
 }
 

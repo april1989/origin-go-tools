@@ -164,9 +164,9 @@ type analysis struct {
 	preGens         []*ssa.Function //bz: number of pregenerated functions/cgs/constraints for reflection, os, runtime
 
 	//bz: make the following from var to here, to keep thread safe
-	isWithinScope     bool        //bz: whether the current genInstr() is working on a method within our scope
-	online          bool        //bz: whether a constraint is from genInvokeOnline()
-	recordPreGen    bool        //bz: when to record preGens
+	isWithinScope bool //bz: whether the current genInstr() is working on a method within our scope
+	online        bool //bz: whether a constraint is from genInvokeOnline()
+	recordPreGen  bool //bz: when to record preGens
 
 	/** bz:
 	    we do have panics when turn on hvn optimization. panics are due to that hvn wrongly computes sccs.
@@ -184,7 +184,7 @@ type analysis struct {
 
 	Update: we only record this skipTypes when optHVN is on
 	*/
-	skipTypes     map[string]string  //bz: a record of skiped methods in generate() off-line
+	skipTypes map[string]string //bz: a record of skiped methods in generate() off-line
 }
 
 // enclosingObj returns the first node of the addressable memory
@@ -286,6 +286,57 @@ func translateQueries(val ssa.Value, id nodeid, cgn *cgnode, result *Result, _re
 	}
 }
 
+//bz: print out config in console
+func printConfig(config *Config) {
+	var mode string //which pta is running
+	if config.Origin {
+		mode = strconv.Itoa(config.K) + "-ORIGIN-SENSITIVE"
+	} else if config.CallSiteSensitive {
+		mode = strconv.Itoa(config.K) + "-CFA"
+	} else {
+		mode = "CONTEXT-INSENSITIVE"
+	}
+	fmt.Println(" *** MODE: " + mode + " *** ")
+	fmt.Println(" *** Level: " + strconv.Itoa(config.Level) + " *** ")
+	//bz: change to default, remove flags
+	fmt.Println(" *** Use Queries/IndirectQueries *** ")
+	fmt.Println(" *** Use Default Queries API *** ")
+	if config.TrackMore {
+		fmt.Println(" *** Track All Types *** ")
+	} else {
+		fmt.Println(" *** Default Type Tracking (skip basic types) *** ")
+	}
+
+	if config.DoPerformance { //bz: this is from my main, i want them to print out
+		if optRenumber {
+			fmt.Println(" *** optRenumber ON *** ")
+		} else {
+			fmt.Println(" *** optRenumber OFF *** ")
+		}
+		if optHVN {
+			fmt.Println(" *** optHVN ON *** ")
+		} else {
+			fmt.Println(" *** optHVN OFF *** ")
+		}
+	}
+
+	fmt.Println(" *** Analyze Scope ***************** ")
+	if len(config.Scope) > 0 {
+		for _, pkg := range config.Scope {
+			fmt.Println(" - " + pkg)
+		}
+	}
+	fmt.Println(" *********************************** ")
+	fmt.Println(" *** Import Libs ******************* ")
+	if len(config.imports) > 0 {
+		for _, pkg := range config.imports {
+			fmt.Print(pkg + ", ")
+		}
+		fmt.Println()
+	}
+	fmt.Println(" *********************************** ")
+}
+
 //bz: user api, to analyze multiple mains
 func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err error) {
 	if config.Mains == nil {
@@ -303,31 +354,7 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 	maxTime = 0
 	minTime = 1000000000
 
-	var mode string //which pta is running
-	if config.Origin {
-		mode = strconv.Itoa(config.K) + "-ORIGIN-SENSITIVE"
-	} else if config.CallSiteSensitive {
-		mode = strconv.Itoa(config.K) + "-CFA"
-	} else {
-		mode = "CONTEXT-INSENSITIVE"
-	}
-	fmt.Println(" *** MODE: " + mode + " *** ")
-	fmt.Println(" *** Analyze Scope ***************** ")
-	if len(config.Scope) > 0 {
-		for _, pkg := range config.Scope {
-			fmt.Println(" - " + pkg)
-		}
-	}
-	fmt.Println(" *********************************** ")
-	fmt.Println(" *** Level: " + strconv.Itoa(config.Level) + " *** ")
-	//bz: change to default, remove flags
-	fmt.Println(" *** Use Queries/IndirectQueries *** ")
-	fmt.Println(" *** Use Default Queries API *** ")
-	if config.TrackMore {
-		fmt.Println(" *** Track All Types *** ")
-	} else {
-		fmt.Println(" *** Default Type Tracking (skip basic types) *** ")
-	}
+	printConfig(config)
 
 	fmt.Println(" *** Multiple Mains **************** ")
 	for i, main := range config.Mains {
@@ -422,7 +449,7 @@ func Analyze(config *Config) (result *Result, err error) {
 // Pointer analysis of a transitively closed well-typed program should
 // always succeed.  An error can occur only due to an internal bug.
 //
-func AnalyzeWCtx(config *Config, printConfig bool) (result *ResultWCtx, err error) { //Result
+func AnalyzeWCtx(config *Config, doPrintConfig bool) (result *ResultWCtx, err error) { //Result
 	if config.Mains == nil {
 		return nil, fmt.Errorf("no main/test packages to analyze (check $GOROOT/$GOPATH)")
 	}
@@ -464,6 +491,8 @@ func AnalyzeWCtx(config *Config, printConfig bool) (result *ResultWCtx, err erro
 		a.log = os.Stderr // for debugging crashes; extremely verbose
 	}
 
+	assert(len(a.config.Mains) == 1, "This API is for analyzing ONE main. If analyzing multiple mains, please use pointer.AnalyzeMultiMains().")
+
 	UpdateDEBUG(a.config.DEBUG) //in pointer/callgraph, print out info changes
 
 	//update analysis import
@@ -474,60 +503,8 @@ func AnalyzeWCtx(config *Config, printConfig bool) (result *ResultWCtx, err erro
 		}
 	}
 
-	if printConfig {
-		var mode string //which pta is running
-		if a.config.Origin {
-			mode = strconv.Itoa(a.config.K) + "-ORIGIN-SENSITIVE"
-		} else if a.config.CallSiteSensitive {
-			mode = strconv.Itoa(a.config.K) + "-CFA"
-		} else {
-			mode = "CONTEXT-INSENSITIVE"
-		}
-		fmt.Println(" *** MODE: " + mode + " *** ")
-		fmt.Println(" *** Analyze Scope ***************** ")
-		if len(a.config.Scope) > 0 {
-			for _, pkg := range a.config.Scope {
-				fmt.Println(" - " + pkg)
-			}
-		}
-		fmt.Println(" *********************************** ")
-		fmt.Println(" *** Import Libs ******************* ")
-		if len(a.config.imports) > 0 {
-			for _, pkg := range a.config.imports {
-				fmt.Print(pkg + ", ")
-			}
-			fmt.Println()
-		}
-		fmt.Println(" *********************************** ")
-		if len(a.config.Mains) > 1 {
-			fmt.Println(" *** Multiple Mains **************** ")
-			for i, main := range a.config.Mains {
-				fmt.Println(strconv.Itoa(i) + ": " + main.String())
-			}
-			fmt.Println(" *********************************** ")
-		}
-		fmt.Println(" *** Level: " + strconv.Itoa(a.config.Level) + " *** ")
-		//bz: change to default, remove flags
-		fmt.Println(" *** Use Queries/IndirectQueries *** ")
-		fmt.Println(" *** Use Default Queries API *** ")
-		if a.config.TrackMore {
-			fmt.Println(" *** Track All Types *** ")
-		} else {
-			fmt.Println(" *** Default Type Tracking (skip basic types) *** ")
-		}
-
-		if config.DoPerformance { //bz: this is from my main, i want them to print out
-			if optRenumber {
-				fmt.Println(" *** optRenumber ON *** ")
-			} else {
-				fmt.Println(" *** optRenumber OFF *** ")
-			}
-			if optHVN {
-				fmt.Println(" *** optHVN ON *** ")
-			} else {
-				fmt.Println(" *** optHVN OFF *** ")
-			}
-		}
+	if doPrintConfig {
+		printConfig(a.config)
 	}
 
 	if a.log != nil {
@@ -603,7 +580,7 @@ func AnalyzeWCtx(config *Config, printConfig bool) (result *ResultWCtx, err erro
 		}
 
 		start := time.Now() //bz: i add performance
-		a.hvn() //default: do this hvn
+		a.hvn()             //default: do this hvn
 		elapsed := time.Now().Sub(start)
 		fmt.Println("HVN using ", elapsed) //bz: i want to know how slow it is ...
 	}
