@@ -112,6 +112,10 @@ func (a *analysis) processNewConstraints() {
 	// (May grow during call to solveConstraints.)
 	if a.config.DoPerformance && len(a.constraints) > 0 {
 		a.num_constraints = a.num_constraints + len(a.constraints)
+		//if len(a.constraints) > 0 { //bz: debug: changed
+		//	fmt.Println("#constraints (during solve()): ", a.num_constraints)
+		//	fmt.Println("#cgnodes (during solve()): ", len(a.cgnodes))
+		//}
 	}
 	constraints := a.constraints
 	a.constraints = nil
@@ -388,7 +392,7 @@ func (c *invokeConstraint) solve(a *analysis, delta *nodeset) {
 					}
 					continue
 				}
-				fnObj = a.genInvokeOnline(nil, nil, fn)
+				fnObj = a.genInvokeOnline(nil, nil, fn) //bz: if reaches here, fn can only be lib from import
 			}
 			if a.log != nil { //debug
 				fmt.Fprintf(a.log, "------------------------------ ------------------------------ ---------------------------- \n")
