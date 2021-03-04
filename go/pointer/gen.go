@@ -1067,12 +1067,11 @@ func (a *analysis) isInLoop(fn *ssa.Function, inst ssa.Instruction) bool {
 }
 
 //bz: which level of lib/app calls we consider: true -> create func/cgnode; false -> do not create
-//scope: 1<2<3<0
+//scope: 1 < 2 < 3 ~ 0
 func (a *analysis) createForLevelX(caller *ssa.Function, callee *ssa.Function) bool {
 	if a.config.Level == 1 {
-		//bz: if callee is from app or import => 1 level
-		//caller in app, callee in lib || caller in app, callee in app || caller in lib, callee in app
-		if a.withinScope(callee.String()) || a.fromImports(callee.String()) {
+		//bz: if callee is from app => 1 level
+		if a.withinScope(callee.String()) {
 			return true
 		}
 	} else if a.config.Level == 2 {
