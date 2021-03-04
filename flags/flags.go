@@ -11,19 +11,20 @@ import (
 var DoLog = false
 var Main = "" //bz: run for a specific main in this pkg; start from 0
 var DoDefault = false //bz: only Do default
-var DoCompare = false //bz: this is super long
+var DoCompare = false //bz: this has a super long time
 var TimeLimit time.Duration //bz: time limit, unit: ?h?m?s
 var DoLevel = -1 //bz: set the analysis scope to level ? default = 0
 
 //my use
 var PrintCGNodes = false //bz: print #cgnodes (before solve())
 var DoPerforamnce = true
+var DoStatistics = true //bz: compare across different level ???
 var DoDetail = false   //bz: print out all data from countReachUnreachXXX
+
+//different run scenario
 var DoSameRoot = false //bz: do all main in a pkg together from the same root -> all mains linked by the root node
 var DoParallel = false //bz: do all mains in a pkg in parallel, do each main by itself by parallel
-
-//test useage in race checker
-var DoSeq = false //bz: do all mains in a pkg sequential, but input is multiple mains
+var DoSeq = false //bz: do all mains in a pkg sequential, but input is multiple mains (test useage in race checker)
 
 
 

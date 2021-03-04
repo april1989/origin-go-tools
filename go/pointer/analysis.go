@@ -643,13 +643,14 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool) (result *ResultWCtx, err er
 		fmt.Println("#constraints (totol num): ", a.num_constraints)
 		fmt.Println("#cgnodes (totol num): ", len(a.cgnodes))
 		//fmt.Println("#func (totol num): ", len(a.fn2cgnodeIdx))
-		numTyp := 0
-		for _, track := range a.trackTypes {
-			if track {
-				numTyp++
-			}
-		}
-		fmt.Println("#tracked types (totol num): ", numTyp)
+		//numTyp := 0
+		//for _, track := range a.trackTypes {
+		//	if track {
+		//		numTyp++
+		//	}
+		//}
+		//fmt.Println("#tracked types (totol num): ", numTyp)
+		fmt.Println("#tracked types (totol num): trackAll") //bz: updated a.track = trackAll, skip this number
 		fmt.Println("#origins (totol num): ", a.numOrigins+1) //bz: main is not included here
 		fmt.Println("\nCall Graph: (cgnode based: function + context) \n#Nodes: ", len(a.result.CallGraph.Nodes))
 		fmt.Println("#Edges: ", a.result.CallGraph.GetNumEdges())
