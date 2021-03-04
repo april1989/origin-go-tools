@@ -93,7 +93,7 @@ func main() {
 	default_minTime = 10000000000000
 
 	if flags.DoSeq {
-		doRaceReq(mains)
+		doSeq(mains)
 		return
 	}else{
 		//DoSameRoot and DoParallel cannot both be true
@@ -101,7 +101,7 @@ func main() {
 			doParallel(mains) //bz: --> fatal error: concurrent map writes!! discarded
 		} else {
 			if flags.DoSameRoot {
-				doTogether(mains)
+				doSameRoot(mains)
 			} else {
 				doEach(mains)
 			}
@@ -130,20 +130,20 @@ func main() {
 }
 
 //baseline: all main together
-func doTogether(mains []*ssa.Package) {
+func doSameRoot(mains []*ssa.Package) {
 	if flags.DoCompare || flags.DoDefault {
-		doMainDefault(mains)
+		doSameRootDefault(mains)
 		fmt.Println("........................................\n........................................")
 	}
 	if flags.DoDefault {
 		return
 	}
 
-	doMainMy(mains)
+	doSameRootMy(mains)
 }
 
 //bz: test usesage in race checker
-func doRaceReq(mains []*ssa.Package) {
+func doSeq(mains []*ssa.Package) {
 	level := 0
 	if flags.DoLevel != -1 {
 		level = flags.DoLevel //bz: reset the analysis scope
@@ -183,7 +183,7 @@ func doRaceReq(mains []*ssa.Package) {
 	}
 }
 
-func doMainMy(mains []*ssa.Package) *[]pointer.Result {
+func doSameRootMy(mains []*ssa.Package) *pointer.Result {
 	// Configure pointer analysis to build call-graph
 	ptaConfig := &pointer.Config{
 		Mains:          mains,
@@ -243,10 +243,10 @@ func doMainMy(mains []*ssa.Package) *[]pointer.Result {
 		my_minTime = elapsed
 	}
 
-	return nil
+	return result
 }
 
-func doMainDefault(mains []*ssa.Package) []*default_algo.Result {
+func doSameRootDefault(mains []*ssa.Package) []*default_algo.Result {
 	// Configure pointer analysis to build call-graph
 	ptaConfig := &default_algo.Config{
 		Mains:           mains, //one main per time
@@ -445,11 +445,11 @@ func doEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 		result.DumpAll()
 	}
 
-	if flags.DoCompare {
+	if flags.DoCompare || flags.DoParallel {
 		_r := result.GetResult()
 		_r.Queries = result.Queries
 		_r.IndirectQueries = result.IndirectQueries
-		return _r //bz: we only need this when comparing results
+		return _r //bz: we only need this when comparing results/run in parallel
 	}
 
 	return nil
@@ -598,14 +598,15 @@ func countReachUnreachFunctions(result *default_algo.Result) (map[*ssa.Function]
 
 //baseline: all main in parallel
 //Update: fatal error: concurrent map writes!! --> change to a.track = trackall, no more panic
+//go add lock @container/intsets/util.go for nodeset when doing this setting
 func doParallel(mains []*ssa.Package) map[*ssa.Package]*pointer.ResultWCtx {
 	ret := make(map[*ssa.Package]*pointer.ResultWCtx) //record of result
 	var _wg sync.WaitGroup
 	start := time.Now()
-	for i, main := range mains {
+	for i, main := range mains[0:3] {
+		fmt.Println("Spawn ", i, ". ", main.String())
 		_wg.Add(1)
 		go func(i int, main *ssa.Package) {
-			fmt.Println("Spawn ", i, ". ", main.String())
 			start := time.Now()
 			fmt.Println("My Algo: ")
 			r_my := doEachMainMy(i, main) //mypta

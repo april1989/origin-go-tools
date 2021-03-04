@@ -17,7 +17,7 @@ var DoLevel = -1 //bz: set the analysis scope to level ? default = 0
 
 //my use
 var PrintCGNodes = false //bz: print #cgnodes (before solve())
-var DoPerforamnce = true
+var DoPerforamnce = false
 var DoStatistics = true //bz: compare across different level ???
 var DoDetail = false   //bz: print out all data from countReachUnreachXXX
 
