@@ -26,13 +26,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="02839b5a-55a2-4e24-b425-23255e76dae7" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/go/compare/commonpart.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/go/pointer/commonpart.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/compare/commonpart.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/compare/comp.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/compare/comp.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/compare/compare.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/compare/compare.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/flags/flags.go" beforeDir="false" afterPath="$PROJECT_DIR$/flags/flags.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go/compare/commonpart.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/go/compare/comp.go" beforeDir="false" afterPath="$PROJECT_DIR$/compare/comp.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go/compare/compare.go" beforeDir="false" afterPath="$PROJECT_DIR$/compare/compare.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/go/pointer/callgraph.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/callgraph.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go/pointer/shares.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/shares.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/main/main.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -71,16 +71,11 @@
     <property name="go.sdk.automatically.set" value="true" />
     <property name="go.tried.to.enable.integration.vgo.integrator" value="true" />
     <property name="last_opened_file_path" value="$USER_HOME$" />
+    <property name="node.js.path.for.package.tslint" value="project" />
+    <property name="node.js.selected.package.tslint" value="(autodetect)" />
     <property name="settings.editor.selected.configurable" value="preferences.keymap" />
   </component>
   <component name="RecentsManager">
-    <key name="MoveFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/go" />
-      <recent name="$PROJECT_DIR$/go/pointer" />
-      <recent name="$PROJECT_DIR$/_myresult" />
-      <recent name="$PROJECT_DIR$/_local" />
-      <recent name="$PROJECT_DIR$/defaultmain" />
-    </key>
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/_myresult" />
       <recent name="$PROJECT_DIR$/_logs" />
@@ -88,12 +83,19 @@
       <recent name="$PROJECT_DIR$/main" />
       <recent name="$PROJECT_DIR$/_local" />
     </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/go/pointer" />
+      <recent name="$PROJECT_DIR$" />
+      <recent name="$PROJECT_DIR$/go" />
+      <recent name="$PROJECT_DIR$/_myresult" />
+      <recent name="$PROJECT_DIR$/_local" />
+    </key>
   </component>
-  <component name="RunManager" selected="Go Build.go build main.go">
+  <component name="RunManager" selected="Go Build.go build main in grpc">
     <configuration name="go build main in etcd" type="GoApplicationRunConfiguration" factoryName="Go Application">
       <output_file path="$PROJECT_DIR$/_local/console.txt" is_save="true" />
       <module name="go_tools" />
-      <working_directory value="$PROJECT_DIR$/../etcd" />
+      <working_directory value="$PROJECT_DIR$/../go-benchs/etcd" />
       <go_parameters value="-i" />
       <parameters value="-doLog -main=go.etcd.io/etcd/v3/tools/etcd-dump-metrics" />
       <kind value="FILE" />
@@ -105,7 +107,7 @@
     <configuration name="go build main in grpc" type="GoApplicationRunConfiguration" factoryName="Go Application">
       <output_file path="$PROJECT_DIR$/_local/console.txt" is_save="true" />
       <module name="go_tools" />
-      <working_directory value="$PROJECT_DIR$/../grpc-go" />
+      <working_directory value="$PROJECT_DIR$/../go-benchs/grpc-go" />
       <go_parameters value="-i" />
       <kind value="FILE" />
       <filePath value="$PROJECT_DIR$/main/main.go" />
@@ -116,7 +118,7 @@
     <configuration name="go build main in istio" type="GoApplicationRunConfiguration" factoryName="Go Application">
       <output_file path="$PROJECT_DIR$/_local/console.txt" is_save="true" />
       <module name="go_tools" />
-      <working_directory value="$PROJECT_DIR$/../istio" />
+      <working_directory value="$PROJECT_DIR$/../go-benchs/istio" />
       <go_parameters value="-i" />
       <kind value="FILE" />
       <filePath value="$PROJECT_DIR$/main/main.go" />
@@ -127,7 +129,7 @@
     <configuration name="go build main in tidb" type="GoApplicationRunConfiguration" factoryName="Go Application">
       <output_file path="$PROJECT_DIR$/_local/console.txt" is_save="true" />
       <module name="go_tools" />
-      <working_directory value="$PROJECT_DIR$/../tidb/tidb-server" />
+      <working_directory value="$PROJECT_DIR$/../go-benchs/tidb/tidb-server" />
       <go_parameters value="-i" />
       <kind value="FILE" />
       <filePath value="$PROJECT_DIR$/main/main.go" />
@@ -197,41 +199,41 @@
     </state>
     <state x="506" y="398" key="#GOROOT/0.23.1440.877@0.23.1440.877" timestamp="1614191901765" />
     <state x="675" y="475" key="#GOROOT/0.23.1920.1057@0.23.1920.1057" timestamp="1614261667983" />
-    <state x="184" y="23" width="1071" height="967" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1614194946810">
-      <screen x="0" y="23" width="1440" height="877" />
+    <state x="761" y="23" width="1071" height="1057" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1614927919185">
+      <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state x="184" y="23" width="1071" height="877" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.23.1440.877@0.23.1440.877" timestamp="1614194946810" />
-    <state x="761" y="92" width="1071" height="967" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.23.1920.1057@0.23.1920.1057" timestamp="1614185707196" />
-    <state x="1167" y="578" width="710" height="487" key="#xdebugger.evaluate" timestamp="1614265285244">
+    <state x="761" y="23" width="1071" height="1057" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.23.1920.1057@0.23.1920.1057" timestamp="1614927919185" />
+    <state x="1166" y="555" width="710" height="487" key="#xdebugger.evaluate" timestamp="1614924606859">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state x="593" y="371" width="733" height="502" key="#xdebugger.evaluate/0.23.1440.877@0.23.1440.877" timestamp="1613883650553" />
-    <state x="1167" y="578" width="710" height="487" key="#xdebugger.evaluate/0.23.1920.1057@0.23.1920.1057" timestamp="1614265285244" />
-    <state width="883" height="562" key="DebuggerActiveHint" timestamp="1614178778821">
+    <state x="1166" y="555" width="710" height="487" key="#xdebugger.evaluate/0.23.1920.1057@0.23.1920.1057" timestamp="1614924606859" />
+    <state width="1075" height="562" key="DebuggerActiveHint" timestamp="1614929346241">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1033" height="466" key="DebuggerActiveHint/0.23.1440.877@0.23.1440.877" timestamp="1613881922898" />
-    <state width="883" height="562" key="DebuggerActiveHint/0.23.1920.1057@0.23.1920.1057" timestamp="1614178778821" />
-    <state width="1878" height="317" key="GridCell.Tab.0.bottom" timestamp="1614266633768">
+    <state width="1075" height="562" key="DebuggerActiveHint/0.23.1920.1057@0.23.1920.1057" timestamp="1614929346241" />
+    <state width="1878" height="261" key="GridCell.Tab.0.bottom" timestamp="1614929400673">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="228" key="GridCell.Tab.0.bottom/0.23.1440.877@0.23.1440.877" timestamp="1614203354162" />
-    <state width="1878" height="317" key="GridCell.Tab.0.bottom/0.23.1920.1057@0.23.1920.1057" timestamp="1614266633768" />
-    <state width="1878" height="317" key="GridCell.Tab.0.center" timestamp="1614266633767">
+    <state width="1878" height="261" key="GridCell.Tab.0.bottom/0.23.1920.1057@0.23.1920.1057" timestamp="1614929400673" />
+    <state width="1878" height="261" key="GridCell.Tab.0.center" timestamp="1614929400672">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="228" key="GridCell.Tab.0.center/0.23.1440.877@0.23.1440.877" timestamp="1614203354161" />
-    <state width="1878" height="317" key="GridCell.Tab.0.center/0.23.1920.1057@0.23.1920.1057" timestamp="1614266633767" />
-    <state width="1878" height="317" key="GridCell.Tab.0.left" timestamp="1614266633767">
+    <state width="1878" height="261" key="GridCell.Tab.0.center/0.23.1920.1057@0.23.1920.1057" timestamp="1614929400672" />
+    <state width="1878" height="261" key="GridCell.Tab.0.left" timestamp="1614929400672">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="228" key="GridCell.Tab.0.left/0.23.1440.877@0.23.1440.877" timestamp="1614203354160" />
-    <state width="1878" height="317" key="GridCell.Tab.0.left/0.23.1920.1057@0.23.1920.1057" timestamp="1614266633767" />
-    <state width="1878" height="317" key="GridCell.Tab.0.right" timestamp="1614266633768">
+    <state width="1878" height="261" key="GridCell.Tab.0.left/0.23.1920.1057@0.23.1920.1057" timestamp="1614929400672" />
+    <state width="1878" height="261" key="GridCell.Tab.0.right" timestamp="1614929400673">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="228" key="GridCell.Tab.0.right/0.23.1440.877@0.23.1440.877" timestamp="1614203354161" />
-    <state width="1878" height="317" key="GridCell.Tab.0.right/0.23.1920.1057@0.23.1920.1057" timestamp="1614266633768" />
+    <state width="1878" height="261" key="GridCell.Tab.0.right/0.23.1920.1057@0.23.1920.1057" timestamp="1614929400673" />
     <state x="221" y="100" key="SettingsEditor" timestamp="1614194705813">
       <screen x="0" y="23" width="1440" height="877" />
     </state>
@@ -245,29 +247,24 @@
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state x="849" y="155" width="858" height="806" key="dock-window-1/0.23.1920.1057@0.23.1920.1057" timestamp="1614028072540" />
-    <state x="513" y="252" width="894" height="815" key="search.everywhere.popup" timestamp="1614263991567">
+    <state x="513" y="252" width="894" height="815" key="search.everywhere.popup" timestamp="1614923628561">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state x="385" y="213" width="670" height="676" key="search.everywhere.popup/0.23.1440.877@0.23.1440.877" timestamp="1614199020255" />
-    <state x="513" y="252" width="894" height="815" key="search.everywhere.popup/0.23.1920.1057@0.23.1920.1057" timestamp="1614263991567" />
+    <state x="513" y="252" width="894" height="815" key="search.everywhere.popup/0.23.1920.1057@0.23.1920.1057" timestamp="1614923628561" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" type="DlvLineBreakpoint">
-          <url>file://$PROJECT_DIR$/go/compare/comp.go</url>
+          <url>file://$PROJECT_DIR$/compare/comp.go</url>
           <line>203</line>
           <option name="timeStamp" value="36" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="DlvLineBreakpoint">
-          <url>file://$PROJECT_DIR$/go/pointer/gen.go</url>
-          <line>2247</line>
-          <option name="timeStamp" value="37" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
-          <url>file://$PROJECT_DIR$/go/ssa/builder.go</url>
-          <line>2272</line>
-          <option name="timeStamp" value="38" />
+          <url>file://$PROJECT_DIR$/go/pointer/callgraph.go</url>
+          <line>466</line>
+          <option name="timeStamp" value="47" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

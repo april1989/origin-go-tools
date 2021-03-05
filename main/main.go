@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.tamu.edu/April1989/go_tools/compare"
 	"github.tamu.edu/April1989/go_tools/flags"
 	"github.tamu.edu/April1989/go_tools/go/callgraph"
-	"github.tamu.edu/April1989/go_tools/go/compare"
 	"github.tamu.edu/April1989/go_tools/go/packages"
 	"github.tamu.edu/April1989/go_tools/go/pointer"
 	default_algo "github.tamu.edu/April1989/go_tools/go/pointer_default"
@@ -121,6 +121,10 @@ func main() {
 		t := time.Now()
 		my_elapsed = my_elapsed + t.Sub(start).Milliseconds()
 
+		if flags.DoCommonPart { //add to compare candidate
+			pointer.AddCandidate(r_my)
+		}
+
 		if flags.DoCompare {
 			if r_default != nil && r_my != nil {
 				start = time.Now()
@@ -145,16 +149,18 @@ func main() {
 		fmt.Println("Avg: ", float32(default_elapsed)/float32(len(mains))/float32(1000), "s.")
 	}
 
-	if !flags.DoDefault { //skip printing out mine if default only
-		fmt.Println("My Algo:")
-		fmt.Println("Total: ", (time.Duration(my_elapsed) * time.Millisecond).String()+".")
-		fmt.Println("Max: ", my_maxTime.String()+".")
-		fmt.Println("Min: ", my_minTime.String()+".")
-		fmt.Println("Avg: ", float32(my_elapsed)/float32(len(mains))/float32(1000), "s.")
+	if flags.DoDefault { //skip printing out mine if default only
+		return
 	}
 
-	if flags.DoCommonPath {
-		compare.ComputeCommonParts()
+	fmt.Println("My Algo:")
+	fmt.Println("Total: ", (time.Duration(my_elapsed) * time.Millisecond).String()+".")
+	fmt.Println("Max: ", my_maxTime.String()+".")
+	fmt.Println("Min: ", my_minTime.String()+".")
+	fmt.Println("Avg: ", float32(my_elapsed)/float32(len(mains))/float32(1000), "s.")
+
+	if flags.DoCommonPart {
+		pointer.ComputeCommonParts()
 	}
 }
 
@@ -252,14 +258,10 @@ func doEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 		result.DumpAll()
 	}
 
-	if flags.DoCompare {
+	if flags.DoCompare || flags.DoCommonPart{
 		_r := result.GetResult()
 		_r.Queries = result.Queries
 		_r.IndirectQueries = result.IndirectQueries
-
-		if flags.DoCommonPath { //add to compare candidate
-			compare.AddCandidate(_r)
-		}
 
 		return _r //bz: we only need this when comparing results
 	}

@@ -17,8 +17,8 @@ var TimeLimit time.Duration //bz: time limit, unit: ?h?m?s
 //my use
 var PrintCGNodes = false //bz: print #cgnodes (before solve())
 var DoPerforamnce = true
-var DoDetail = false //bz: print out all data from countReachUnreachXXX
-var DoCommonPath = true //bz: do compute common path
+var DoDetail = false    //bz: print out all data from countReachUnreachXXX
+var DoCommonPart = true //bz: do compute common path
 
 //bz: analyze all flags from input
 func ParseFlags() {
