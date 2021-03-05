@@ -11,11 +11,11 @@ import (
 //bz: compute the common paths in a set of mains from a pkg
 
 var (
-	size  = 10 //how many cands can include
+	size  = 60 //how many cands can include
 	cands []*ResultWCtx
 	base  *ResultWCtx
 	//result
-	sames = make(map[*ssa.Function][]string)
+	sames = make(map[*ssa.Function][]int)
 	diffs = make(map[*ssa.Function][]string)
 )
 
@@ -94,9 +94,7 @@ func ComputeCommonParts() {
 	fmt.Println("\nSame Detail: ")
 	for fn, details := range sames {
 		fmt.Println(fn)
-		for _, detail := range details {
-			fmt.Println(detail)
-		}
+		fmt.Println(details)
 	}
 
 	fmt.Println("\n\nDiff Detail: ")
@@ -108,9 +106,9 @@ func ComputeCommonParts() {
 	}
 }
 
-func updateSame(fn *ssa.Function, s string) {
+func updateSame(fn *ssa.Function, ithCand int) {
 	same := sames[fn]
-	same = append(same, s)
+	same = append(same, ithCand)
 	sames[fn] = same
 }
 
@@ -211,7 +209,7 @@ func compareAcross(fn *ssa.Function, base *Node, ithCand int, _callers []*Node) 
 		}
 	}
 
-	updateSame(fn, "- "+strconv.Itoa(ithCand)+"'s cand -> SAME")
+	updateSame(fn, ithCand)
 }
 
 //bz: whether n and o have the same sites (same target),
@@ -271,9 +269,9 @@ func sameParamReturn(nfnObj nodeid, nSig *types.Signature, ofnObj nodeid, oSig *
 		//static func
 		nRecvSize = 0
 		oRecvSize = 0
-	}else if nSig.Recv() == nil || oSig.Recv() == nil {
+	} else if nSig.Recv() == nil || oSig.Recv() == nil {
 		return false
-	}else {
+	} else {
 		nRecvSize = na.sizeof(nSig.Recv().Type())
 		oRecvSize = oa.sizeof(oSig.Recv().Type())
 		if nRecvSize != oRecvSize {
