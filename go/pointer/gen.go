@@ -262,6 +262,7 @@ func (a *analysis) makeFunctionObject(fn *ssa.Function, callersite *callsite) no
 //TODO: Precision Problem: since go ssa instruction only record call instruction but no program counter,
 //      two calls (no param and return value) to the same target within one method cannot be distinguished ...
 //      e.g., go2/race_checker/GoBench/Kubernetes/88331/main.go: func NewPriorityQueue() *PriorityQueue {...}
+//      bz: DID I FIX THIS??
 func (a *analysis) makeFunctionObjectWithContext(caller *cgnode, fn *ssa.Function, callersite *callsite, closure *ssa.MakeClosure, loopID int) (nodeid, bool) {
 	if a.log != nil {
 		fmt.Fprintf(a.log, "\t---- makeFunctionObjectWithContext (kcfa) %s\n", fn)

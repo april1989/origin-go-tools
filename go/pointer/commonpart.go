@@ -3,6 +3,7 @@ package pointer
 import (
 	"fmt"
 	"github.tamu.edu/April1989/go_tools/go/ssa"
+	"go/types"
 	"strconv"
 	"strings"
 )
@@ -68,7 +69,7 @@ func ComputeCommonParts() {
 			continue
 		}
 		if len(baseNodes) > 1 {
-			fmt.Println("** Multiple shared contour bases @"+fn.String())
+			fmt.Println("** Multiple shared contour bases @" + fn.String())
 			continue
 		}
 
@@ -133,7 +134,7 @@ func compareAcross(fn *ssa.Function, base *Node, ithCand int, _callers []*Node) 
 		return
 	}
 	if len(comparees) > 1 {
-		fmt.Println("** Multiple shared contour comparees @"+fn.String())
+		fmt.Println("** Multiple shared contour comparees @" + fn.String())
 		return
 	}
 
@@ -145,7 +146,7 @@ func compareAcross(fn *ssa.Function, base *Node, ithCand int, _callers []*Node) 
 	//compare pts
 	base_cgn := base.GetCGNode()
 	comparee_cgn := comparee.GetCGNode()
-	same := compareCGNode(base_cgn, ithCand, comparee_cgn)
+	same := comparePTSinCGNode(base_cgn, ithCand, comparee_cgn)
 
 	if !same {
 		updateDiff(fn, "- "+strconv.Itoa(ithCand)+"'s cand -> DIFF PTS")
@@ -216,7 +217,7 @@ func compareAcross(fn *ssa.Function, base *Node, ithCand int, _callers []*Node) 
 //bz: whether n and o have the same sites (same target),
 //callersite (shared contour -> skip compare), actualCallerSite (skip now),
 //and localval, localobj -> have the same pts
-func compareCGNode(n *cgnode, ith int, o *cgnode) bool {
+func comparePTSinCGNode(n *cgnode, ith int, o *cgnode) bool {
 	na := base.a
 	oa := cands[ith].a
 
@@ -231,6 +232,14 @@ func compareCGNode(n *cgnode, ith int, o *cgnode) bool {
 	//	}
 	//}
 
+	//compare params, return val
+	nfnObj := n.obj //nodeid should be right
+	ofnObj := o.obj
+	if !sameParamReturn(nfnObj, n.fn.Signature, ofnObj, o.fn.Signature, na, oa) {
+		return false
+	}
+
+	//compare localval, localobj
 	if len(n.localval) != len(o.localval) || len(n.localobj) != len(o.localobj) {
 		return false
 	}
@@ -238,8 +247,7 @@ func compareCGNode(n *cgnode, ith int, o *cgnode) bool {
 	//compare localval
 	for val, nid := range n.localval {
 		oid := o.localval[val] //should have the same hashcode; and should also have the same order of storing val
-		same := samePTS(nid, oid, na, oa)
-		if !same {
+		if !samePTS(nid, oid, na, oa) {
 			return false
 		}
 	}
@@ -247,12 +255,63 @@ func compareCGNode(n *cgnode, ith int, o *cgnode) bool {
 	//compare localobj
 	for val, nid := range n.localobj {
 		oid := o.localobj[val] //should have the same hashcode
-		same := samePTS(nid, oid, na, oa)
-		if !same {
+		if !samePTS(nid, oid, na, oa) {
 			return false
 		}
 	}
 
+	return true
+}
+
+func sameParamReturn(nfnObj nodeid, nSig *types.Signature, ofnObj nodeid, oSig *types.Signature, na *analysis, oa *analysis) bool {
+	//compare params: this
+	nArg0 := na.funcParams(nfnObj)
+	nRecvSize := na.sizeof(nSig.Recv().Type())
+	oArg0 := oa.funcParams(ofnObj)
+	oRecvSize := oa.sizeof(oSig.Recv().Type())
+	if nRecvSize != oRecvSize {
+		return false
+	}
+	if !samePTSinBlock(nArg0, oArg0, nRecvSize, na, oa) {
+		return false
+	}
+
+	nDst := nArg0 + nodeid(nRecvSize) //method formal parameters starts here
+	oDst := oArg0 + nodeid(oRecvSize)
+
+	// compare method formal parameters.
+	nParamsSize := na.sizeof(nSig.Params())
+	oParamsSize := oa.sizeof(oSig.Params())
+	if nParamsSize != oParamsSize {
+		return false
+	}
+	if !samePTSinBlock(nDst, oDst, nParamsSize, na, oa) {
+		return false
+	}
+
+	// compare method results
+	nDst += nodeid(nParamsSize) //result block starts here
+	nResultsSize := na.sizeof(nSig.Results())
+	oDst += nodeid(oParamsSize)
+	oResultsSize := oa.sizeof(oSig.Results())
+	if nResultsSize != oResultsSize {
+		return false
+	}
+	if !samePTSinBlock(nDst, oDst, nResultsSize, na, oa) {
+		return false
+	}
+
+	return true
+}
+
+func samePTSinBlock(nid nodeid, oid nodeid, sizeof uint32, na *analysis, oa *analysis) bool {
+	for i := uint32(0); i < sizeof; i++ {
+		if !samePTS(nid, oid, na, oa) {
+			return false
+		}
+		nid++
+		oid++
+	}
 	return true
 }
 
