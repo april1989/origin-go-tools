@@ -1,4 +1,18 @@
-# Go Tools -> Go Pointer Analysis 
+# Go Tools -> Go Pointer Analysis
+
+## This branch is for call back funcs shown in app func but called after several level of lib calls
+
+We want to skip the analysis of lib calls, too expensive. If we are going to create synthetic ssa for lib functions,
+   we start here.
+   1. write a native.xml file with all irs we want
+   2. preload all irs in native.xml
+   3. when reach here @ssa/create.go CreatePackage(), we check if it is in preload, if yes, use this synthetic
+
+Key files:
+ ssa/create.go
+ ssa/builder.go
+ 
+====================================================================================
 
 Git clone from https://github.com/golang/tools, start from commit 146a0deefdd11b942db7520f68c117335329271a (around v0.5.0-pre1).
 

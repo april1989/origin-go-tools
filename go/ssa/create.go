@@ -162,6 +162,13 @@ func membersFromDecl(pkg *Package, decl ast.Decl) {
 // The real work of building SSA form for each function is not done
 // until a subsequent call to Package.Build().
 //
+// TODO: bz: if we are going to create synthetic ssa for lib functions,
+//   we start here.
+//   -> this is for call back funcs shown in app func but called after several level of lib calls
+//      we want to skip the analysis of lib calls, too expensive
+//   1. write a native.xml file with all irs we want
+//   2. preload all irs in native.xml
+//   3. when reach here @ssa/create.go CreatePackage(), we check if it is in preload, if yes, use this synthetic
 func (prog *Program) CreatePackage(pkg *types.Package, files []*ast.File, info *types.Info, importable bool) *Package {
 	p := &Package{
 		Prog:    prog,
