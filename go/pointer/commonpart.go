@@ -79,7 +79,7 @@ func ComputeCommonParts() {
 			}
 			_, ok := cand.CallGraph.Fn2CGNode[fn] //should have the same hashcode
 			if !ok {
-				fmt.Println("No such func in cand ", i, " @", fn.String())
+				//fmt.Println("No such func in cand ", i, " @", fn.String())
 				continue
 			}
 			_callers := cand.CallGraph.GetNodesForFn(fn)
@@ -265,14 +265,26 @@ func comparePTSinCGNode(n *cgnode, ith int, o *cgnode) bool {
 
 func sameParamReturn(nfnObj nodeid, nSig *types.Signature, ofnObj nodeid, oSig *types.Signature, na *analysis, oa *analysis) bool {
 	//compare params: this
-	nArg0 := na.funcParams(nfnObj)
-	nRecvSize := na.sizeof(nSig.Recv().Type())
-	oArg0 := oa.funcParams(ofnObj)
-	oRecvSize := oa.sizeof(oSig.Recv().Type())
-	if nRecvSize != oRecvSize {
+	var nRecvSize uint32
+	var oRecvSize uint32
+	if nSig.Recv() == nil && oSig.Recv() == nil {
+		//static func
+		nRecvSize = 0
+		oRecvSize = 0
+	}else if nSig.Recv() == nil || oSig.Recv() == nil {
 		return false
+	}else {
+		nRecvSize = na.sizeof(nSig.Recv().Type())
+		oRecvSize = oa.sizeof(oSig.Recv().Type())
+		if nRecvSize != oRecvSize {
+			return false
+		}
 	}
-	if !samePTSinBlock(nArg0, oArg0, nRecvSize, na, oa) {
+
+	nArg0 := na.funcParams(nfnObj)
+	oArg0 := oa.funcParams(ofnObj)
+
+	if !samePTSinBlock(nArg0, oArg0, nRecvSize, na, oa) { //check if has receiver
 		return false
 	}
 
