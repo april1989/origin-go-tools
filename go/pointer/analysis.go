@@ -44,6 +44,12 @@ const (
 	otFunction             // function object
 )
 
+var ( //bz: my performance
+	maxTime time.Duration
+	minTime time.Duration
+	total   int64
+)
+
 // An object represents a contiguous block of memory to which some
 // (generalized) pointer may point.
 //
@@ -131,7 +137,7 @@ type analysis struct {
 	atFuncs     map[*ssa.Function]bool      // address-taken functions (for presolver)
 	mapValues   []nodeid                    // values of makemap objects (indirect in HVN)
 	work        nodeset                     // solver's worklist
-	//result      *Result                     // results of the analysis
+	//result      *Result                     // results of the analysis: default
 	track      track // pointerlike types whose aliasing we track
 	deltaSpace []int // working space for iterating over PTS deltas
 
@@ -157,6 +163,29 @@ type analysis struct {
 	numObjs         int             //bz: number of objects allocated
 	numOrigins      int             //bz: number of origins
 	preGens         []*ssa.Function //bz: number of pregenerated functions/cgs/constraints for reflection, os, runtime
+
+	//bz: make the following from var to here, to keep thread safe
+	isWithinScope bool //bz: whether the current genInstr() is working on a method within our scope
+	online        bool //bz: whether a constraint is from genInvokeOnline()
+	recordPreGen  bool //bz: when to record preGens
+
+	/** bz:
+	    we do have panics when turn on hvn optimization. panics are due to that hvn wrongly computes sccs.
+	    wrong sccs is because some pointers are not marked as indirect (but marked in default).
+	    This not-marked behavior is because we do not create function pointers for those functions that
+	    we skip their cgnode/func/constraints creation in offline generate(). So we keep a record here.
+
+	HOWEVER, we still have panics ... e.g., google.golang.org/grpc/benchmark/worker
+	OR maybe we need to do this for all functions?
+	HOWEVER, why is this a must?
+
+	MOREOVER, this makes the analysis even slower, since hvn uses a lot of time (it has nothing to do with my renumbering code)
+	do we really need this?
+	MAYBE this favors large programs? but the performance on tidb cannot stop ...
+
+	Update: we only record this skipTypes when optHVN is on
+	*/
+	skipTypes map[string]string //bz: a record of skiped methods in generate() off-line
 }
 
 // enclosingObj returns the first node of the addressable memory
@@ -197,7 +226,7 @@ func (a *analysis) warnf(pos token.Pos, format string, args ...interface{}) {
 func (a *analysis) computeTrackBits() {
 	if len(a.config.extendedQueries) != 0 {
 		// TODO(dh): only track the types necessary for the query.
-		a.track = trackAll //bz: we want this trackAll, but we do not set this
+		a.track = trackAll //bz: we want this trackAll, but we do not set this  --> update: set it
 		return
 	}
 	var queryTypes []types.Type
@@ -258,6 +287,131 @@ func translateQueries(val ssa.Value, id nodeid, cgn *cgnode, result *Result, _re
 	}
 }
 
+//bz: print out config in console
+func printConfig(config *Config) {
+	var mode string //which pta is running
+	if config.Origin {
+		mode = strconv.Itoa(config.K) + "-ORIGIN-SENSITIVE"
+	} else if config.CallSiteSensitive {
+		mode = strconv.Itoa(config.K) + "-CFA"
+	} else {
+		mode = "CONTEXT-INSENSITIVE"
+	}
+	fmt.Println(" *** MODE: " + mode + " *** ")
+	fmt.Println(" *** Level: " + strconv.Itoa(config.Level) + " *** ")
+	//bz: change to default, remove flags
+	fmt.Println(" *** Use Queries/IndirectQueries *** ")
+	fmt.Println(" *** Use Default Queries API *** ")
+	if config.TrackMore {
+		fmt.Println(" *** Track All Types *** ")
+	} else {
+		fmt.Println(" *** Default Type Tracking (skip basic types) *** ")
+	}
+
+	if config.DoPerformance { //bz: this is from my main, i want them to print out
+		if optRenumber {
+			fmt.Println(" *** optRenumber ON *** ")
+		} else {
+			fmt.Println(" *** optRenumber OFF *** ")
+		}
+		if optHVN {
+			fmt.Println(" *** optHVN ON *** ")
+		} else {
+			fmt.Println(" *** optHVN OFF *** ")
+		}
+	}
+
+	fmt.Println(" *** Analyze Scope ***************** ")
+	if len(config.Scope) > 0 {
+		for _, pkg := range config.Scope {
+			fmt.Println(" - " + pkg)
+		}
+	}
+	fmt.Println(" *********************************** ")
+	fmt.Println(" *** Import Libs ******************* ")
+	if len(config.imports) > 0 {
+		for _, pkg := range config.imports {
+			fmt.Print(pkg + ", ")
+		}
+		fmt.Println()
+	}
+	fmt.Println(" *********************************** ")
+}
+
+//bz: user api, to analyze multiple mains
+func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err error) {
+	if config.Mains == nil {
+		return nil, fmt.Errorf("no main/test packages to analyze (check $GOROOT/$GOPATH)")
+	}
+	defer func() {
+		if p := recover(); p != nil {
+			err = fmt.Errorf("internal error in pointer analysis: %v (please report this bug)", p)
+			fmt.Fprintln(os.Stderr, "Internal panic in pointer analysis:")
+			debug.PrintStack()
+		}
+	}()
+
+	assert(len(config.Mains) > 1, "This API is for analyzing MULTIPLE mains. If analyzing one main, please use pointer.Analyze().")
+	maxTime = 0
+	minTime = 1000000000
+
+	printConfig(config)
+
+	fmt.Println(" *** Multiple Mains **************** ")
+	for i, main := range config.Mains {
+		//create a config
+		var _mains []*ssa.Package
+		_mains = append(_mains, main)
+		_config := &Config{
+			Mains:          _mains,
+			Reflection:     config.Reflection,
+			BuildCallGraph: config.BuildCallGraph,
+			Log:            config.Log,
+			//CallSiteSensitive: true, //kcfa
+			Origin: config.Origin, //origin
+			//shared config
+			K:             config.K,
+			LimitScope:    config.LimitScope, //bz: only consider app methods now -> no import will be considered
+			DEBUG:         config.DEBUG,      //bz: rm all printed out info in console
+			Scope:         config.Scope,      //bz: analyze scope + input path
+			Exclusion:     config.Exclusion,  //bz: copied from race_checker if any
+			TrackMore:     config.TrackMore,  //bz: track pointers with all types
+			Level:         config.Level,      //bz: see pointer.Config
+			DoPerformance: config.DoPerformance,
+		}
+
+		//we initially run the analysis
+		start := time.Now()
+		_result, err := AnalyzeWCtx(_config, false)
+		if err != nil {
+			return nil, err
+		}
+
+		translateResult(_result, main)
+		elapse := time.Now().Sub(start)
+		if maxTime < elapse {
+			maxTime = elapse
+		}
+		if minTime > elapse {
+			minTime = elapse
+		}
+		total = total + elapse.Milliseconds()
+
+		//performance
+		fmt.Println(strconv.Itoa(i)+": "+main.String(), " (use "+elapse.String()+")")
+	}
+	fmt.Println(" *********************************** ")
+
+	//bz: i want this...
+	fmt.Println("Total: ", (time.Duration(total)*time.Millisecond).String()+".")
+	fmt.Println("Max: ", maxTime.String()+".")
+	fmt.Println("Min: ", minTime.String()+".")
+	fmt.Println("Avg: ", float32(total)/float32(len(config.Mains))/float32(1000), "s.")
+
+	results = main2Analysis
+	return results, nil
+}
+
 //bz: change to default api
 //but result does not include call graph (a.result.CallGraph),
 //since the type does not match and race checker also does not use this
@@ -280,41 +434,12 @@ func Analyze(config *Config) (result *Result, err error) {
 	}
 
 	//we initially run the analysis
-	_result, err := AnalyzeWCtx(config)
+	_result, err := AnalyzeWCtx(config, true)
 	if err != nil {
 		return nil, err
 	}
-	//translate to default return value
-	result = &Result{
-		Queries:         make(map[ssa.Value][]PointerWCtx),
-		IndirectQueries: make(map[ssa.Value][]PointerWCtx),
-	}
 
-	//go through each cgnode
-	callgraph := _result.CallGraph
-	fns := callgraph.Fn2CGNode
-	for _, cgns := range fns {
-		for _, cgn := range cgns {
-			for val, id := range cgn.localval {
-				translateQueries(val, id, cgn, result, _result)
-			}
-
-			for obj, id := range cgn.localobj {
-				translateQueries(obj, id, cgn, result, _result)
-			}
-		}
-	}
-	for val, id := range _result.a.globalval {
-		translateQueries(val, id, nil, result, _result)
-	}
-	for obj, id := range _result.a.globalobj {
-		translateQueries(obj, id, nil, result, _result)
-	}
-
-	main2Analysis = make(map[*ssa.Package]*Result)
-	main2Analysis[main] = result
-	result.a = _result.a
-
+	result = translateResult(_result, main)
 	return result, nil
 }
 
@@ -325,7 +450,7 @@ func Analyze(config *Config) (result *Result, err error) {
 // Pointer analysis of a transitively closed well-typed program should
 // always succeed.  An error can occur only due to an internal bug.
 //
-func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
+func AnalyzeWCtx(config *Config, doPrintConfig bool) (result *ResultWCtx, err error) { //Result
 	if config.Mains == nil {
 		return nil, fmt.Errorf("no main/test packages to analyze (check $GOROOT/$GOPATH)")
 	}
@@ -356,75 +481,31 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 			DEBUG:           config.DEBUG,
 		},
 		deltaSpace: make([]int, 0, 100),
-		//bz: i did not clear the following two after offline TODO: do I ?
+		//bz: i did not clear the following two after offline
 		fn2cgnodeIdx: make(map[*ssa.Function][]int),
 		closures:     make(map[*ssa.Function]*Ctx2nodeid),
 		closureWOGo:  make(map[nodeid]nodeid),
+		skipTypes:    make(map[string]string),
 	}
 
 	if false {
 		a.log = os.Stderr // for debugging crashes; extremely verbose
 	}
 
-	var mode string //which pta is running
-	if a.config.Origin {
-		mode = strconv.Itoa(a.config.K) + "-ORIGIN-SENSITIVE"
-	} else if a.config.CallSiteSensitive {
-		mode = strconv.Itoa(a.config.K) + "-CFA"
-	} else {
-		mode = "CONTEXT-INSENSITIVE"
-	}
+	assert(len(a.config.Mains) == 1, "This API is for analyzing ONE main. If analyzing multiple mains, please use pointer.AnalyzeMultiMains().")
 
 	UpdateDEBUG(a.config.DEBUG) //in pointer/callgraph, print out info changes
 
-	//update analysis scope: +
+	//update analysis import
 	imports := a.config.Mains[0].Pkg.Imports()
 	if len(imports) > 0 {
 		for _, _import := range imports {
 			a.config.imports = append(a.config.imports, _import.Name())
 		}
 	}
-	fmt.Println(" *** MODE: " + mode + " *** ")
-	fmt.Println(" *** Analyze Scope ***************** ")
-	if len(a.config.Scope) > 0 {
-		for _, pkg := range a.config.Scope {
-			fmt.Println(" - " + pkg)
-		}
-	}
-	fmt.Println(" *********************************** ")
-	fmt.Println(" *** Import Libs ******************* ")
-	if len(a.config.imports) > 0 {
-		for _, pkg := range a.config.imports {
-			fmt.Print(pkg + ", ")
-		}
-		fmt.Println()
-	}
-	fmt.Println(" *********************************** ")
-	if len(a.config.Mains) > 1 {
-		fmt.Println(" *** Multiple Mains **************** ")
-		for i, main := range a.config.Mains {
-			fmt.Println(strconv.Itoa(i) + ": " + main.String())
-		}
-		fmt.Println(" *********************************** ")
-	}
-	fmt.Println(" *** Level: " + strconv.Itoa(a.config.Level) + " *** ")
-	//bz: change to default, remove flags
-	fmt.Println(" *** Use Queries/IndirectQueries *** ")
-	fmt.Println(" *** Use Default Queries API *** ")
-	if a.config.TrackMore {
-		fmt.Println(" *** Track Types in Scope *** ")
-	} else {
-		fmt.Println(" *** Default Type Tracking *** ")
-	}
-	if optRenumber {
-		fmt.Println(" *** optRenumber ON *** ")
-	} else {
-		fmt.Println(" *** optRenumber OFF *** ")
-	}
-	if optHVN {
-		fmt.Println(" *** optHVN ON *** ")
-	} else {
-		fmt.Println(" *** optHVN OFF *** ")
+
+	if doPrintConfig {
+		printConfig(a.config)
 	}
 
 	if a.log != nil {
@@ -464,7 +545,9 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 	if runtime := a.prog.ImportedPackage("runtime"); runtime != nil {
 		a.runtimeSetFinalizer = runtime.Func("SetFinalizer")
 	}
-	a.computeTrackBits() //bz: use when there is input queries before running this analysis; we do not need this for now?
+
+	//a.computeTrackBits() //bz: use when there is input queries before running this analysis; -> update: we do not need this. just update a.track here
+	a.track = trackAll
 
 	a.generate()   //bz: a preprocess for reflection/runtime/import libs
 	a.showCounts() //bz: print out size ...
@@ -497,8 +580,8 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 			a.rtypes.SetHasher(a.hasher)
 		}
 
-		start := time.Now()
-		a.hvn() //default: do this hvn
+		start := time.Now() //bz: i add performance
+		a.hvn()             //default: do this hvn
 		elapsed := time.Now().Sub(start)
 		fmt.Println("HVN using ", elapsed) //bz: i want to know how slow it is ...
 	}
@@ -561,20 +644,58 @@ func AnalyzeWCtx(config *Config) (result *ResultWCtx, err error) { //Result
 		fmt.Println("#constraints (totol num): ", a.num_constraints)
 		fmt.Println("#cgnodes (totol num): ", len(a.cgnodes))
 		//fmt.Println("#func (totol num): ", len(a.fn2cgnodeIdx))
-		numTyp := 0
-		for _, track := range a.trackTypes {
-			if track {
-				numTyp++
-			}
-		}
-		fmt.Println("#tracked types (totol num): ", numTyp)
+		//numTyp := 0
+		//for _, track := range a.trackTypes {
+		//	if track {
+		//		numTyp++
+		//	}
+		//}
+		//fmt.Println("#tracked types (totol num): ", numTyp)
+		fmt.Println("#tracked types (totol num): trackAll") //bz: updated a.track = trackAll, skip this number
 		fmt.Println("#origins (totol num): ", a.numOrigins+1) //bz: main is not included here
 		fmt.Println("#objs (totol num): ", a.numObjs)
 		fmt.Println("\nCall Graph: (cgnode based: function + context) \n#Nodes: ", len(a.result.CallGraph.Nodes))
-		fmt.Println("#Edges: ", GetNumEdges())
+		fmt.Println("#Edges: ", a.result.CallGraph.GetNumEdges())
 	}
 
 	return a.result, nil
+}
+
+//bz: translate to default return value, and update main2Analysis
+func translateResult(_result *ResultWCtx, main *ssa.Package) *Result {
+	result := &Result{
+		Queries:         make(map[ssa.Value][]PointerWCtx),
+		IndirectQueries: make(map[ssa.Value][]PointerWCtx),
+	}
+
+	//go through each cgnode
+	callgraph := _result.CallGraph
+	fns := callgraph.Fn2CGNode
+	for _, cgns := range fns {
+		for _, cgn := range cgns {
+			for val, id := range cgn.localval {
+				translateQueries(val, id, cgn, result, _result)
+			}
+
+			for obj, id := range cgn.localobj {
+				translateQueries(obj, id, cgn, result, _result)
+			}
+		}
+	}
+	for val, id := range _result.a.globalval {
+		translateQueries(val, id, nil, result, _result)
+	}
+	for obj, id := range _result.a.globalobj {
+		translateQueries(obj, id, nil, result, _result)
+	}
+
+	if main2Analysis == nil {
+		main2Analysis = make(map[*ssa.Package]*Result)
+	}
+	main2Analysis[main] = result
+	result.a = _result.a
+
+	return result
 }
 
 //bz: used in race_checker
@@ -644,7 +765,7 @@ func (a *analysis) callEdge(caller *cgnode, site *callsite, calleeid nodeid) {
 		// (to wrappers) to arise due to the elimination of
 		// context information, but I haven't observed any.
 		// Understand this better.
-		AddEdge(cg.CreateNodeWCtx(caller), site.instr, cg.CreateNodeWCtx(callee)) //bz: changed
+		cg.AddEdge(cg.CreateNodeWCtx(caller), site.instr, cg.CreateNodeWCtx(callee)) //bz: changed
 	}
 
 	if a.log != nil {

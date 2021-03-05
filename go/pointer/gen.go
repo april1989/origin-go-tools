@@ -25,26 +25,6 @@ var (
 	tEface     = types.NewInterfaceType(nil, nil).Complete()
 	tInvalid   = types.Typ[types.Invalid]
 	tUnsafePtr = types.Typ[types.UnsafePointer]
-
-	withinScope  = false //bz: whether the current genInstr() is working on a method within our scope
-	Online       = false //bz: whether a constraint is from genInvokeOnline()
-	recordPreGen = false //bz: when to record preGens
-
-	/** bz:
-	    we do have panics when turn on hvn optimization. panics are due to that hvn wrongly computes sccs.
-	    wrong sccs is because some pointers are not marked as indirect (but marked in default).
-	    This not-marked behavior is because we do not create function pointers for those functions that
-	    we skip their cgnode/func/constraints creation in offline generate(). So we keep a record here.
-
-	HOWEVER, we still have panics ... e.g., google.golang.org/grpc/benchmark/worker
-	OR maybe we need to do this for all functions?
-	HOWEVER, why is this a must?
-
-	MOREOVER, this makes the analysis even slower, since hvn uses a lot of time (it has nothing to do with my renumbering code)
-	do we really need this?
-	MAYBE this favors large programs? but the performance on tidb cannot stop ...
-	*/
-	skipTypes = make(map[string]string) //bz: a record of skiped methods in generate() off-line
 )
 
 // ---------- Node creation ----------
@@ -154,7 +134,7 @@ func (a *analysis) setValueNode(v ssa.Value, id nodeid, cgn *cgnode) {
 	//}
 }
 
-func (a *analysis) recordExtendedQueries(t types.Type, cgn *cgnode, v ssa.Value, id nodeid) {
+func (a *analysis) recordExtendedQueries(t types.Type, v ssa.Value, id nodeid) {
 	ptr := PointerWCtx{a, a.addNodes(t, "query.extended"), nil}
 	ptrs, ok := a.result.ExtendedQueries[v]
 	if !ok {
@@ -169,7 +149,7 @@ func (a *analysis) recordExtendedQueries(t types.Type, cgn *cgnode, v ssa.Value,
 }
 
 //bz: utility func to record global queries
-func (a *analysis) recordGlobalQueries(t types.Type, cgn *cgnode, v ssa.Value, id nodeid) {
+func (a *analysis) recordGlobalQueries(t types.Type, v ssa.Value, id nodeid) {
 	ptr := PointerWCtx{a, a.addNodes(t, "query.global"), nil}
 	ptrs, ok := a.result.GlobalQueries[v]
 	if !ok {
@@ -304,6 +284,8 @@ func (a *analysis) makeFunctionObjectWithContext(caller *cgnode, fn *ssa.Functio
 	var existNodeID nodeid
 	var isNew bool
 	if a.config.Origin { //bz: origin -> we only create new callsite[] for specific instr, not everyone
+		assert(callersite != nil, "Unexpected nil callersite.instr @ makeFunctionObjectWithContext().")
+
 		if _, ok := callersite.instr.(*ssa.Go); callersite == nil || ok {
 			existFnIdx, multiFn, existNodeID, isNew = a.existContextForComb(fn, callersite, caller)
 			if !isNew {
@@ -706,7 +688,7 @@ func (a *analysis) addressOf(T types.Type, id, obj nodeid) {
 	}
 
 	if a.config.TrackMore {
-		if withinScope || a.shouldTrack(T) {
+		if a.isWithinScope || a.shouldTrack(T) {
 			a.addConstraint(&addrConstraint{id, obj})
 		}
 	} else { //default
@@ -764,7 +746,7 @@ func (a *analysis) store(dst, src nodeid, offset uint32, sizeof uint32) {
 //
 func (a *analysis) offsetAddr(T types.Type, dst, src nodeid, offset uint32) {
 	if a.config.TrackMore {
-		if !withinScope && !a.shouldTrack(T) {
+		if !a.isWithinScope && !a.shouldTrack(T) {
 			return
 		}
 	} else { //default
@@ -1085,31 +1067,35 @@ func (a *analysis) isInLoop(fn *ssa.Function, inst ssa.Instruction) bool {
 }
 
 //bz: which level of lib/app calls we consider: true -> create func/cgnode; false -> do not create
-//scope: 1<2<3<0
+//scope: (discard 1)
+//2 < 3 < 0
 func (a *analysis) createForLevelX(caller *ssa.Function, callee *ssa.Function) bool {
-	if a.config.Level == 1 {
-		//bz: if callee is from app or import => 1 level
-		//caller in app, callee in lib || caller in app, callee in app || caller in lib, callee in app
-		if a.withinScope(callee.String()) || a.fromImports(callee.String()) {
-			return true
-		}
-	} else if a.config.Level == 2 {
+	//if a.config.Level == 1 {
+	//	//bz: if callee is from app => 1 level
+	//	if a.withinScope(callee.String()) {
+	//		return true
+	//	}
+	//} else
+	if a.config.Level == 2 {
 		//bz: parent of caller in app, caller in lib, callee also in lib
 		// || parent in lib, caller in app, callee in lib || parent in lib, caller in lib, callee in app
-		if caller == nil {
+		if caller == nil { //shared contour
 			if a.withinScope(callee.String()) || a.fromImports(callee.String()) {
 				return true //bz: as long as callee is app/path func, we do it
 			}
-			return true
+			return false
 		}
-		//parentcaller -> app; caller -> lib; callee -> lib  => 2 level
+
 		parentCaller := caller.Parent()
 		if parentCaller == nil { //bz: pkg initializer, no parent or other cases
-			if a.withinScope(callee.String()) || a.fromImports(callee.String()) || a.withinScope(caller.String()) || a.fromImports(caller.String()) {
+			if a.withinScope(callee.String()) || a.fromImports(callee.String()) ||
+				a.withinScope(caller.String()) || a.fromImports(caller.String()) {
 				return true
 			}
 			return false
 		}
+
+		//parentcaller -> app; caller -> lib; callee -> lib  => 2 level
 		if a.withinScope(parentCaller.String()) || a.withinScope(caller.String()) || a.withinScope(callee.String()) {
 			return true
 		}
@@ -1121,12 +1107,13 @@ func (a *analysis) createForLevelX(caller *ssa.Function, callee *ssa.Function) b
 			}
 			return false
 		}
-		if a.withinScope(callee.String()) || a.fromImports(callee.String()) || a.withinScope(caller.String()) || a.fromImports(caller.String()) {
+		if a.withinScope(callee.String()) || a.fromImports(callee.String()) ||
+			a.withinScope(caller.String()) || a.fromImports(caller.String()) {
 			return true
 		}
 	}
 
-	//bz: this is really considering all, including lib's lib, lib's lib's lib, etc.
+	//bz: default 0: this is really considering all, including lib's lib, lib's lib's lib, etc.
 	return true
 }
 
@@ -1168,15 +1155,15 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 	var obj nodeid //bz: only used in some cases below
 	var id nodeid  //bz: only used if fn is in skips
 
-	//bz: check if in skip; only if we have not create it before
-	if _, ok := a.globalobj[fn]; !ok {
+	//bz: check if in skip; only if we have not create it before -> optHVN only
+	if _, ok := a.globalobj[fn]; optHVN && !ok {
 		//TODO: bz: this name matching is not perfect ...
 		name := fn.String()
 		name = name[0:strings.LastIndex(name, ".")] //remove func name
 		if strings.Contains(name, "(") {
 			name = name[1 : len(name)-1] //remove brackets
 		}
-		if _type, ok := skipTypes[name]; ok {
+		if _type, ok := a.skipTypes[name]; ok {
 			//let's make a id here
 			id = a.addNodes(fn.Type(), _type)
 
@@ -1223,7 +1210,7 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 	}
 
 	if obj != 0 {
-		if id != 0 { //bz: we need to make up this missing constraints
+		if optHVN && id != 0 { //bz: we need to make up this missing constraints
 			a.addressOf(fn.Type(), id, obj)
 			//but do we set value in a.globalobj?
 		}
@@ -1313,7 +1300,7 @@ func (a *analysis) genDynamicCall(caller *cgnode, site *callsite, call *ssa.Call
 //bz: Online iteratively doing genFunc <-> genInstr iteratively
 func (a *analysis) genInvokeOnline(caller *cgnode, site *callsite, fn *ssa.Function) nodeid {
 	//set status
-	Online = true
+	a.online = true
 	if caller != nil {
 		a.localval = caller.localval
 		a.localobj = caller.localobj
@@ -1335,7 +1322,7 @@ func (a *analysis) genConstraintsOnline() {
 		a.genFunc(cgn)
 	}
 
-	Online = false //set back
+	a.online = false //set back
 }
 
 //bz: special handling for invoke (online solving), doing something like genMethodsOf() and valueNode() for invoke calls;
@@ -1346,7 +1333,7 @@ func (a *analysis) genConstraintsOnline() {
 func (a *analysis) valueNodeInvoke(caller *cgnode, site *callsite, fn *ssa.Function) nodeid {
 	if caller == nil && site == nil { //requires shared contour
 		id := a.valueNode(fn) //bz: we use this to generate fn, cgn and their constraints, no other uses
-		if Online {
+		if a.online {
 			return id + 1 // cgn vs func
 		} else {
 			return id
@@ -1371,13 +1358,13 @@ func (a *analysis) valueNodeInvoke(caller *cgnode, site *callsite, fn *ssa.Funct
 			a.atFuncs[fn] = true // Methods of concrete types are address-taken functions.
 		}
 
-		if Online {
+		if a.online {
 			return obj
 		} else {
 			return id
 		}
 	}
-	if Online {
+	if a.online {
 		return obj
 	} else {
 		return obj - 1 //== id : fn
@@ -2176,7 +2163,7 @@ func (a *analysis) genFunc(cgn *cgnode) {
 	}
 
 	//bz: we only want to track global values used in the app methods
-	withinScope = a.considerMyContext(fn.String()) //global bool
+	a.isWithinScope = a.considerMyContext(fn.String()) //global bool
 	// Generate constraints for instructions.
 	for _, b := range fn.Blocks {
 		for _, instr := range b.Instrs {
@@ -2199,7 +2186,7 @@ func (a *analysis) genMethodsOf(T types.Type) {
 		m := a.prog.MethodValue(mset.At(i))
 		a.valueNode(m)
 
-		if recordPreGen {
+		if a.recordPreGen {
 			a.preGens = append(a.preGens, m)
 		}
 
@@ -2226,15 +2213,14 @@ func (a *analysis) generate() {
 
 	// Create nodes and constraints
 	//for all methods of reflect.rtype.
-	// (Shared contours are used by dynamic calls to reflect.Type
-	// methods---typically just String().)
+	// (Shared contours are used by dynamic calls to reflect.Type methods---typically just String().)
 	if a.config.DoPerformance {
-		recordPreGen = true
+		a.recordPreGen = true
 	}
 	if rtype := a.reflectRtypePtr; rtype != nil {
 		a.genMethodsOf(rtype)
 	}
-	recordPreGen = false
+	a.recordPreGen = false
 
 	root := a.genRootCalls()
 
@@ -2252,7 +2238,9 @@ func (a *analysis) generate() {
 			if a.log != nil {
 				fmt.Fprintf(a.log, "SKIP genMethodsOf() offline for type: "+T.String()+"\n")
 			}
-			skipTypes[_type] = _type
+			if optHVN {
+				a.skipTypes[_type] = _type
+			}
 			skip++
 			continue
 		}
@@ -2264,17 +2252,25 @@ func (a *analysis) generate() {
 			if a.log != nil {
 				fmt.Fprintf(a.log, "EXCLUDE genMethodsOf() offline for type: "+T.String()+"\n")
 			}
-			skipTypes[_type] = _type
+			if optHVN {
+				a.skipTypes[_type] = _type
+			}
 			skip++
 		}
 	}
-	fmt.Println("#Excluded types in genMethodsOf() offline (not function): ", skip)
+
+	if a.config.DEBUG {
+		fmt.Println("#Excluded types in genMethodsOf() offline (not function): ", skip)
+	}
+
 	if a.log != nil {
 		fmt.Fprintf(a.log, "\nDone genMethodsOf() offline. \n\n")
 
-		fmt.Fprintf(a.log, "\nDump out skipped types:  \n")
-		for _, _type := range skipTypes {
-			fmt.Fprintf(a.log, _type+"\n")
+		if optHVN {
+			fmt.Fprintf(a.log, "\nDump out skipped types:  \n")
+			for _, _type := range a.skipTypes {
+				fmt.Fprintf(a.log, _type+"\n")
+			}
 		}
 	}
 

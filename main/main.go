@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.tamu.edu/April1989/go_tools/compare"
 	"github.tamu.edu/April1989/go_tools/flags"
 	"github.tamu.edu/April1989/go_tools/go/callgraph"
+	"github.tamu.edu/April1989/go_tools/go/compare"
 	"github.tamu.edu/April1989/go_tools/go/packages"
 	"github.tamu.edu/April1989/go_tools/go/pointer"
 	default_algo "github.tamu.edu/April1989/go_tools/go/pointer_default"
@@ -14,10 +14,11 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
-var scope []string   //bz: now extract from pkgs
+var scope []string           //bz: now extract from pkgs
 var excludedPkgs = []string{ //bz: excluded a lot of default constraints
 	//"runtime",
 	//"reflect",
@@ -30,7 +31,6 @@ var my_elapsed int64
 var default_maxTime time.Duration
 var default_minTime time.Duration
 var default_elapsed int64
-
 
 func main() {
 	flags.ParseFlags()
@@ -92,18 +92,232 @@ func main() {
 	my_minTime = 10000000000000
 	default_minTime = 10000000000000
 
-	//baseline: foreach
+	if flags.DoSeq {
+		doSeq(mains)
+		return
+	}else{
+		//DoSameRoot and DoParallel cannot both be true
+		if flags.DoParallel {
+			doParallel(mains) //bz: --> fatal error: concurrent map writes!! discarded
+		} else {
+			if flags.DoSameRoot {
+				doSameRoot(mains)
+			} else {
+				doEach(mains)
+			}
+		}
+	}
+
+	fmt.Println("\n\nBASELINE All Done  -- PTA/CG Build. \n")
+
+	if flags.DoCompare || flags.DoDefault {
+		fmt.Println("Default Algo:")
+		fmt.Println("Total: ", (time.Duration(default_elapsed)*time.Millisecond).String()+".")
+		fmt.Println("Max: ", default_maxTime.String()+".")
+		fmt.Println("Min: ", default_minTime.String()+".")
+		fmt.Println("Avg: ", float32(default_elapsed)/float32(len(mains))/float32(1000), "s.")
+	}
+
+	if flags.DoDefault {
+		return
+	}
+
+	fmt.Println("My Algo:")
+	fmt.Println("Total: ", (time.Duration(my_elapsed)*time.Millisecond).String()+".")
+	fmt.Println("Max: ", my_maxTime.String()+".")
+	fmt.Println("Min: ", my_minTime.String()+".")
+	fmt.Println("Avg: ", float32(my_elapsed)/float32(len(mains))/float32(1000), "s.")
+}
+
+//baseline: all main together
+func doSameRoot(mains []*ssa.Package) {
+	if flags.DoCompare || flags.DoDefault {
+		doSameRootDefault(mains)
+		fmt.Println("........................................\n........................................")
+	}
+	if flags.DoDefault {
+		return
+	}
+
+	doSameRootMy(mains)
+}
+
+//bz: test usesage in race checker
+func doSeq(mains []*ssa.Package) {
+	level := 0
+	if flags.DoLevel != -1 {
+		level = flags.DoLevel //bz: reset the analysis scope
+	}
+
+	ptaConfig := &pointer.Config{
+		Mains:          mains,
+		Reflection:     false,
+		BuildCallGraph: true,
+		Log:            nil,
+		//CallSiteSensitive: true, //kcfa
+		Origin: true, //origin
+		//shared config
+		K:          1,
+		LimitScope: true,         //bz: only consider app methods now -> no import will be considered
+		DEBUG:      false,        //bz: rm all printed out info in console
+		Scope:      scope,        //bz: analyze scope + input path
+		Exclusion:  excludedPkgs, //bz: copied from race_checker if any
+		TrackMore:  true,         //bz: track pointers with all types
+		Level:      level,        //bz: see pointer.Config
+		DoPerformance:  flags.DoPerforamnce,     //bz: i want to see this performance
+	}
+
+	start := time.Now()                                    //performance
+	results, r_err := pointer.AnalyzeMultiMains(ptaConfig) // conduct pointer analysis
+	t := time.Now()
+	elapsed := t.Sub(start)
+	if r_err != nil {
+		panic(fmt.Sprintln(r_err))
+	}
+	fmt.Println("\nDone  -- PTA/CG Build; Using " + elapsed.String() + ".\n ")
+
+	//check
+	fmt.Println("#Receive Result: ", len(results))
+	for main, result := range results {
+		fmt.Println("Receive result (#Queries: ", len(result.Queries), ", #IndirectQueries: ", len(result.IndirectQueries), ") for main: ", main.String())
+	}
+}
+
+func doSameRootMy(mains []*ssa.Package) *pointer.Result {
+	// Configure pointer analysis to build call-graph
+	ptaConfig := &pointer.Config{
+		Mains:          mains,
+		Reflection:     false,
+		BuildCallGraph: true,
+		Log:            nil,
+		//CallSiteSensitive: true, //kcfa
+		Origin: true, //origin
+		//shared config
+		K:             1,
+		LimitScope:    true,                //bz: only consider app methods now -> no import will be considered
+		DEBUG:         false,               //bz: rm all printed out info in console
+		Scope:         scope,               //bz: analyze scope + input path
+		Exclusion:     excludedPkgs,        //bz: copied from race_checker if any
+		TrackMore:     true,                //bz: track pointers with all types
+		Level:         0,                   //bz: see pointer.Config
+		DoPerformance: flags.DoPerforamnce, //bz: if we output performance related info
+	}
+
+	//*** compute pta here
 	start := time.Now() //performance
+	var result *pointer.Result
+	var r_err error
+	if flags.TimeLimit != 0 { //we set time limit
+		c := make(chan string, 1)
+
+		// Run the pta in it's own goroutine and pass back it's
+		// response into our channel.
+		go func() {
+			result, r_err = pointer.Analyze(ptaConfig) // conduct pointer analysis
+			c <- "done"
+		}()
+
+		// Listen on our channel AND a timeout channel - which ever happens first.
+		select {
+		case res := <-c:
+			fmt.Println(res)
+		case <-time.After(flags.TimeLimit):
+			fmt.Println("\n!! Out of time (", flags.TimeLimit, "). Kill it :(")
+			return nil
+		}
+	} else {
+		result, r_err = pointer.Analyze(ptaConfig) // conduct pointer analysis
+	}
+	t := time.Now()
+	elapsed := t.Sub(start)
+	if r_err != nil {
+		panic(fmt.Sprintln(r_err))
+	}
+
+	fmt.Println("\nDone  -- PTA/CG Build; Using " + elapsed.String() + ".\n ")
+
+	if my_maxTime < elapsed {
+		my_maxTime = elapsed
+	}
+	if my_minTime > elapsed {
+		my_minTime = elapsed
+	}
+
+	return result
+}
+
+func doSameRootDefault(mains []*ssa.Package) []*default_algo.Result {
+	// Configure pointer analysis to build call-graph
+	ptaConfig := &default_algo.Config{
+		Mains:           mains, //one main per time
+		Reflection:      false,
+		BuildCallGraph:  true,
+		Log:             nil,
+		DoPerformance:   flags.DoPerforamnce, //bz: I add to output performance for comparison
+		DoRecordQueries: flags.DoCompare,     //bz: record all queries to compare result
+	}
+
+	//*** compute pta here
+	start := time.Now() //performance
+	var result *default_algo.Result
+	var r_err error           //bz: result error
+	if flags.TimeLimit != 0 { //we set time limit
+		c := make(chan string, 1)
+
+		// Run the pta in it's own goroutine and pass back it's
+		// response into our channel.
+		go func() {
+			result, r_err = default_algo.Analyze(ptaConfig) // conduct pointer analysis
+			c <- "done"
+		}()
+
+		// Listen on our channel AND a timeout channel - which ever happens first.
+		select {
+		case res := <-c:
+			fmt.Println(res)
+		case <-time.After(flags.TimeLimit):
+			fmt.Println("\n!! Out of time (", flags.TimeLimit, "). Kill it :(")
+			return nil
+		}
+	} else {
+		result, r_err = default_algo.Analyze(ptaConfig) // conduct pointer analysis
+	}
+	t := time.Now()
+	elapsed := t.Sub(start)
+	if r_err != nil {
+		panic(fmt.Sprintln(r_err))
+	}
+
+	fmt.Println("\nDone  -- PTA/CG Build; Using ", elapsed.String(), ".\n")
+
+	if default_maxTime < elapsed {
+		default_maxTime = elapsed
+	}
+	if default_minTime > elapsed {
+		default_minTime = elapsed
+	}
+
+	if len(result.Warnings) > 0 {
+		fmt.Println("Warning: ", len(result.Warnings)) //bz: just do not report not used var on result
+	}
+
+	return nil
+}
+
+//baseline: foreach
+func doEach(mains []*ssa.Package) {
 	for i, main := range mains {
 		if flags.Main != "" && flags.Main != main.Pkg.Path() { //run for IDX only
 			continue
 		}
 
-		fmt.Println(i, " ", main.String())
+		fmt.Println(i, ". ", main.String())
 		var r_default *default_algo.Result
 		var r_my *pointer.ResultWCtx
 
+		start := time.Now() //performance
 		if flags.DoCompare || flags.DoDefault {
+			//default
 			fmt.Println("Default Algo: ")
 			r_default = doEachMainDefault(i, main) //default pta
 			t := time.Now()
@@ -132,7 +346,7 @@ func main() {
 				t := time.Now()
 				comp_elapsed := t.Sub(start)
 				fmt.Println("Compare Total Time: ", comp_elapsed.String()+".")
-			}else {
+			} else {
 				fmt.Println("\n\n!! Cannot compare results due to OOT.")
 			}
 		}
@@ -192,18 +406,18 @@ func doEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 		//CallSiteSensitive: true, //kcfa
 		Origin: true, //origin
 		//shared config
-		K:              1,
-		LimitScope:     true,          //bz: only consider app methods now -> no import will be considered
-		DEBUG:          false,         //bz: rm all printed out info in console
-		Scope:          scope,         //bz: analyze scope + input path
-		Exclusion:      excludedPkgs,  //bz: copied from race_checker if any
-		TrackMore:      true,          //bz: track pointers with types declared in Analyze Scope
-		Level:          0,             //bz: see pointer.Config
-		DoPerformance:  flags.DoPerforamnce, //bz: if we output performance related info
+		K:             1,                   //bz: how many level of origins? default = 1
+		LimitScope:    true,                //bz: only consider app methods now -> no import will be considered
+		DEBUG:         false,               //bz: rm all printed out info in console
+		Scope:         scope,               //bz: analyze scope + input path
+		Exclusion:     excludedPkgs,        //bz: copied from race_checker if any
+		TrackMore:     true,                //bz: track pointers with types declared in Analyze Scope
+		Level:         0,                   //bz: see pointer.Config
+		DoPerformance: flags.DoPerforamnce, //bz: if we output performance related info
 	}
 
 	//*** compute pta here
-	start := time.Now()                       //performance
+	start := time.Now() //performance
 	var result *pointer.Result
 	var r_err error
 	if flags.TimeLimit != 0 { //we set time limit
@@ -212,7 +426,7 @@ func doEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 		// Run the pta in it's own goroutine and pass back it's
 		// response into our channel.
 		go func() {
-			result, err = pointer.Analyze(ptaConfig) // conduct pointer analysis
+			result, r_err = pointer.Analyze(ptaConfig) // conduct pointer analysis
 			c <- "done"
 		}()
 
@@ -221,11 +435,11 @@ func doEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 		case res := <-c:
 			fmt.Println(res)
 		case <-time.After(flags.TimeLimit):
-			fmt.Println("\n!! Out of time (", flags.TimeLimit,"). Kill it :(")
+			fmt.Println("\n!! Out of time (", flags.TimeLimit, "). Kill it :(")
 			return nil
 		}
-	}else{
-		result, err = pointer.Analyze(ptaConfig) // conduct pointer analysis
+	} else {
+		result, r_err = pointer.Analyze(ptaConfig) // conduct pointer analysis
 	}
 	t := time.Now()
 	elapsed := t.Sub(start)
@@ -258,12 +472,12 @@ func doEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 		result.DumpAll()
 	}
 
-	if flags.DoCompare || flags.DoCommonPart{
+	if flags.DoCompare || flags.DoParallel  || flags.DoCommonPart{
 		_r := result.GetResult()
 		_r.Queries = result.Queries
 		_r.IndirectQueries = result.IndirectQueries
 
-		return _r //bz: we only need this when comparing results
+		return _r //bz: we only need this when comparing results/run in parallel/compute common part
 	}
 
 	return nil
@@ -295,9 +509,9 @@ func doEachMainDefault(i int, main *ssa.Package) *default_algo.Result {
 	}
 
 	//*** compute pta here
-	start := time.Now()                            //performance
+	start := time.Now() //performance
 	var result *default_algo.Result
-	var r_err error //bz: result error
+	var r_err error           //bz: result error
 	if flags.TimeLimit != 0 { //we set time limit
 		c := make(chan string, 1)
 
@@ -313,10 +527,10 @@ func doEachMainDefault(i int, main *ssa.Package) *default_algo.Result {
 		case res := <-c:
 			fmt.Println(res)
 		case <-time.After(flags.TimeLimit):
-			fmt.Println("\n!! Out of time (", flags.TimeLimit,"). Kill it :(")
+			fmt.Println("\n!! Out of time (", flags.TimeLimit, "). Kill it :(")
 			return nil
 		}
-	}else{
+	} else {
 		result, r_err = default_algo.Analyze(ptaConfig) // conduct pointer analysis
 	}
 	t := time.Now()
@@ -398,7 +612,7 @@ func countReachUnreachFunctions(result *default_algo.Result) (map[*ssa.Function]
 
 	//collect unreaches
 	for _, node := range r.CallGraph.Nodes {
-		if _, ok := reaches[node.Func]; !ok {  //unreached
+		if _, ok := reaches[node.Func]; !ok { //unreached
 			if _, ok2 := unreaches[node.Func]; ok2 {
 				continue //already stored
 			}
@@ -408,4 +622,42 @@ func countReachUnreachFunctions(result *default_algo.Result) (map[*ssa.Function]
 
 	//preGen and preFuncs are supposed to be the same with mine
 	return reaches, unreaches
+}
+
+//baseline: all main in parallel
+//Update: fatal error: concurrent map writes!! --> change to a.track = trackall, no more panic
+//go add lock @container/intsets/util.go for nodeset when doing this setting
+func doParallel(mains []*ssa.Package) map[*ssa.Package]*pointer.ResultWCtx {
+	ret := make(map[*ssa.Package]*pointer.ResultWCtx) //record of result
+	var _wg sync.WaitGroup
+	start := time.Now()
+	for i, main := range mains[0:3] {
+		fmt.Println("Spawn ", i, ". ", main.String())
+		_wg.Add(1)
+		go func(i int, main *ssa.Package) {
+			start := time.Now()
+			fmt.Println("My Algo: ")
+			r_my := doEachMainMy(i, main) //mypta
+			t := time.Now()
+			my_elapsed = my_elapsed + t.Sub(start).Milliseconds()
+
+			//update
+			ret[main] = r_my
+			_wg.Done()
+
+			fmt.Println("Join ", i, ". ", main.String())
+		}(i, main)
+	}
+	_wg.Wait()
+
+	elapsed := time.Now().Sub(start)
+	fmt.Println("\nDone  -- PTA/CG Build; Using " + elapsed.String() + ".\n ")
+
+	//check
+	fmt.Println("#Receive Result: ", len(ret))
+	for main, result := range ret {
+		fmt.Println("Receive result (#Queries: ", len(result.Queries), ", #IndirectQueries: ", len(result.IndirectQueries), ") for main: ", main.String())
+	}
+
+	return ret
 }
