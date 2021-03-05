@@ -48,6 +48,8 @@ var ( //bz: my performance
 	maxTime time.Duration
 	minTime time.Duration
 	total   int64
+
+	main2Result map[*ssa.Package]*Result //bz: return value of AnalyzeMultiMains(), skip redo everytime calls Analyze()
 )
 
 // An object represents a contiguous block of memory to which some
@@ -257,8 +259,6 @@ func (a *analysis) computeTrackBits() {
 	}
 }
 
-var main2Analysis map[*ssa.Package]*Result //bz: skip redo everytime calls Analyze()
-
 //bz: fill in the result
 func translateQueries(val ssa.Value, id nodeid, cgn *cgnode, result *Result, _result *ResultWCtx) {
 	t := val.Type()
@@ -338,7 +338,7 @@ func printConfig(config *Config) {
 	fmt.Println(" *********************************** ")
 }
 
-//bz: user api, to analyze multiple mains
+//bz: user api, to analyze multiple mains sequentially
 func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err error) {
 	if config.Mains == nil {
 		return nil, fmt.Errorf("no main/test packages to analyze (check $GOROOT/$GOPATH)")
@@ -351,7 +351,10 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 		}
 	}()
 
-	assert(len(config.Mains) > 1, "This API is for analyzing MULTIPLE mains. If analyzing one main, please use pointer.Analyze().")
+	if len(config.Mains) == 1 {
+		panic("This API is for analyzing MULTIPLE mains. If analyzing one main, please use pointer.Analyze().")
+	}
+
 	maxTime = 0
 	minTime = 1000000000
 
@@ -408,7 +411,7 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 	fmt.Println("Min: ", minTime.String()+".")
 	fmt.Println("Avg: ", float32(total)/float32(len(config.Mains))/float32(1000), "s.")
 
-	results = main2Analysis
+	results = main2Result
 	return results, nil
 }
 
@@ -428,7 +431,7 @@ func Analyze(config *Config) (result *Result, err error) {
 	}()
 
 	main := config.Mains[0] //bz: currently only handle one main
-	if result, ok := main2Analysis[main]; ok {
+	if result, ok := main2Result[main]; ok {
 		//we already done the analysis, now find and wrap the result
 		return result, nil
 	}
@@ -443,8 +446,7 @@ func Analyze(config *Config) (result *Result, err error) {
 	return result, nil
 }
 
-// bz: lazy way
-// AnalyzeWCtx runs the pointer analysis with the scope and options
+// bz: AnalyzeWCtx runs the pointer analysis with the scope and options
 // specified by config, and returns the (synthetic) root of the callgraph.
 //
 // Pointer analysis of a transitively closed well-typed program should
@@ -492,7 +494,9 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool) (result *ResultWCtx, err er
 		a.log = os.Stderr // for debugging crashes; extremely verbose
 	}
 
-	assert(len(a.config.Mains) == 1, "This API is for analyzing ONE main. If analyzing multiple mains, please use pointer.AnalyzeMultiMains().")
+	if len(a.config.Mains) > 1 {
+		panic("This API is for analyzing ONE main. If analyzing multiple mains, please use pointer.AnalyzeMultiMains().")
+	}
 
 	UpdateDEBUG(a.config.DEBUG) //in pointer/callgraph, print out info changes
 
@@ -591,6 +595,10 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool) (result *ResultWCtx, err er
 		runtime.GC()
 	}
 
+	if len(analyses) > 0 { //bz: want to reuse solve in analyses when called by AnalyzeMultiMains()
+		reuse(a)
+	}
+
 	a.solve() //bz: officially starts here
 
 	// Compare solutions.
@@ -661,7 +669,7 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool) (result *ResultWCtx, err er
 	return a.result, nil
 }
 
-//bz: translate to default return value, and update main2Analysis
+//bz: translate to default return value, and update main2Result
 func translateResult(_result *ResultWCtx, main *ssa.Package) *Result {
 	result := &Result{
 		Queries:         make(map[ssa.Value][]PointerWCtx),
@@ -689,10 +697,10 @@ func translateResult(_result *ResultWCtx, main *ssa.Package) *Result {
 		translateQueries(obj, id, nil, result, _result)
 	}
 
-	if main2Analysis == nil {
-		main2Analysis = make(map[*ssa.Package]*Result)
+	if main2Result == nil {
+		main2Result = make(map[*ssa.Package]*Result)
 	}
-	main2Analysis[main] = result
+	main2Result[main] = result
 	result.a = _result.a
 
 	return result

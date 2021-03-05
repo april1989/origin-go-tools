@@ -225,6 +225,8 @@ func (a *analysis) endObject(obj nodeid, cgn *cgnode, data interface{}) *object 
 // For a context-sensitive contour, callersite identifies the sole
 // callsite; for shared contours, caller is nil.
 //
+//bz: except the caller from genInvokeReflectType(), all others will store this obj in
+//    a.globalobj with *ssa.Function as the key, we can use this to retrieve existing pts info
 func (a *analysis) makeFunctionObject(fn *ssa.Function, callersite *callsite) nodeid {
 	if a.log != nil {
 		fmt.Fprintf(a.log, "\t---- makeFunctionObject %s\n", fn)
