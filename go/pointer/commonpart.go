@@ -11,7 +11,7 @@ import (
 //bz: compute the common paths in a set of mains from a pkg
 
 var (
-	size  = 60 //how many cands can include
+	size  = 10 //how many cands can include
 	cands []*ResultWCtx
 	base  *ResultWCtx
 	//result
