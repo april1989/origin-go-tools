@@ -306,7 +306,7 @@ func doSameRootDefault(mains []*ssa.Package) []*default_algo.Result {
 
 //baseline: foreach
 func doEach(mains []*ssa.Package) {
-	for i, main := range mains[0:10] {
+	for i, main := range mains[10:20] {
 		if flags.Main != "" && flags.Main != main.Pkg.Path() { //run for IDX only
 			continue
 		}
