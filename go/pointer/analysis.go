@@ -556,6 +556,16 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool) (result *ResultWCtx, err er
 	a.generate()   //bz: a preprocess for reflection/runtime/import libs
 	a.showCounts() //bz: print out size ...
 
+	/*
+	bz: tmp: we do this reuse here, since renumbering later will destroy the sequence (since in a.generate(), all pointers in a cgnode
+	has a set of continuous nodeids; if we enter renumber, this will break; now making the copy easier according to the continuous nodeids;
+	TODO: unsolved: how to map instances across mains? propagation? queries? ).
+	here,
+	 */
+	if len(analyses) > 0 { //bz: want to reuse solve in analyses when called by AnalyzeMultiMains()
+		reuse(a)
+	}
+
 	if optRenumber { //bz: default true
 		a.renumber()
 	}
@@ -593,10 +603,6 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool) (result *ResultWCtx, err er
 	if debugHVNCrossCheck {
 		runtime.GC()
 		runtime.GC()
-	}
-
-	if len(analyses) > 0 { //bz: want to reuse solve in analyses when called by AnalyzeMultiMains()
-		reuse(a)
 	}
 
 	a.solve() //bz: officially starts here
