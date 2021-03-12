@@ -12,6 +12,9 @@ Key files:
  ssa/create.go
  ssa/builder.go
  
+Standard libraries: https://pkg.go.dev/std
+
+
 ====================================================================================
 
 Git clone from https://github.com/golang/tools, start from commit 146a0deefdd11b942db7520f68c117335329271a (around v0.5.0-pre1).
