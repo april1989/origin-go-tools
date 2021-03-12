@@ -1,0 +1,14 @@
+# callback functions that users want us to analyze
+- package: time
+    method:
+        - name: AfterFunc
+          receiver: nil
+
+- package: sync
+    method:
+
+        - name: Range
+          receiver: sync.Map
+
+        - name: Rd
+          receiver: sync.df

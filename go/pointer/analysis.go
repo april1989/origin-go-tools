@@ -595,10 +595,6 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool) (result *ResultWCtx, err er
 		runtime.GC()
 	}
 
-	if len(analyses) > 0 { //bz: want to reuse solve in analyses when called by AnalyzeMultiMains()
-		reuse(a)
-	}
-
 	a.solve() //bz: officially starts here
 
 	// Compare solutions.

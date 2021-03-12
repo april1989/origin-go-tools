@@ -169,6 +169,11 @@ func membersFromDecl(pkg *Package, decl ast.Decl) {
 //   1. write a native.xml file with all irs we want
 //   2. preload all irs in native.xml
 //   3. when reach here @ssa/create.go CreatePackage(), we check if it is in preload, if yes, use this synthetic
+//  Update: discareded ????
+//          instead, we use DSL (yaml, json, xml?) to let users specify what is the callback function
+//          they want us to analyze.
+//          MAYBE, we skip the generation of synthetic IR, we only create pointers and constraints for
+//          the *ssa.Instructions that are reachable to the invocation of the callback func？
 func (prog *Program) CreatePackage(pkg *types.Package, files []*ast.File, info *types.Info, importable bool) *Package {
 	p := &Package{
 		Prog:    prog,
@@ -176,14 +181,14 @@ func (prog *Program) CreatePackage(pkg *types.Package, files []*ast.File, info *
 		values:  make(map[types.Object]Value),
 		Pkg:     pkg,
 		info:    info,  // transient (CREATE and BUILD phases)
-		files:   files, // transient (CREATE and BUILD phases)
+		files:   files, // transient (CREATE and BUILD phases) -> bz: only exist when go source code is available
 	}
 
 	// Add init() function.
 	p.init = &Function{
 		name:      "init",
 		Signature: new(types.Signature),
-		Synthetic: "package initializer",
+		Synthetic: "package initializer", //bz: only synthetic for now
 		Pkg:       p,
 		Prog:      prog,
 	}
