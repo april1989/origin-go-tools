@@ -27,11 +27,7 @@
   <component name="ChangeListManager">
     <list default="true" id="02839b5a-55a2-4e24-b425-23255e76dae7" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/container/intsets/sparse.go" beforeDir="false" afterPath="$PROJECT_DIR$/container/intsets/sparse.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/flags/flags.go" beforeDir="false" afterPath="$PROJECT_DIR$/flags/flags.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go/pointer/gen.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/gen.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go/pointer/util.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/util.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/main/main.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go/pointer/api.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/api.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -141,10 +137,10 @@
       <method v="2" />
     </configuration>
     <list>
-      <item itemvalue="Go Build.go build main.go" />
-      <item itemvalue="Go Build.go build main in grpc" />
       <item itemvalue="Go Build.go build main in etcd" />
+      <item itemvalue="Go Build.go build main in grpc" />
       <item itemvalue="Go Build.go build main in tidb" />
+      <item itemvalue="Go Build.go build main.go" />
     </list>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />

@@ -741,9 +741,40 @@ func (r *Result) DumpAll() {
 	}
 }
 
-//bz: do comparison with default
+//bz: my debug use; do comparison with default
 func (r *Result) GetResult() *ResultWCtx {
 	return r.a.result
+}
+
+//bz: user API: return PointerWCtx for a ssa.Value used under context of *ssa.GO,
+//input: ssa.Value, *ssa.GO
+//output: PointerWCtx; this can be empty if we cannot match any v with its goInstr
+func (r *Result) PointsToByGo(v ssa.Value, goInstr *ssa.Go) PointerWCtx {
+	ptss := r.a.result.pointsToRegular(v) //return type: []PointerWCtx
+	_, ok1 := v.(*ssa.FreeVar)
+	_, ok2 := v.(*ssa.Global)
+	_, ok3 := v.(*ssa.UnOp)
+	if ok1 || ok2 || ok3 { //free var: only one pts available
+		return ptss[0]
+	}
+
+	if goInstr == nil {
+		return r.a.result.pointsToByMain(v)
+	}
+	//others
+	for _, pts := range ptss {
+		if pts.MatchMyContext(goInstr) {
+			return pts
+		}
+	}
+	if r.a.result.DEBUG {
+		if goInstr == nil {
+			fmt.Println(" **** *Result: Pointer Analysis cannot match this ssa.Value: " + v.String() + " with this *ssa.GO: main **** ") //panic
+		}else{
+			fmt.Println(" **** *Result: Pointer Analysis cannot match this ssa.Value: " + v.String() + " with this *ssa.GO: " + goInstr.String() + " **** ") //panic
+		}
+	}
+	return PointerWCtx{a: nil}
 }
 
 //bz: do comparison with default
