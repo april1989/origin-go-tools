@@ -749,6 +749,7 @@ func (r *Result) GetResult() *ResultWCtx {
 //bz: user API: return PointerWCtx for a ssa.Value used under context of *ssa.GO,
 //input: ssa.Value, *ssa.GO
 //output: PointerWCtx; this can be empty if we cannot match any v with its goInstr
+//Update: many same v from different functions ... further separate them
 func (r *Result) PointsToByGo(v ssa.Value, goInstr *ssa.Go) PointerWCtx {
 	ptss := r.a.result.pointsToRegular(v) //return type: []PointerWCtx
 	_, ok1 := v.(*ssa.FreeVar)
@@ -763,8 +764,15 @@ func (r *Result) PointsToByGo(v ssa.Value, goInstr *ssa.Go) PointerWCtx {
 	}
 	//others
 	for _, pts := range ptss {
-		if pts.MatchMyContext(goInstr) {
-			return pts
+		if pts.cgn.fn == v.Parent() { //many same v (ssa.Value) from different functions, separate them
+			if v.Parent().IsFromApp {
+				if pts.MatchMyContext(goInstr) {
+					return pts
+				}
+			}else{
+				//discard the goInstr input, we use shared contour in real pta, hence only one pts is available
+				return pts
+			}
 		}
 	}
 	if r.a.result.DEBUG {
