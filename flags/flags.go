@@ -13,7 +13,7 @@ var Main = "" //bz: run for a specific main in this pkg; start from 0
 var DoDefault = false //bz: only Do default
 var DoCompare = false //bz: this has a super long time
 var TimeLimit time.Duration //bz: time limit, unit: ?h?m?s
-var DoLevel = -1 //bz: set the analysis scope to level ? default = 0
+var DoLevel = 0 //bz: set the analysis scope to level ? default = 0
 
 //my use
 var PrintCGNodes = false //bz: print #cgnodes (before solve())

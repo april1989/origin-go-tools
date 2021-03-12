@@ -1070,16 +1070,20 @@ func (a *analysis) isInLoop(fn *ssa.Function, inst ssa.Instruction) bool {
 }
 
 //bz: which level of lib/app calls we consider: true -> create func/cgnode; false -> do not create
-//scope: (discard 1)
-//2 < 3 < 0
+//scope:
+//1 < 2 < 3 < 0
 func (a *analysis) createForLevelX(caller *ssa.Function, callee *ssa.Function) bool {
-	//if a.config.Level == 1 {
-	//	//bz: if callee is from app => 1 level
-	//	if a.withinScope(callee.String()) {
-	//		return true
-	//	}
-	//} else
-	if a.config.Level == 2 {
+	switch a.config.Level {
+	case 0: //bz: analyze all
+		return true
+
+	case 1:
+		//bz: if callee is from app => 1 level
+		if a.withinScope(callee.String()) {
+			return true
+		}
+
+	case 2:
 		//bz: parent of caller in app, caller in lib, callee also in lib
 		// || parent in lib, caller in app, callee in lib || parent in lib, caller in lib, callee in app
 		if caller == nil { //shared contour
@@ -1102,7 +1106,8 @@ func (a *analysis) createForLevelX(caller *ssa.Function, callee *ssa.Function) b
 		if a.withinScope(parentCaller.String()) || a.withinScope(caller.String()) || a.withinScope(callee.String()) {
 			return true
 		}
-	} else if a.config.Level == 3 {
+
+	case 3:
 		//bz: this analyze lib's import
 		if caller == nil {
 			if a.withinScope(callee.String()) || a.fromImports(callee.String()) {
@@ -1114,20 +1119,29 @@ func (a *analysis) createForLevelX(caller *ssa.Function, callee *ssa.Function) b
 			a.withinScope(caller.String()) || a.fromImports(caller.String()) {
 			return true
 		}
+	default:
+		//bz: default 0: this is really considering all, including lib's lib, lib's lib's lib, etc.
+		return true
 	}
-
-	//bz: default 0: this is really considering all, including lib's lib, lib's lib's lib, etc.
-	return true
+	return false
 }
 
-//  ------------- bz : the following several functions generate constraints for different method calls --------------
+//bz: link the callback here
+func genCallBack(caller *cgnode, instr ssa.CallInstruction, site *callsite, call *ssa.CallCommon, result nodeid) {
+	fn := call.StaticCallee()
+}
+
+
+//bz : the following several functions generate constraints for different method calls --------------
 // genStaticCall generates constraints for a statically dispatched function call.
-// bz: force call site here
 func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site *callsite, call *ssa.CallCommon, result nodeid) {
 	fn := call.StaticCallee()
 	if !a.createForLevelX(caller.fn, fn) {
 		if a.config.DEBUG {
 			fmt.Println("Level excluded: " + fn.String())
+		}
+		if IsCallBack(fn) { //bz: if fn is in callback.yml
+			genCallBack(caller, instr, site, call, result)
 		}
 		return
 	}
@@ -1160,7 +1174,7 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 
 	//bz: check if in skip; only if we have not create it before -> optHVN only
 	if _, ok := a.globalobj[fn]; optHVN && !ok {
-		//TODO: bz: this name matching is not perfect ...
+		//TODO: bz: this name matching is not perfect ... and this is not a good solution
 		name := fn.String()
 		name = name[0:strings.LastIndex(name, ".")] //remove func name
 		if strings.Contains(name, "(") {

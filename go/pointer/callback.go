@@ -2,6 +2,7 @@ package pointer
 
 import (
 	"fmt"
+	"github.tamu.edu/April1989/go_tools/go/ssa"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"log"
@@ -16,7 +17,8 @@ bz: input is callback.yml
 
 var (
 	debugCB = true //debug
-	Signatures = make([]string, 0) //record of all pkg + method signatures that we have to analyze
+	signatures = make([]string, 0) //record of all pkg + method signatures that we have to analyze
+	//TODO: further classify to map: pkg <-> methods[]
 )
 
 type CallBack struct {
@@ -73,16 +75,24 @@ func DecodeYaml(path string)  {
 			}else{ //virtual
 				sig = "(*" + receiver + ")." + fn
 			}
-			Signatures = append(Signatures, sig)
+			signatures = append(signatures, sig)
 		}
 	}
 
 	if debugCB {
-		fmt.Println("------------------------------\nDump Signatures: (#", len(Signatures), ")")
-		for i, sig := range Signatures {
+		fmt.Println("------------------------------\nDump Signatures: (#", len(signatures), ")")
+		for i, sig := range signatures {
 			fmt.Println(i, ". ", sig)
 		}
 		fmt.Println("------------------------------")
 	}
 }
 
+func IsCallBack(fn *ssa.Function) bool {
+	for _, sig := range signatures {
+		if sig == fn.String() {
+			return true
+		}
+	}
+	return false
+}

@@ -36,6 +36,7 @@ func main() {
 	flags.ParseFlags()
 
 	if flags.DoYml {
+		flags.DoLevel = 1 //only consider app func
 		pointer.DecodeYaml("/Users/bozhen/Documents/GO2/go_tools/main/callback.yml")
 	}
 
@@ -148,11 +149,6 @@ func doSameRoot(mains []*ssa.Package) {
 
 //bz: test usesage in race checker
 func doSeq(mains []*ssa.Package) {
-	level := 0
-	if flags.DoLevel != -1 {
-		level = flags.DoLevel //bz: reset the analysis scope
-	}
-
 	ptaConfig := &pointer.Config{
 		Mains:          mains,
 		Reflection:     false,
@@ -167,7 +163,7 @@ func doSeq(mains []*ssa.Package) {
 		Scope:      scope,        //bz: analyze scope + input path
 		Exclusion:  excludedPkgs, //bz: copied from race_checker if any
 		TrackMore:  true,         //bz: track pointers with all types
-		Level:      level,        //bz: see pointer.Config
+		Level:      flags.DoLevel,        //bz: see pointer.Config
 		DoPerformance:  flags.DoPerforamnce,     //bz: i want to see this performance
 	}
 
@@ -203,7 +199,7 @@ func doSameRootMy(mains []*ssa.Package) *pointer.Result {
 		Scope:         scope,               //bz: analyze scope + input path
 		Exclusion:     excludedPkgs,        //bz: copied from race_checker if any
 		TrackMore:     true,                //bz: track pointers with all types
-		Level:         0,                   //bz: see pointer.Config
+		Level:         flags.DoLevel,       //bz: see pointer.Config
 		DoPerformance: flags.DoPerforamnce, //bz: if we output performance related info
 	}
 
@@ -416,7 +412,7 @@ func doEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 		Scope:         scope,               //bz: analyze scope + input path
 		Exclusion:     excludedPkgs,        //bz: copied from race_checker if any
 		TrackMore:     true,                //bz: track pointers with types declared in Analyze Scope
-		Level:         0,                   //bz: see pointer.Config
+		Level:         flags.DoLevel,       //bz: see pointer.Config
 		DoPerformance: flags.DoPerforamnce, //bz: if we output performance related info
 	}
 
