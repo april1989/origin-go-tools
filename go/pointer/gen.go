@@ -1183,6 +1183,8 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 		//        to be specific, a go routine requires a make closure: e.g.,
 		//              t37 = make closure (*B).RunParallel$1 [t35, t29, t6, t0, t1]
 		//              go t37()
+		//        Update: make closure and go can happens in different functions ... i do not like this ...
+		//        e.g., t37 passed as a param to func a, then go t37() is in func a
 		//case 3: no closure, but invoke virtual function: e.g., go (*ccBalancerWrapper).watcher(t0), we create a new context for it
 		if a.considerMyContext(fn.String()) {
 			//bz: simple brute force solution; start to be kcfa from main.main.go
@@ -1906,6 +1908,7 @@ func (a *analysis) genInstr(cgn *cgnode, instr ssa.Instruction) {
 				a.copy(a.valueNode(instr), c, 1)
 			}
 		} else { //default: context-insensitive
+			//Update: for origin-sensitive, we ignore the go routines that associate with this make closure
 			a.copy(a.valueNode(instr), a.valueNode(fn), 1)
 		}
 

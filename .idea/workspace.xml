@@ -26,15 +26,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="02839b5a-55a2-4e24-b425-23255e76dae7" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/go/pointer/callback.go" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/go/ssa/native.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/go/ssa/native.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/main/callback.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/flags/flags.go" beforeDir="false" afterPath="$PROJECT_DIR$/flags/flags.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go/pointer/analysis.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/analysis.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go/ssa/create.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/ssa/create.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go/ssa/emit.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/ssa/emit.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go.mod" beforeDir="false" afterPath="$PROJECT_DIR$/go.mod" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go.sum" beforeDir="false" afterPath="$PROJECT_DIR$/go.sum" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go/pointer/callback.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/callback.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go/pointer/gen.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/gen.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main/callback.yml" beforeDir="false" afterPath="$PROJECT_DIR$/main/callback.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/main/main.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -159,7 +158,7 @@
       <module name="go_tools" />
       <working_directory value="$PROJECT_DIR$" />
       <go_parameters value="-i" />
-      <parameters value="-doLog ../go2/race_checker/tests/GoBench/Istio/8144/main.go" />
+      <parameters value="-doYml -doLog ../go2/race_checker/tests/GoBench/Istio/8144/main.go" />
       <kind value="FILE" />
       <filePath value="$PROJECT_DIR$/main/main.go" />
       <package value="github.tamu.edu/April1989/go_tools" />
@@ -216,45 +215,45 @@
     </state>
     <state x="506" y="398" key="#GOROOT/0.23.1440.877@0.23.1440.877" timestamp="1614191901765" />
     <state x="675" y="475" key="#GOROOT/0.23.1920.1057@0.23.1920.1057" timestamp="1614261667983" />
-    <state x="761" y="23" width="1071" height="1057" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1615502879749">
+    <state x="761" y="23" width="1071" height="1057" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1615574496479">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state x="184" y="23" width="1071" height="877" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.23.1440.877@0.23.1440.877" timestamp="1614194946810" />
-    <state x="761" y="23" width="1071" height="1057" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.23.1920.1057@0.23.1920.1057" timestamp="1615502879749" />
+    <state x="761" y="23" width="1071" height="1057" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.23.1920.1057@0.23.1920.1057" timestamp="1615574496479" />
     <state x="693" y="360" key="#com.intellij.fileTypes.FileTypeChooser" timestamp="1614972680932">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state x="693" y="360" key="#com.intellij.fileTypes.FileTypeChooser/0.23.1920.1057@0.23.1920.1057" timestamp="1614972680932" />
-    <state x="1166" y="532" width="710" height="548" key="#xdebugger.evaluate" timestamp="1615563136341">
+    <state x="1166" y="532" width="710" height="548" key="#xdebugger.evaluate" timestamp="1615575048816">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state x="593" y="371" width="733" height="502" key="#xdebugger.evaluate/0.23.1440.877@0.23.1440.877" timestamp="1613883650553" />
-    <state x="1166" y="532" width="710" height="548" key="#xdebugger.evaluate/0.23.1920.1057@0.23.1920.1057" timestamp="1615563136341" />
-    <state width="1075" height="562" key="DebuggerActiveHint" timestamp="1615560855451">
+    <state x="1166" y="532" width="710" height="548" key="#xdebugger.evaluate/0.23.1920.1057@0.23.1920.1057" timestamp="1615575048816" />
+    <state width="1075" height="562" key="DebuggerActiveHint" timestamp="1615575047777">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1033" height="466" key="DebuggerActiveHint/0.23.1440.877@0.23.1440.877" timestamp="1613881922898" />
-    <state width="1075" height="562" key="DebuggerActiveHint/0.23.1920.1057@0.23.1920.1057" timestamp="1615560855451" />
-    <state width="1878" height="217" key="GridCell.Tab.0.bottom" timestamp="1615563781758">
+    <state width="1075" height="562" key="DebuggerActiveHint/0.23.1920.1057@0.23.1920.1057" timestamp="1615575047777" />
+    <state width="1878" height="285" key="GridCell.Tab.0.bottom" timestamp="1615576474389">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="228" key="GridCell.Tab.0.bottom/0.23.1440.877@0.23.1440.877" timestamp="1614203354162" />
-    <state width="1878" height="217" key="GridCell.Tab.0.bottom/0.23.1920.1057@0.23.1920.1057" timestamp="1615563781758" />
-    <state width="1878" height="217" key="GridCell.Tab.0.center" timestamp="1615563781757">
+    <state width="1878" height="285" key="GridCell.Tab.0.bottom/0.23.1920.1057@0.23.1920.1057" timestamp="1615576474389" />
+    <state width="1878" height="285" key="GridCell.Tab.0.center" timestamp="1615576474388">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="228" key="GridCell.Tab.0.center/0.23.1440.877@0.23.1440.877" timestamp="1614203354161" />
-    <state width="1878" height="217" key="GridCell.Tab.0.center/0.23.1920.1057@0.23.1920.1057" timestamp="1615563781757" />
-    <state width="1878" height="217" key="GridCell.Tab.0.left" timestamp="1615563781757">
+    <state width="1878" height="285" key="GridCell.Tab.0.center/0.23.1920.1057@0.23.1920.1057" timestamp="1615576474388" />
+    <state width="1878" height="285" key="GridCell.Tab.0.left" timestamp="1615576474387">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="228" key="GridCell.Tab.0.left/0.23.1440.877@0.23.1440.877" timestamp="1614203354160" />
-    <state width="1878" height="217" key="GridCell.Tab.0.left/0.23.1920.1057@0.23.1920.1057" timestamp="1615563781757" />
-    <state width="1878" height="217" key="GridCell.Tab.0.right" timestamp="1615563781758">
+    <state width="1878" height="285" key="GridCell.Tab.0.left/0.23.1920.1057@0.23.1920.1057" timestamp="1615576474387" />
+    <state width="1878" height="285" key="GridCell.Tab.0.right" timestamp="1615576474388">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="228" key="GridCell.Tab.0.right/0.23.1440.877@0.23.1440.877" timestamp="1614203354161" />
-    <state width="1878" height="217" key="GridCell.Tab.0.right/0.23.1920.1057@0.23.1920.1057" timestamp="1615563781758" />
+    <state width="1878" height="285" key="GridCell.Tab.0.right/0.23.1920.1057@0.23.1920.1057" timestamp="1615576474388" />
     <state x="295" y="116" key="SettingsEditor" timestamp="1615563237778">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
@@ -272,20 +271,15 @@
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state x="849" y="155" width="858" height="806" key="dock-window-1/0.23.1920.1057@0.23.1920.1057" timestamp="1614028072540" />
-    <state x="513" y="252" width="894" height="815" key="search.everywhere.popup" timestamp="1615557257569">
+    <state x="513" y="252" width="894" height="815" key="search.everywhere.popup" timestamp="1615574754592">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state x="385" y="213" width="670" height="676" key="search.everywhere.popup/0.23.1440.877@0.23.1440.877" timestamp="1614202814179" />
-    <state x="513" y="252" width="894" height="815" key="search.everywhere.popup/0.23.1920.1057@0.23.1920.1057" timestamp="1615557257569" />
+    <state x="513" y="252" width="894" height="815" key="search.everywhere.popup/0.23.1920.1057@0.23.1920.1057" timestamp="1615574754592" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
-        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
-          <url>file://$PROJECT_DIR$/go/ssa/methods.go</url>
-          <line>47</line>
-          <option name="timeStamp" value="1" />
-        </line-breakpoint>
         <line-breakpoint enabled="true" type="DlvLineBreakpoint">
           <url>file://$PROJECT_DIR$/go/compare/comp.go</url>
           <line>203</line>

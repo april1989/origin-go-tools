@@ -35,6 +35,10 @@ var default_elapsed int64
 func main() {
 	flags.ParseFlags()
 
+	if flags.DoYml {
+		pointer.DecodeYaml("/Users/bozhen/Documents/GO2/go_tools/main/callback.yml")
+	}
+
 	args := flag.Args()
 	cfg := &packages.Config{
 		Mode:  packages.LoadAllSyntax, // the level of information returned for each package
