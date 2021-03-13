@@ -2262,6 +2262,17 @@ func (prog *Program) Build() {
 //
 func (p *Package) Build() { p.buildOnce.Do(p.build) }
 
+//bz: create a basic block to hold the invoke callback fn instruction
+func (p *Package) CreateSyntheticForCallBack(fakeFn *Function, targetFn *Function)  {
+	bb := fakeFn.newBasicBlock("synthetic.invoke")
+	fakeFn.currentBlock = bb
+	var v Call //bz: fake a call
+	v.Call.Value = targetFn
+	v.setType(types.NewTuple())
+	fakeFn.emit(&v)
+	fakeFn.finishBody()
+}
+
 func (p *Package) build() {
 	if p.info == nil {
 		return // synthetic package, e.g. "testmain"

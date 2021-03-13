@@ -27,7 +27,7 @@ import (
 const (
 	// optimization options; enable all when committing
 	// TODO: bz: optHVN mess up my constraints and also make it sloooooow, tmp turn it off ....
-	optRenumber = true  // enable renumbering optimization (makes logs hard to read)
+	optRenumber = false  // enable renumbering optimization (makes logs hard to read)
 	optHVN      = false // enable pointer equivalence via Hash-Value Numbering
 
 	// debugging options; disable all when committing
@@ -778,7 +778,7 @@ func (a *analysis) callEdge(caller *cgnode, site *callsite, calleeid nodeid) {
 
 	// Warn about calls to non-intrinsic external functions.
 	// TODO(adonovan): de-dup these messages.
-	if fn := callee.fn; fn.Blocks == nil && a.findIntrinsic(fn) == nil {
+	if fn := callee.fn; fn.Blocks == nil && a.findIntrinsic(fn) == nil && fn.Synthetic == "" { //bz: we create synthetic funcs (cause this warning), skip this.
 		a.warnf(site.pos(), "unsound call to unknown intrinsic: %s", fn)
 		a.warnf(fn.Pos(), " (declared here)")
 	}

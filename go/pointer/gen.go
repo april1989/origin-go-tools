@@ -1127,10 +1127,42 @@ func (a *analysis) createForLevelX(caller *ssa.Function, callee *ssa.Function) b
 }
 
 //bz: link the callback here
-func genCallBack(caller *cgnode, instr ssa.CallInstruction, site *callsite, call *ssa.CallCommon, result nodeid) {
+//    fake a fn with one call site linked to the callback function
+//    for callback from makecloser, it has been created already, but caller + context becomes different
+//    -> tmp solution: we use the context of caller as the context of fakeCgn; assume they share the same ctx
+func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, site *callsite, call *ssa.CallCommon, result nodeid) {
 	fn := call.StaticCallee()
-}
+	//create a function
+	fakeFn := a.prog.NewFunction(fn.Name(), new(types.Signature), "synthetic of "+fn.Name()) //we use empty signature, otherwise we cannot match the params and return val
+	fakeFn.Pkg = fn.Pkg
+	//create a cgnode
+	fakeCgn := a.makeCGNode(fakeFn, a.nextNode(), nil) //bz: should not consider the context here
+	a.endObject(fakeCgn.obj, fakeCgn, fn).flags |= otFunction
+	fakeCgn.callersite = caller.callersite //same ctx as caller
+	a.genq = append(a.genq, fakeCgn) //manually queue it
 
+	var targetFn *ssa.Function      //callback fn
+	for _, arg := range call.Args { //which params is callback fn?
+		if cb, ok := arg.(*ssa.MakeClosure); ok {
+			targetFn = cb.Fn.(*ssa.Function) //always valid
+			targets := a.addOneNode(cb.Type(), "synthetic.targets", nil)
+			site := &callsite{targets: targets}
+			fakeCgn.sites = append(fakeCgn.sites, site)
+			a.copy(targets, a.valueNode(cb), 1) //bz: same as above, no context
+		}
+	}
+	if targetFn == nil {
+		panic("No callback fn in *ssa.MakeClosure @" + call.String())
+	}
+
+	//for virtual function, we need to provide the receiver constraints
+	if fn.Signature.Recv() != nil {
+		//TODO:
+	}
+
+	//create a basic block to hold the invoke callback fn instruction
+	fakeFn.Pkg.CreateSyntheticForCallBack(fakeFn, targetFn)
+}
 
 //bz : the following several functions generate constraints for different method calls --------------
 // genStaticCall generates constraints for a statically dispatched function call.
@@ -1141,7 +1173,7 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 			fmt.Println("Level excluded: " + fn.String())
 		}
 		if IsCallBack(fn) { //bz: if fn is in callback.yml
-			genCallBack(caller, instr, site, call, result)
+			a.genCallBack(caller, instr, site, call, result)
 		}
 		return
 	}
@@ -1214,13 +1246,23 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 				return
 			}
 
-			//for kcfa: we need a new contour
-			//for origin: whatever left, we use caller context
-			obj, _ = a.makeFunctionObjectWithContext(caller, fn, site, nil, -1)
+			if caller.fn.Synthetic != "" {
+				//bz: synthetic fn and its callback fn need to match here using a.closure not a.fn2cgnodeIdx
+				objs, ok, _ := a.existClosure(fn, caller.callersite[0]) //TODO: this may be in a loop ...
+				if ok { //must be ok
+					obj = objs[0]
+				} else {
+					panic("Nil callback makeclosure func in a.existClosure: " + fn.String())
+				}
+			}else {
+				//for kcfa: we need a new contour
+				//for origin: whatever left, we use caller context
+				obj, _ = a.makeFunctionObjectWithContext(caller, fn, site, nil, -1)
+			}
 		} else {
 			obj = a.objectNode(nil, fn) // shared contour
 		}
-	} else {  //default: context-insensitive
+	} else { //default: context-insensitive
 		if a.shouldUseContext(fn) { // default
 			obj = a.makeFunctionObject(fn, site) // new contour
 		} else {
@@ -2095,6 +2137,10 @@ func (a *analysis) genRootCalls() *cgnode {
 // genFunc generates constraints for function fn.
 func (a *analysis) genFunc(cgn *cgnode) {
 	fn := cgn.fn
+
+	if strings.Contains(fn.String(), "AfterFunc") {
+		fmt.Println()
+	}
 
 	impl := a.findIntrinsic(fn)
 
