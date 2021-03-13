@@ -1139,6 +1139,9 @@ func (a *analysis) createForLevelX(caller *ssa.Function, callee *ssa.Function) b
 func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, site *callsite, call *ssa.CallCommon, result nodeid) {
 	fn := call.StaticCallee()
 	key := fn.Name() + "@" + caller.contourkFull() //the key of a.globalcb -> different callsite has different ir in fakeFn
+	if fn.Signature.Recv() != nil { //for virtual function, we need to change the key to include receiver type
+		key = fn.String() + "@" + caller.contourkFull()
+	}
 
 	//check if fake function already exists
 	fakeFn, okFn := a.globalcb[key]
@@ -1158,7 +1161,11 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, site *
 
 		//create a fake function
 		//we use empty signature below, otherwise we cannot match the params and return val -> probably we do not need to match, since it's a makeclosure
-		fakeFn = a.prog.NewFunction(fn.Name(), new(types.Signature), "synthetic of "+fn.Name())
+		fnName := fn.Name()
+		if fn.Signature.Recv() != nil { //update for virtual to include receiver type
+			fnName = fn.String()
+		}
+		fakeFn = a.prog.NewFunction(fnName, new(types.Signature), "synthetic of "+fn.Name())
 		fakeFn.Pkg = fn.Pkg
 		fakeFn.IsMySynthetic = true
 
@@ -1201,11 +1208,6 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, site *
 
 	if targetFn == nil {
 		panic("No callback fn in *ssa.MakeClosure @" + call.String() + ". Please adjust your callback.yml.")
-	}
-
-	//for virtual function, we need to provide the receiver constraints
-	if fn.Signature.Recv() != nil {
-
 	}
 
 	//create a basic block to hold the invoke callback fn instruction
