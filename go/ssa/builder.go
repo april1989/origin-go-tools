@@ -2262,10 +2262,16 @@ func (prog *Program) Build() {
 //
 func (p *Package) Build() { p.buildOnce.Do(p.build) }
 
-//bz: create a basic block to hold the invoke callback fn instruction
+//bz: create a basic block to hold the invoke callback fn instruction -> one and only one basic block
+// will not be triggered by default
 func (p *Package) CreateSyntheticForCallBack(fakeFn *Function, targetFn *Function)  {
-	bb := fakeFn.newBasicBlock("synthetic.invoke")
-	fakeFn.currentBlock = bb
+	if len(fakeFn.Blocks) == 0 { //first time
+		bb := fakeFn.newBasicBlock("synthetic.invoke")
+		fakeFn.currentBlock = bb
+	}else{ //exist
+		fakeFn.currentBlock = fakeFn.Blocks[0]
+	}
+
 	var v Call //bz: fake a call
 	v.Call.Value = targetFn
 	v.setType(types.NewTuple())

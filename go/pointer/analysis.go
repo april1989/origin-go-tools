@@ -166,6 +166,9 @@ type analysis struct {
 	numOrigins      int             //bz: number of origins
 	preGens         []*ssa.Function //bz: number of pregenerated functions/cgs/constraints for reflection, os, runtime
 
+	globalcb     map[string]*ssa.Function  //bz: a map of synthetic fakeFn and its fn nodeid -> cannot use map of newFunction directly ...
+	gencb        []*cgnode                 //bz: queue of functions to generate constraints from genCallBack, we solve these at the end
+
 	//bz: make the following from var to here, to keep thread safe
 	isWithinScope bool //bz: whether the current genInstr() is working on a method within our scope
 	online        bool //bz: whether a constraint is from genInvokeOnline()
@@ -488,6 +491,7 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool) (result *ResultWCtx, err er
 		closures:     make(map[*ssa.Function]*Ctx2nodeid),
 		closureWOGo:  make(map[nodeid]nodeid),
 		skipTypes:    make(map[string]string),
+		globalcb:     make(map[string]*ssa.Function),
 	}
 
 	if false {
