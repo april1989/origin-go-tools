@@ -1133,18 +1133,34 @@ func (a *analysis) createForLevelX(caller *ssa.Function, callee *ssa.Function) b
 //    the same fn might be invoked multiple times with different makeclosure callback function
 //    -> we store the fakeFn created first time, then retrieve it next time;
 //       this corresponding cgnode will be solved at the end when all callback functions are collected from the program
-//TODO: why this change mess up the renumber phase?
+//    Further: the same fn might be invoked from different context ...
+//TODO: 1. why this change mess up the renumber phase?
+//      2. handle loop...
 func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, site *callsite, call *ssa.CallCommon, result nodeid) {
 	fn := call.StaticCallee()
+	key := fn.Name() + "@" + caller.contourkFull() //the key of a.globalcb -> different callsite has different ir in fakeFn
 
 	//check if fake function already exists
-	fakeFn, ok := a.globalcb[fn.Name()]
+	fakeFn, okFn := a.globalcb[key]
 	var fakeCgn *cgnode
-	if !ok {
+
+	var ids []nodeid
+	var okCS bool
+	var c2ids map[*callsite][]nodeid
+	if okFn { //check if call site is the same
+		ids, okCS, c2ids = a.existCallback(fakeFn, caller.callersite[0])
+	}
+	//we need to create a whole set (fakefn, fakecgn), since callsite is different, basicblock/instruction is different
+	if !okFn || !okCS {
+		if a.log != nil {
+			fmt.Fprintf(a.log, "\tCreate fake function and cgnode for: %s@%s\n", fn.String(), caller.callersite)
+		}
+
 		//create a fake function
 		//we use empty signature below, otherwise we cannot match the params and return val -> probably we do not need to match, since it's a makeclosure
-		fakeFn = a.prog.NewFunction(fn.Name(), new(types.Signature), "synthetic of " + fn.Name())
+		fakeFn = a.prog.NewFunction(fn.Name(), new(types.Signature), "synthetic of "+fn.Name())
 		fakeFn.Pkg = fn.Pkg
+		fakeFn.IsMySynthetic = true
 
 		id := a.addNodes(fakeFn.Type(), fakeFn.String()) //fn id
 
@@ -1153,13 +1169,20 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, site *
 		fakeCgn = a.makeCGNode(fakeFn, obj, nil) //bz: should not consider the context here
 		a.endObject(fakeCgn.obj, fakeCgn, fn).flags |= otFunction
 		fakeCgn.callersite = caller.callersite //same ctx as caller
-		a.gencb = append(a.gencb, fakeCgn) //manually queue it
+		a.gencb = append(a.gencb, fakeCgn)     //manually queue it
+
+		//update for new callback
+		ids = make([]nodeid, 1) //-> we store ids for fakeFn, we need to update its bb later
+		ids[0] = id
+		c2ids = make(map[*callsite][]nodeid)
+		callsite := caller.callersite[0]
+		c2ids[callsite] = ids
+		a.callbacks[fakeFn] = &Ctx2nodeid{c2ids}
 
 		//update
-		a.setValueNode(fakeFn, id, nil)
-		a.globalcb[fn.Name()] = fakeFn
-	}else {
-		id := a.globalval[fakeFn]
+		a.globalcb[key] = fakeFn
+	} else { //reuse
+		id := ids[0]
 		obj := id + 1
 		fakeCgn = a.nodes[obj].obj.cgn //retrieve it
 	}
@@ -1175,6 +1198,7 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, site *
 			a.copy(targets, a.valueNode(cb), 1) //bz: same as above, no context -> cb must exist a obj already before this point
 		}
 	}
+
 	if targetFn == nil {
 		panic("No callback fn in *ssa.MakeClosure @" + call.String() + ". Please adjust your callback.yml.")
 	}
@@ -1186,6 +1210,21 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, site *
 
 	//create a basic block to hold the invoke callback fn instruction
 	fakeFn.Pkg.CreateSyntheticForCallBack(fakeFn, targetFn)
+}
+
+//bz: if exist nodeid for *cgnode of fn with callersite as callsite, return nodeids of *cgnode
+func (a *analysis) existCallback(fn *ssa.Function, callersite *callsite) ([]nodeid, bool, map[*callsite][]nodeid) {
+	_map, ok := a.callbacks[fn]
+	if ok { //check if exist
+		c2id := _map.ctx2nodeid
+		for site, ids := range c2id { //currently only match 1 callsite
+			if callersite == site || callersite.loopEqual(site) {
+				return ids, true, c2id //exist
+			}
+		}
+		return nil, false, c2id
+	}
+	return nil, false, nil
 }
 
 //bz : the following several functions generate constraints for different method calls --------------
@@ -1270,15 +1309,15 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 				return
 			}
 
-			if caller.fn.Synthetic != "" {
+			if caller.fn.IsMySynthetic {
 				//bz: synthetic fn and its callback fn need to match here using a.closure not a.fn2cgnodeIdx
 				objs, ok, _ := a.existClosure(fn, caller.callersite[0]) //TODO: this may be in a loop ...
-				if ok { //must be ok
+				if ok {                                                 //must be ok
 					obj = objs[0]
 				} else {
 					panic("Nil callback makeclosure func in a.existClosure: " + fn.String())
 				}
-			}else {
+			} else {
 				//for kcfa: we need a new contour
 				//for origin: whatever left, we use caller context
 				obj, _ = a.makeFunctionObjectWithContext(caller, fn, site, nil, -1)
@@ -1286,7 +1325,7 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 		} else {
 			obj = a.objectNode(nil, fn) // shared contour
 		}
-	} else { //default: context-insensitive
+	} else {                        //default: context-insensitive
 		if a.shouldUseContext(fn) { // default
 			obj = a.makeFunctionObject(fn, site) // new contour
 		} else {
@@ -1627,7 +1666,7 @@ func (a *analysis) valueNodeClosure(cgn *cgnode, closure *ssa.MakeClosure, v ssa
 		//update for new closures
 		var c2id = make(map[*callsite][]nodeid)
 		c2id[callersite] = objs
-		a.closures[fn] = &Ctx2nodeid{c2id} //we do not know the matching go instr now
+		a.closures[fn] = &Ctx2nodeid{c2id} //we do not know the matching go instr now -> update later
 	}
 	return ids
 }
@@ -2161,10 +2200,6 @@ func (a *analysis) genRootCalls() *cgnode {
 // genFunc generates constraints for function fn.
 func (a *analysis) genFunc(cgn *cgnode) {
 	fn := cgn.fn
-
-	if strings.Contains(fn.String(), "AfterFunc") {
-		fmt.Println()
-	}
 
 	impl := a.findIntrinsic(fn)
 

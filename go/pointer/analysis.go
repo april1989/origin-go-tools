@@ -166,8 +166,9 @@ type analysis struct {
 	numOrigins      int             //bz: number of origins
 	preGens         []*ssa.Function //bz: number of pregenerated functions/cgs/constraints for reflection, os, runtime
 
-	globalcb     map[string]*ssa.Function  //bz: a map of synthetic fakeFn and its fn nodeid -> cannot use map of newFunction directly ...
-	gencb        []*cgnode                 //bz: queue of functions to generate constraints from genCallBack, we solve these at the end
+	globalcb     map[string]*ssa.Function       //bz: a map of synthetic fakeFn and its fn nodeid -> cannot use map of newFunction directly ...
+	callbacks    map[*ssa.Function]*Ctx2nodeid  //bz: fakeFn invoked by different context/call sites
+	gencb        []*cgnode                      //bz: queue of functions to generate constraints from genCallBack, we solve these at the end
 
 	//bz: make the following from var to here, to keep thread safe
 	isWithinScope bool //bz: whether the current genInstr() is working on a method within our scope
@@ -491,6 +492,8 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool) (result *ResultWCtx, err er
 		closures:     make(map[*ssa.Function]*Ctx2nodeid),
 		closureWOGo:  make(map[nodeid]nodeid),
 		skipTypes:    make(map[string]string),
+
+		callbacks:    make(map[*ssa.Function]*Ctx2nodeid),
 		globalcb:     make(map[string]*ssa.Function),
 	}
 
@@ -782,7 +785,7 @@ func (a *analysis) callEdge(caller *cgnode, site *callsite, calleeid nodeid) {
 
 	// Warn about calls to non-intrinsic external functions.
 	// TODO(adonovan): de-dup these messages.
-	if fn := callee.fn; fn.Blocks == nil && a.findIntrinsic(fn) == nil && fn.Synthetic == "" { //bz: we create synthetic funcs (cause this warning), skip this.
+	if fn := callee.fn; fn.Blocks == nil && a.findIntrinsic(fn) == nil && !fn.IsMySynthetic { //bz: we create synthetic funcs (cause this warning), skip this warn.
 		a.warnf(site.pos(), "unsound call to unknown intrinsic: %s", fn)
 		a.warnf(fn.Pos(), " (declared here)")
 	}
