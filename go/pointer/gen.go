@@ -1136,10 +1136,9 @@ func (a *analysis) createForLevelX(caller *ssa.Function, callee *ssa.Function) b
 //    Further: the same fn might be invoked from different context ...
 //TODO: 1. why this change mess up the renumber phase?
 //      2. handle loop...
-func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, site *callsite, call *ssa.CallCommon, result nodeid) {
-	fn := call.StaticCallee()
+func (a *analysis) genCallBack(caller *cgnode, fn *ssa.Function, site *callsite, call *ssa.CallCommon) {
 	key := fn.Name() + "@" + caller.contourkFull() //the key of a.globalcb -> different callsite has different ir in fakeFn
-	if fn.Signature.Recv() != nil { //for virtual function, we need to change the key to include receiver type
+	if fn.Signature.Recv() != nil {                //for virtual function, we need to change the key to include receiver type
 		key = fn.String() + "@" + caller.contourkFull()
 	}
 
@@ -1212,6 +1211,10 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, site *
 
 	//create a basic block to hold the invoke callback fn instruction
 	fakeFn.Pkg.CreateSyntheticForCallBack(fakeFn, targetFn)
+
+	//add call edge
+	//virtual calls will be added in AnalyzeWCtx() at the end, but we need to update the site.targets of caller
+	a.callEdge(caller, site, ids[0]+1)
 }
 
 //bz: if exist nodeid for *cgnode of fn with callersite as callsite, return nodeids of *cgnode
@@ -1238,7 +1241,7 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 			fmt.Println("Level excluded: " + fn.String())
 		}
 		if IsCallBack(fn) { //bz: if fn is in callback.yml
-			a.genCallBack(caller, instr, site, call, result)
+			a.genCallBack(caller, fn, site, call)
 		}
 		return
 	}

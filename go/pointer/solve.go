@@ -10,6 +10,7 @@ package pointer
 import (
 	"fmt"
 	"github.tamu.edu/April1989/go_tools/flags"
+	"github.tamu.edu/April1989/go_tools/go/ssa"
 	"go/types"
 )
 
@@ -389,6 +390,10 @@ func (c *invokeConstraint) solve(a *analysis, delta *nodeset) {
 				if !a.createForLevelX(nil, fn) {
 					if a.config.DEBUG {
 						fmt.Println("Level excluded: " + fn.String())
+					}
+					if IsCallBack(fn) { //bz: if fn is in callback.yml
+						call := c.site.instr.(ssa.CallInstruction)
+						a.genCallBack(c.caller, fn, c.site, call.Common())
 					}
 					continue
 				}

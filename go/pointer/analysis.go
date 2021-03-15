@@ -620,10 +620,6 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool) (result *ResultWCtx, err er
 		}
 	}
 
-	if a.log != nil { // log format
-		fmt.Fprintf(a.log, "\n\n\nCall Graph -----> \n")
-	}
-
 	// Add dynamic edges to call graph.
 	var space [100]int
 	for _, caller := range a.cgnodes {
@@ -635,13 +631,32 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool) (result *ResultWCtx, err er
 	}
 
 	//bz: update all callee actual ctx for a.closureWOGo
-	a.updateActaulCallSites()
+	a.updateActualCallSites()
 
 	//bz: just assign for the main method; not a good solution, will resolve later
 	for _, cgn := range a.cgnodes {
 		if cgn.fn == a.config.Mains[0].Func("main") {
 			//this is the main methid in app
 			a.result.main = cgn
+		}
+	}
+
+	if a.log != nil { // dump call graph
+		fmt.Fprintf(a.log, "\n\n\nCall Graph -----> \n")
+		printed := make(map[int]int)
+		cg := a.result.CallGraph
+		list := make([]*Node, 1)
+		list[0] = cg.Root
+		for len(list) > 0 {
+			node := list[0]
+			list = list[1:]
+			for _, out := range node.Out {
+				fmt.Fprintf(a.log, "\t%s (from %s) \n\t\t-> %s\n", out.Site, node.cgn.String(), out.Callee.String())
+				if printed[out.Callee.ID] == 0 { // not printed before
+					list = append(list, out.Callee)
+					printed[out.Callee.ID] = out.Callee.ID
+				}
+			}
 		}
 	}
 
@@ -721,7 +736,10 @@ func ContainStringRelax(s []string, e string) bool {
 
 //bz: solution@field actualCallerSite []*callsite of cgnode type
 //update the callee of nodes in a.closureWOGo
-func (a *analysis) updateActaulCallSites() {
+func (a *analysis) updateActualCallSites() {
+	if a.log != nil {
+		fmt.Fprintf(a.log, "\n\n")
+	}
 	cg := a.result.CallGraph
 	var total nodeset
 	waiting := a.closureWOGo
@@ -734,10 +752,10 @@ func (a *analysis) updateActaulCallSites() {
 			target := outEdge.Callee.cgn
 			if !total.Has(target.idx) {
 				if a.log != nil {
-					fmt.Fprintf(a.log, "* Update actualCallerSite for ----> \n   %s -> [%s] \n", target, cgn.contourkActualFull())
+					fmt.Fprintf(a.log, "* Update actualCallerSite for ----> \n%s -> [%s] \n", target, cgn.contourkActualFull())
 				}
 				if a.config.DEBUG {
-					fmt.Printf("* Update actualCallerSite for ----> \n   %s -> [%s] \n", target, cgn.contourkActualFull())
+					fmt.Printf("* Update actualCallerSite for ----> \n%s -> [%s] \n", target, cgn.contourkActualFull())
 				}
 				for _, actual := range cgn.actualCallerSite {
 					target.actualCallerSite = append(target.actualCallerSite, actual) //update
@@ -762,10 +780,10 @@ func (a *analysis) callEdge(caller *cgnode, site *callsite, calleeid nodeid) {
 	if a.closureWOGo[calleeid] != 0 {
 		if !a.equalContextFor(caller.callersite, callee.callersite) {
 			if a.log != nil {
-				fmt.Fprintf(a.log, "Update actualCallerSite for ----> \n   %s -> [%s] \n", callee, caller.contourkFull())
+				fmt.Fprintf(a.log, "Update actualCallerSite for ----> \n%s -> [%s] \n", callee, caller.contourkFull())
 			}
 			if a.config.DEBUG {
-				fmt.Printf("Update actualCallerSite for ----> \n   %s -> [%s] \n", callee, caller.contourkFull())
+				fmt.Printf("Update actualCallerSite for ----> \n%s -> [%s] \n", callee, caller.contourkFull())
 			}
 			callee.actualCallerSite = append(callee.actualCallerSite, caller.callersite) //update
 		}
@@ -780,7 +798,7 @@ func (a *analysis) callEdge(caller *cgnode, site *callsite, calleeid nodeid) {
 	}
 
 	if a.log != nil {
-		fmt.Fprintf(a.log, "\tcall edge %s -> %s\n", site, callee)
+		fmt.Fprintf(a.log, "\t%s -> %s\n", site, callee)
 	}
 
 	// Warn about calls to non-intrinsic external functions.
