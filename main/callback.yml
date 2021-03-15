@@ -4,6 +4,7 @@ callbackcfgs:
     method:
       - name: AfterFunc
         receiver: nil
+        # tell me the make closure function name, pkg and receiver (if any)
 
   - package: sync
     method:
