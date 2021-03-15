@@ -767,7 +767,7 @@ func (a *analysis) callEdge(caller *cgnode, site *callsite, calleeid nodeid) {
 	}
 
 	if a.log != nil {
-		fmt.Fprintf(a.log, "\tcall edge %s -> %s\n", site, callee)
+		fmt.Fprintf(a.log, "\tcall edge %s (from %s) -> %s\n", site, caller, callee)
 	}
 
 	// Warn about calls to non-intrinsic external functions.
