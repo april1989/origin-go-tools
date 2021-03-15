@@ -1016,8 +1016,14 @@ func (p PointerWCtx) MatchMyContextWithLoopID(go_instr *ssa.Go, loopID int) bool
 	}
 	my_cs := p.cgn.callersite[0]
 	my_go_instr := my_cs.goInstr
-	if my_go_instr == go_instr && my_cs.loopID == loopID {
-		return true
+	if my_go_instr == go_instr {
+		if loopID == 0 {
+			return true //no loop
+		}else if my_cs.loopID == loopID {
+			return true //loop id matched
+		}else {
+			return false //loop id not matched
+		}
 	}
 	if p.cgn.actualCallerSite == nil {
 		return false
@@ -1025,8 +1031,14 @@ func (p PointerWCtx) MatchMyContextWithLoopID(go_instr *ssa.Go, loopID int) bool
 	//double check actualCallerSite
 	for _, actualCS := range p.cgn.actualCallerSite {
 		actual_go_instr := actualCS[0].goInstr
-		if actual_go_instr == go_instr && actualCS[0].loopID == loopID {
-			return true
+		if actual_go_instr == go_instr {
+			if loopID == 0 {
+				return true //no loop
+			}else if actualCS[0].loopID == loopID {
+				return true //loop id matched
+			}else {
+				return false //loop id not matched
+			}
 		}
 	}
 	return false
