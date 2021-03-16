@@ -2264,7 +2264,7 @@ func (p *Package) Build() { p.buildOnce.Do(p.build) }
 
 //bz: create a basic block to hold the invoke callback fn instruction -> one and only one basic block
 // will not be triggered by default
-func (p *Package) CreateSyntheticForCallBack(fakeFn *Function, targetFn *Function)  {
+func (p *Package) CreateSyntheticCallForCallBack(fakeFn *Function, targetFn Value)  {
 	if len(fakeFn.Blocks) == 0 { //first time
 		bb := fakeFn.newBasicBlock("synthetic.invoke")
 		fakeFn.currentBlock = bb

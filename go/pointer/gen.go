@@ -1126,6 +1126,54 @@ func (a *analysis) createForLevelX(caller *ssa.Function, callee *ssa.Function) b
 	return false
 }
 
+//bz: experiment, do not want to write each fn signature in .yml
+//   true -> if param wraps a function type and func is from app
+//   also return the callback func (or pointer) and its corresponding arg (v here)
+//return value order -> v, targetfn, bool
+//TODO: NOW ASSUME only one function in params
+func (a *analysis) hasFuncParam(call *ssa.CallCommon) (ssa.Value, ssa.Value, bool) {
+	for _, arg := range call.Args { //which params is callback fn?
+		switch v := arg.(type) {
+		case *ssa.MakeClosure: //most cases: create a make closure and pass as param
+			fn := v.Fn.(*ssa.Function)
+			if fn != nil && fn.IsFromApp { //we must seen this closure before reaching this point
+				return v, fn, true // if arg is callback fn and it is a function inside closure
+			}
+
+		//we might not seen the fn for the following cases, check if fn is in scope -> no then return
+		case *ssa.Function: //e.g., _tests/main/cg_namefn.go, may be directly pass a func as param
+		    if a.withinScope(v.String()) {
+				return v, v, true
+			}
+
+		case *ssa.TypeAssert: //maybe create func first, then long call chain (need to cast to interface),
+			// finally pass to the caller and cast back
+			if sig, ok := v.Type().(*types.Signature); ok {
+				//from go1.15 doc: A Signature (*types.Signature) represents a (non-builtin) function or method type.
+				//-> then this should be a function pointer; however, I need to create a ssa.instruction of type change here before this sequence
+				//   of creating constraints
+				//TODO: what is exactly the target func here?
+				if a.withinScope(sig.String()) {
+					return v, v, true
+				}
+			}
+
+		case *ssa.ChangeType: //e.g., _tests/main/cg_typefn.go
+			fn, ok := v.X.(*ssa.Function)
+			if ok && a.withinScope(fn.String()) {
+				return v, fn, true
+			}
+
+		case *ssa.Call: //e.g., _tests/main/cg_long.go
+			if fn, ok := v.Call.Value.(*ssa.Function); ok && a.withinScope(fn.String()) {
+				return v, fn, true
+			}
+		}
+	}
+
+	return nil, nil, false
+}
+
 //bz: link the callback here
 //    fake a fn with one call site linked to the callback function
 //    for callback from makecloser, it has been created already, but caller + context becomes different
@@ -1134,9 +1182,20 @@ func (a *analysis) createForLevelX(caller *ssa.Function, callee *ssa.Function) b
 //    -> we store the fakeFn created first time, then retrieve it next time;
 //       this corresponding cgnode will be solved at the end when all callback functions are collected from the program
 //    Further: the same fn might be invoked from different context ...
+//Update: ASSUME the parameter together of the caller (of callback) with callback func also is the parameter to callback func
+//     if callback needs any input
 //TODO: 1. why this change mess up the renumber phase?
-//      2. handle loop...
 func (a *analysis) genCallBack(caller *cgnode, fn *ssa.Function, site *callsite, call *ssa.CallCommon) {
+	//relation: caller -(invoke)-> fn -(invoke)-> callback/targetFn
+	v, targetFn, isCallback := a.hasFuncParam(call) //v -> arg that wrapping callback; targetFn -> callback fn
+	if !isCallback {
+		return //not callback or not in scope
+	}
+
+	if targetFn == nil {
+		panic("No callback fn in *ssa.MakeClosure @" + call.String() + ". Please adjust your callback.yml.")
+	}
+
 	key := fn.Name() + "@" + caller.contourkFull() //the key of a.globalcb -> different callsite has different ir in fakeFn
 	if fn.Signature.Recv() != nil {                //for virtual function, we need to change the key to include receiver type
 		key = fn.String() + "@" + caller.contourkFull()
@@ -1144,7 +1203,7 @@ func (a *analysis) genCallBack(caller *cgnode, fn *ssa.Function, site *callsite,
 
 	//check if fake function already exists
 	fakeFn, okFn := a.globalcb[key]
-	var fakeCgn *cgnode
+	var fakeCgns []*cgnode //to handle loop
 
 	var ids []nodeid
 	var okCS bool
@@ -1152,6 +1211,7 @@ func (a *analysis) genCallBack(caller *cgnode, fn *ssa.Function, site *callsite,
 	if okFn { //check if call site is the same
 		ids, okCS, c2ids = a.existCallback(fakeFn, caller.callersite[0])
 	}
+
 	//we need to create a whole set (fakefn, fakecgn), since callsite is different, basicblock/instruction is different
 	if !okFn || !okCS {
 		if a.log != nil {
@@ -1172,10 +1232,13 @@ func (a *analysis) genCallBack(caller *cgnode, fn *ssa.Function, site *callsite,
 
 		//create a cgnode
 		obj := a.nextNode()
-		fakeCgn = a.makeCGNode(fakeFn, obj, nil) //bz: should not consider the context here
+		fakeCgn := a.makeCGNode(fakeFn, obj, nil) //bz: should not consider the context here
 		a.endObject(fakeCgn.obj, fakeCgn, fn).flags |= otFunction
 		fakeCgn.callersite = caller.callersite //same ctx as caller
 		a.gencb = append(a.gencb, fakeCgn)     //manually queue it
+
+		fakeCgns = make([]*cgnode, 1)
+		fakeCgns[0] = fakeCgn
 
 		//update for new callback
 		ids = make([]nodeid, 1) //-> we store ids for fakeFn, we need to update its bb later
@@ -1188,33 +1251,50 @@ func (a *analysis) genCallBack(caller *cgnode, fn *ssa.Function, site *callsite,
 		//update
 		a.globalcb[key] = fakeFn
 	} else { //reuse
-		id := ids[0]
-		obj := id + 1
-		fakeCgn = a.nodes[obj].obj.cgn //retrieve it
-	}
-
-	//create ssa.Call instruction for this callback
-	var targetFn *ssa.Function      //callback fn
-	for _, arg := range call.Args { //which params is callback fn?
-		if cb, ok := arg.(*ssa.MakeClosure); ok {
-			targetFn = cb.Fn.(*ssa.Function) //always valid
-			targets := a.addOneNode(cb.Type(), "synthetic.targets", nil)
-			site := &callsite{targets: targets}
-			fakeCgn.sites = append(fakeCgn.sites, site)
-			a.copy(targets, a.valueNode(cb), 1) //bz: same as above, no context -> cb must exist a obj already before this point
+		fakeCgns = make([]*cgnode, len(ids))
+		for i, id := range ids {
+			obj := id + 1
+			fakeCgn := a.nodes[obj].obj.cgn //retrieve it
+			fakeCgns[i] = fakeCgn
 		}
 	}
 
-	if targetFn == nil {
-		panic("No callback fn in *ssa.MakeClosure @" + call.String() + ". Please adjust your callback.yml.")
-	}
+	//create ssa.Call instruction for this callback
+	a.genFakeConstraints(targetFn, v, call, fakeCgns)
 
 	//create a basic block to hold the invoke callback fn instruction
-	fakeFn.Pkg.CreateSyntheticForCallBack(fakeFn, targetFn)
+	fakeFn.Pkg.CreateSyntheticCallForCallBack(fakeFn, targetFn)
 
 	//add call edge
-	//virtual calls will be added in AnalyzeWCtx() at the end, but we need to update the site.targets of caller
-	a.callEdge(caller, site, ids[0]+1)
+	//TODO: why virtual calls (also be added in AnalyzeWCtx()) has duplicate edges?
+	for _, id := range ids {
+		a.callEdge(caller, site, id + 1)
+	}
+}
+
+//bz: generat fake target/constraints for fake function
+func (a *analysis) genFakeConstraints(targetFn ssa.Value, v ssa.Value, call *ssa.CallCommon, fakeCgns []*cgnode) {
+	targets := a.addOneNode(targetFn.Type(), "synthetic.targets", nil)
+	site := &callsite{targets: targets}
+	for _, fakeCgn := range fakeCgns {
+		fakeCgn.sites = append(fakeCgn.sites, site)
+	}
+	a.copy(targets, a.valueNode(v), 1) //bz: same as above, no context -> cb must exist a obj already before this point
+
+	//match input param for callback (targetFn)
+	if fn, ok := targetFn.(*ssa.Function); ok {
+		if len(fn.Params) > 1 { //includes receiver if any
+			for _, arg := range call.Args { //which params is callback fn's input params?
+				if arg != v {
+					for _, param := range fn.Params {
+						if param.Type() == arg.Type() { //matched
+							fmt.Println()
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 //bz: if exist nodeid for *cgnode of fn with callersite as callsite, return nodeids of *cgnode
@@ -1240,7 +1320,7 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 		if a.config.DEBUG {
 			fmt.Println("Level excluded: " + fn.String())
 		}
-		if IsCallBack(fn) { //bz: if fn is in callback.yml
+		if a.config.DoCallback || IsCallBack(fn) { //bz: if fn is in callback.yml
 			a.genCallBack(caller, fn, site, call)
 		}
 		return
@@ -1318,9 +1398,12 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 				//bz: synthetic fn and its callback fn need to match here using a.closure not a.fn2cgnodeIdx
 				objs, ok, _ := a.existClosure(fn, caller.callersite[0]) //TODO: this may be in a loop ...
 				if ok {                                                 //must be ok
-					obj = objs[0]
+					obj = objs[0] //should return only one obj
 				} else {
-					panic("Nil callback makeclosure func in a.existClosure: " + fn.String())
+					obj = a.globalval[fn] + 1 //may be directly assign a function instead of make closure
+					if obj == 1 {
+						panic("Nil callback makeclosure func in a.existClosure: " + fn.String())
+					}
 				}
 			} else {
 				//for kcfa: we need a new contour
@@ -1351,8 +1434,10 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 //bz: we take these special cases for *ssa.Go outside normal workflow; both kcfa and origin
 func (a *analysis) genStaticCallForGoCall(caller *cgnode, instr ssa.CallInstruction, site *callsite, call *ssa.CallCommon, result nodeid) {
 	fn := call.StaticCallee()
-	objs, ok, _ := a.existClosure(fn, caller.callersite[0])
+	objs, ok, c2id := a.existClosure(fn, caller.callersite[0])
 	if ok { //exist closure, add its new context, but no constraints
+	} else if c2id != nil {
+		fmt.Println()
 	} else { //bz: case 1 and 3: we need a new contour and a new context for origin
 		if a.config.Origin && a.isInLoop(fn, instr) {
 			objs = make([]nodeid, 2)
@@ -1640,14 +1725,28 @@ func (a *analysis) valueNodeClosure(cgn *cgnode, closure *ssa.MakeClosure, v ssa
 	// Value nodes for globals are created on demand.
 	fn, _ := v.(*ssa.Function)
 	callersite := cgn.callersite[0]
-	ids, ok, _ := a.existClosure(fn, callersite) //checked
-	if !ok {                                     //not exist
+	ids, ok, c2id := a.existClosure(fn, callersite) //checked
+	if !ok {                                        //not exist
 		var comment string
 		if a.log != nil {
 			comment = v.String()
 		}
-
 		var objs []nodeid
+
+		if c2id != nil { //closure might from loop but not solved at the same time/same cgnode
+			ids = make([]nodeid, 1)
+			objs = make([]nodeid, 1)
+			id, obj := a.valueNodeClosureInternal(cgn, closure, v, -1, comment)
+			//udpate
+			ids[0] = id
+			objs[0] = obj
+
+			c2id[callersite] = objs
+			a.closures[fn] = &Ctx2nodeid{c2id} //we do not know the matching go instr now -> update later
+
+			return ids
+		}
+
 		if a.config.Origin && a.isInLoop(cgn.fn, closure) { // handle loop only in origin-sensitive
 			ids = make([]nodeid, 2)
 			objs = make([]nodeid, 2)
@@ -1669,10 +1768,11 @@ func (a *analysis) valueNodeClosure(cgn *cgnode, closure *ssa.MakeClosure, v ssa
 		}
 
 		//update for new closures
-		var c2id = make(map[*callsite][]nodeid)
+		c2id = make(map[*callsite][]nodeid)
 		c2id[callersite] = objs
 		a.closures[fn] = &Ctx2nodeid{c2id} //we do not know the matching go instr now -> update later
 	}
+
 	return ids
 }
 

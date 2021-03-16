@@ -164,6 +164,7 @@ func doSeq(mains []*ssa.Package) {
 		Exclusion:  excludedPkgs, //bz: copied from race_checker if any
 		TrackMore:  true,         //bz: track pointers with all types
 		Level:      flags.DoLevel,        //bz: see pointer.Config
+		DoCallback: (flags.DoYml || flags.DoCallback), //bz: sythesize callback
 		DoPerformance:  flags.DoPerforamnce,     //bz: i want to see this performance
 	}
 
@@ -200,6 +201,7 @@ func doSameRootMy(mains []*ssa.Package) *pointer.Result {
 		Exclusion:     excludedPkgs,        //bz: copied from race_checker if any
 		TrackMore:     true,                //bz: track pointers with all types
 		Level:         flags.DoLevel,       //bz: see pointer.Config
+		DoCallback: (flags.DoYml || flags.DoCallback), //bz: sythesize callback
 		DoPerformance: flags.DoPerforamnce, //bz: if we output performance related info
 	}
 
@@ -413,6 +415,7 @@ func doEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 		Exclusion:     excludedPkgs,        //bz: copied from race_checker if any
 		TrackMore:     true,                //bz: track pointers with types declared in Analyze Scope
 		Level:         flags.DoLevel,       //bz: see pointer.Config
+		DoCallback:    (flags.DoYml || flags.DoCallback), //bz: sythesize callback
 		DoPerformance: flags.DoPerforamnce, //bz: if we output performance related info
 	}
 
@@ -468,9 +471,9 @@ func doEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 		my_minTime = elapsed
 	}
 
-	if ptaConfig.DEBUG {
+	//if ptaConfig.DEBUG {
 		result.DumpAll()
-	}
+	//}
 
 	if flags.DoCompare || flags.DoParallel  || flags.DoCommonPart{
 		_r := result.GetResult()

@@ -383,6 +383,7 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 			Scope:         config.Scope,      //bz: analyze scope + input path
 			Exclusion:     config.Exclusion,  //bz: copied from race_checker if any
 			TrackMore:     config.TrackMore,  //bz: track pointers with all types
+			DoCallback:    config.DoCallback,  //bz: do callback
 			Level:         config.Level,      //bz: see pointer.Config
 			DoPerformance: config.DoPerformance,
 		}
@@ -720,6 +721,10 @@ func translateResult(_result *ResultWCtx, main *ssa.Package) *Result {
 	}
 	main2Result[main] = result
 	result.a = _result.a
+
+	//also udpate _result for new api
+	_result.Queries = result.Queries
+	_result.IndirectQueries = result.IndirectQueries
 
 	return result
 }

@@ -391,12 +391,15 @@ func (c *invokeConstraint) solve(a *analysis, delta *nodeset) {
 					if a.config.DEBUG {
 						fmt.Println("Level excluded: " + fn.String())
 					}
-					if IsCallBack(fn) { //bz: if fn is in callback.yml
-						call := c.site.instr.(ssa.CallInstruction)
-						a.genCallBack(c.caller, fn, c.site, call.Common())
+					if fn.IsMySynthetic {
+						call := c.site.instr.(ssa.CallInstruction).Common()
+						if a.config.DoCallback || IsCallBack(fn) { //bz: if fn is in callback.yml
+							a.genCallBack(c.caller, fn, c.site, call)
+						}
 					}
 					continue
 				}
+
 				fnObj = a.genInvokeOnline(nil, nil, fn) //bz: if reaches here, fn can only be lib from import
 			}
 			if a.log != nil { //debug

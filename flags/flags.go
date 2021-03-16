@@ -14,6 +14,8 @@ var DoDefault = false //bz: only Do default
 var DoCompare = false //bz: this has a super long time
 var TimeLimit time.Duration //bz: time limit, unit: ?h?m?s
 var DoLevel = 0 //bz: set the analysis scope to level ? default = 0
+var DoCallback = true //bz: simplify callback fn
+
 
 //my use
 var PrintCGNodes = false //bz: print #cgnodes (before solve())
