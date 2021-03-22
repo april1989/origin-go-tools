@@ -16,6 +16,7 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -275,8 +276,16 @@ func handleDriverUnderDir(restPatterns []string, patterns []string, response *re
 
 	if !skip {
 		//TODO: bz: tmp condition filter to do the list all main entry points
-		cmd := exec.Command("find", ".", "-type", "d") //bz: list this subdir recursively until none
-		cmd.Dir = cfg.Dir                              //set cmd dir
+		//Update: to conside windows os console cmd;
+		var cmd *exec.Cmd //bz: list this subdir recursively until none
+		if runtime.GOOS == "windows" {//@https://helpdesk.kaseya.com/hc/en-gb/articles/229044948-Recursive-directory-listing-in-Windows
+			fmt.Println("Runtime from Windows")
+			cmd = exec.Command("dir", "/b", "/s", "/a:-D")
+		}else{ //default: Unix (MacOS + Ubuntu)
+			cmd = exec.Command("find", ".", "-type", "d")
+		}
+
+		cmd.Dir = cfg.Dir   //set cmd dir
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
