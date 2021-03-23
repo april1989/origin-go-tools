@@ -1036,12 +1036,10 @@ func (p PointerWCtx) MatchMyContextWithLoopID(go_instr *ssa.Go, loopID int) bool
 				return true //no loop
 			}else if actualCS[0].loopID == loopID {
 				return true //loop id matched
-			}else {
-				return false //loop id not matched
 			}
 		}
 	}
-	return false
+	return false //loop id not matched
 }
 
 //bz: return the context of cgn which calls setValueNode() to record this pointer;
