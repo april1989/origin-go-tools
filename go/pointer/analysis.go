@@ -258,6 +258,11 @@ func (a *analysis) computeTrackBits() {
 
 var main2Analysis map[*ssa.Package]*Result //bz: skip redo everytime calls Analyze()
 
+//bz: expose to my test.go only
+func GetMain2Analysis() map[*ssa.Package]*Result {
+	return main2Analysis
+}
+
 //bz: fill in the result
 func translateQueries(val ssa.Value, id nodeid, cgn *cgnode, result *Result, _result *ResultWCtx) {
 	t := val.Type()
