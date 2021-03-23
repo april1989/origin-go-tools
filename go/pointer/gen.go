@@ -1656,9 +1656,8 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 				isClosure := a.isFromMakeClosure(v)
 				if isClosure && a.considerMyContext(v.String()) {
 					panic("WRONG PATH @objectNode() FOR MAKE CLOSURE: " + v.String())
-				} else { //normal case
-					obj = a.makeFunctionObject(v, nil)
 				}
+				obj = a.makeFunctionObject(v, nil) //TODO: missing scope func here
 
 			case *ssa.Const:
 				// not addressable

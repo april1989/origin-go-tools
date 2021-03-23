@@ -29,15 +29,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="02839b5a-55a2-4e24-b425-23255e76dae7" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/go/myutil/myutil.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/flags/flags.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/myutil/flags/flags.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go/compare/comp.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/myutil/compare/comp.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go/compare/compare.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/myutil/compare/compare.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go/pointer/analysis.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/analysis.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go/pointer/callback_test.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/go/pointer/solve.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/solve.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/main/main.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go/myutil/myutil.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/myutil/myutil.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go/pointer/gen.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/gen.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -174,8 +168,8 @@
       <item itemvalue="Go Build.go build main in grpc" />
       <item itemvalue="Go Build.go build main in tidb" />
       <item itemvalue="Go Build.go build main.go" />
-      <item itemvalue="Go Test.TestCallback in github.tamu.edu/April1989/go_tools/go/pointer" />
       <item itemvalue="Go Test.TestCallback in github.tamu.edu/April1989/go_tools/_tests_callback" />
+      <item itemvalue="Go Test.TestCallback in github.tamu.edu/April1989/go_tools/go/pointer" />
     </list>
     <recent_temporary>
       <list>
@@ -245,26 +239,26 @@
     </state>
     <state width="1033" height="466" key="DebuggerActiveHint/0.23.1440.877@0.23.1440.877" timestamp="1613881922898" />
     <state width="1096" height="562" key="DebuggerActiveHint/0.23.1920.1057@0.23.1920.1057" timestamp="1614894191672" />
-    <state width="1878" height="329" key="GridCell.Tab.0.bottom" timestamp="1616515606023">
+    <state width="1878" height="291" key="GridCell.Tab.0.bottom" timestamp="1616528808428">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="160" key="GridCell.Tab.0.bottom/0.23.1440.877@0.23.1440.877" timestamp="1614203163002" />
-    <state width="1878" height="329" key="GridCell.Tab.0.bottom/0.23.1920.1057@0.23.1920.1057" timestamp="1616515606023" />
-    <state width="1878" height="329" key="GridCell.Tab.0.center" timestamp="1616515606022">
+    <state width="1878" height="291" key="GridCell.Tab.0.bottom/0.23.1920.1057@0.23.1920.1057" timestamp="1616528808428" />
+    <state width="1878" height="291" key="GridCell.Tab.0.center" timestamp="1616528808426">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="160" key="GridCell.Tab.0.center/0.23.1440.877@0.23.1440.877" timestamp="1614203163002" />
-    <state width="1878" height="329" key="GridCell.Tab.0.center/0.23.1920.1057@0.23.1920.1057" timestamp="1616515606022" />
-    <state width="1878" height="329" key="GridCell.Tab.0.left" timestamp="1616515606022">
+    <state width="1878" height="291" key="GridCell.Tab.0.center/0.23.1920.1057@0.23.1920.1057" timestamp="1616528808426" />
+    <state width="1878" height="291" key="GridCell.Tab.0.left" timestamp="1616528808425">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="160" key="GridCell.Tab.0.left/0.23.1440.877@0.23.1440.877" timestamp="1614203163001" />
-    <state width="1878" height="329" key="GridCell.Tab.0.left/0.23.1920.1057@0.23.1920.1057" timestamp="1616515606022" />
-    <state width="1878" height="329" key="GridCell.Tab.0.right" timestamp="1616515606023">
+    <state width="1878" height="291" key="GridCell.Tab.0.left/0.23.1920.1057@0.23.1920.1057" timestamp="1616528808425" />
+    <state width="1878" height="291" key="GridCell.Tab.0.right" timestamp="1616528808427">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="160" key="GridCell.Tab.0.right/0.23.1440.877@0.23.1440.877" timestamp="1614203163002" />
-    <state width="1878" height="329" key="GridCell.Tab.0.right/0.23.1920.1057@0.23.1920.1057" timestamp="1616515606023" />
+    <state width="1878" height="291" key="GridCell.Tab.0.right/0.23.1920.1057@0.23.1920.1057" timestamp="1616528808427" />
     <state x="295" y="116" key="SettingsEditor" timestamp="1616510000346">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
@@ -278,11 +272,11 @@
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state x="849" y="155" width="858" height="806" key="dock-window-1/0.23.1920.1057@0.23.1920.1057" timestamp="1614028072540" />
-    <state x="513" y="252" width="894" height="815" key="search.everywhere.popup" timestamp="1616515658164">
+    <state x="513" y="252" width="894" height="815" key="search.everywhere.popup" timestamp="1616528883709">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state x="385" y="213" width="670" height="676" key="search.everywhere.popup/0.23.1440.877@0.23.1440.877" timestamp="1614202814179" />
-    <state x="513" y="252" width="894" height="815" key="search.everywhere.popup/0.23.1920.1057@0.23.1920.1057" timestamp="1616515658164" />
+    <state x="513" y="252" width="894" height="815" key="search.everywhere.popup/0.23.1920.1057@0.23.1920.1057" timestamp="1616528883709" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
