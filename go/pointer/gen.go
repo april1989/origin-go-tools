@@ -975,7 +975,7 @@ func (a *analysis) considerKCFA(fn string) bool {
 // !!!!!! manually excluded pkg google.golang.org/grpc/grpclog ...
 func (a *analysis) withinScope(method string) bool {
 	if a.config.LimitScope {
-		if strings.Contains(method, "command-line-arguments") { //default scope
+		if strings.Contains(method, "command-line-arguments") || strings.HasPrefix(method, "main."){ //default scope and in test cases
 			return true
 		} else {
 			if len(a.config.Exclusion) > 0 { //user assigned exclusion -> bz: want to exclude all reflection ...
@@ -1121,7 +1121,7 @@ func (a *analysis) createForLevelX(caller *ssa.Function, callee *ssa.Function) b
 		}
 	default:
 		//bz: default 0: this is really considering all, including lib's lib, lib's lib's lib, etc.
-		return true
+		return false
 	}
 	return false
 }
@@ -1883,9 +1883,8 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 				isClosure := a.isFromMakeClosure(v)
 				if isClosure && a.considerMyContext(v.String()) {
 					panic("WRONG PATH @objectNode() FOR MAKE CLOSURE: " + v.String())
-				} else { //normal case
-					obj = a.makeFunctionObject(v, nil)
 				}
+				obj = a.makeFunctionObject(v, nil) //TODO: missing scope func here
 
 			case *ssa.Const:
 				// not addressable

@@ -50,6 +50,7 @@ var ( //bz: my performance
 	total   int64
 
 	main2Result map[*ssa.Package]*Result //bz: return value of AnalyzeMultiMains(), skip redo everytime calls Analyze()
+	main2ResultWCtx map[*ssa.Package]*ResultWCtx //bz: return value of AnalyzeMultiMains(), skip redo everytime calls Analyze()
 )
 
 // An object represents a contiguous block of memory to which some
@@ -266,8 +267,8 @@ func (a *analysis) computeTrackBits() {
 var main2Analysis map[*ssa.Package]*Result //bz: skip redo everytime calls Analyze()
 
 //bz: expose to my test.go only
-func GetMain2Analysis() map[*ssa.Package]*Result {
-	return main2Analysis
+func GetMain2ResultWCtx() map[*ssa.Package]*ResultWCtx {
+	return main2ResultWCtx
 }
 
 //bz: fill in the result
@@ -723,11 +724,18 @@ func translateResult(_result *ResultWCtx, main *ssa.Package) *Result {
 		translateQueries(obj, id, nil, result, _result)
 	}
 
+	//upate
 	if main2Result == nil {
 		main2Result = make(map[*ssa.Package]*Result)
 	}
 	main2Result[main] = result
 	result.a = _result.a
+
+	//udpate: test only
+	if main2ResultWCtx == nil {
+		main2ResultWCtx = make(map[*ssa.Package]*ResultWCtx)
+	}
+	main2ResultWCtx[main] = _result
 
 	//also udpate _result for new api
 	_result.Queries = result.Queries

@@ -8,7 +8,12 @@ golog
 gologfile\ copy
 
 main/main
-_*/
+_issues/
+_local/
+_logs/
+_myresult/
+_panics/
+_tests_loop/
 pta_summary.md
 
 

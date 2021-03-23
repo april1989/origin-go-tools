@@ -418,7 +418,7 @@ func (r *ResultWCtx) getMain() *Node {
 //input: ssa.Value;
 //output: PointerWCtx
 //panic: if no record for such input
-func (r *ResultWCtx) pointsTo(v ssa.Value) []PointerWCtx {
+func (r *ResultWCtx) PointsTo(v ssa.Value) []PointerWCtx {
 	pointers := r.pointsToFreeVar(v)
 	if pointers != nil {
 		return pointers

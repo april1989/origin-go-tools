@@ -45,7 +45,12 @@ type cgnode struct {
 	localobj map[ssa.Value]nodeid //bz: same as above
 }
 
-//bz: do i have a shared contour as context?
+//bz: test use only
+func (n *cgnode) Getlocalval() map[ssa.Value]nodeid {
+	return n.localval
+}
+
+//bz: do i have a shared contour as my context?
 func (n *cgnode) IsSharedContour() bool {
 	return n.callersite == nil || len(n.callersite) == 0 || n.callersite[0] == nil
 }

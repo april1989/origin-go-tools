@@ -383,7 +383,7 @@ func DoEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 		Scope:         scope,               //bz: analyze scope + input path
 		Exclusion:     excludedPkgs,        //bz: copied from race_checker if any
 		TrackMore:     true,                //bz: track pointers with types declared in Analyze Scope
-		Level:         0,                   //bz: see pointer.Config
+		Level:         flags.DoLevel,                   //bz: see pointer.Config
 		DoCallback:    (flags.DoYml || flags.DoCallback), //bz: sythesize callback
 		DoPerformance: flags.DoPerforamnce, //bz: if we output performance related info
 	}
