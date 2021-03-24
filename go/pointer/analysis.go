@@ -195,6 +195,16 @@ type analysis struct {
 	skipTypes map[string]string //bz: a record of skiped methods in generate() off-line
 }
 
+//bz: for callback use only
+func (a *analysis) GetMySyntheticFn(base *ssa.Function) *ssa.Function {
+	for n, fn := range a.globalcb {
+		if strings.HasPrefix(n, base.String()) {
+			return fn
+		}
+	}
+	return nil
+}
+
 // enclosingObj returns the first node of the addressable memory
 // object that encloses node id.  Panic ensues if that node does not
 // belong to any object.
@@ -363,9 +373,9 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 		}
 	}()
 
-	if len(config.Mains) == 1 {
-		panic("This API is for analyzing MULTIPLE mains. If analyzing one main, please use pointer.Analyze().")
-	}
+	//if len(config.Mains) == 1 {
+	//	panic("This API is for analyzing MULTIPLE mains. If analyzing one main, please use pointer.Analyze().")
+	//}
 
 	maxTime = 0
 	minTime = 1000000000
@@ -510,9 +520,9 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool) (result *ResultWCtx, err er
 		a.log = os.Stderr // for debugging crashes; extremely verbose
 	}
 
-	if len(a.config.Mains) > 1 {
-		panic("This API is for analyzing ONE main. If analyzing multiple mains, please use pointer.AnalyzeMultiMains().")
-	}
+	//if len(a.config.Mains) > 1 {
+	//	panic("This API is for analyzing ONE main. If analyzing multiple mains, please use pointer.AnalyzeMultiMains().")
+	//}
 
 	UpdateDEBUG(a.config.DEBUG) //in pointer/callgraph, print out info changes
 

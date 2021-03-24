@@ -749,6 +749,11 @@ func (r *Result) GetResult() *ResultWCtx {
 }
 
 
+//bz: for callback use only
+func (r *Result) GetMySyntheticFn(fn *ssa.Function) *ssa.Function {
+	return r.a.GetMySyntheticFn(fn)
+}
+
 //bz: user API: return PointerWCtx for a ssa.Value used under context of *ssa.GO,
 //input: ssa.Value, *ssa.GO
 //output: PointerWCtx; this can be empty if we cannot match any v with its goInstr
