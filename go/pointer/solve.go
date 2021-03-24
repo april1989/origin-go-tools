@@ -392,9 +392,10 @@ func (c *invokeConstraint) solve(a *analysis, delta *nodeset) {
 						fmt.Println("Level excluded: " + fn.String())
 					}
 					if fn.IsMySynthetic {
-						call := c.site.instr.(ssa.CallInstruction).Common()
+						instr := c.site.instr.(ssa.CallInstruction)
+						call := instr.Common()
 						if a.config.DoCallback || IsCallBack(fn) { //bz: if fn is in callback.yml
-							a.genCallBack(c.caller, fn, c.site, call)
+							a.genCallBack(c.caller, instr, fn, c.site, call)
 						}
 					}
 					continue

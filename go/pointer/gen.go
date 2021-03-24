@@ -1185,7 +1185,7 @@ func (a *analysis) hasFuncParam(call *ssa.CallCommon) (ssa.Value, ssa.Value, boo
 //Update: ASSUME the parameter together of the caller (of callback) with callback func also is the parameter to callback func
 //     if callback needs any input
 //TODO: 1. why this change mess up the renumber phase?
-func (a *analysis) genCallBack(caller *cgnode, fn *ssa.Function, site *callsite, call *ssa.CallCommon) {
+func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ssa.Function, site *callsite, call *ssa.CallCommon) {
 	//relation: caller -(invoke)-> fn -(invoke)-> callback/targetFn
 	v, targetFn, isCallback := a.hasFuncParam(call) //v -> arg that wrapping callback; targetFn -> callback fn
 	if !isCallback {
@@ -1215,17 +1215,15 @@ func (a *analysis) genCallBack(caller *cgnode, fn *ssa.Function, site *callsite,
 	//we need to create a whole set (fakefn, fakecgn), since callsite is different, basicblock/instruction is different
 	if !okFn || !okCS {
 		if a.log != nil {
-			fmt.Fprintf(a.log, "\tCreate fake function and cgnode for: %s@%s\n", fn.String(), caller.callersite)
+			fmt.Fprintf(a.log, "\t---- \n\tCreate fake function and cgnode for: %s@%s\n", fn.String(), caller.callersite)
 		}
 
 		//create a fake function
-		//we use empty signature below, otherwise we cannot match the params and return val -> probably we do not need to match, since it's a makeclosure
+		//we use fn's signature/params below to match the params and return val
 		fnName := fn.Name()
-		if fn.Signature.Recv() != nil { //update for virtual to include receiver type
-			fnName = fn.String()
-		}
-		fakeFn = a.prog.NewFunction(fnName, new(types.Signature), "synthetic of "+fn.Name())
+		fakeFn = a.prog.NewFunction(fnName, fn.Signature, "synthetic of "+fn.Name())
 		fakeFn.Pkg = fn.Pkg
+		fakeFn.Params = fn.Params
 		fakeFn.IsMySynthetic = true
 
 		id := a.addNodes(fakeFn.Type(), fakeFn.String()) //fn id
@@ -1233,10 +1231,24 @@ func (a *analysis) genCallBack(caller *cgnode, fn *ssa.Function, site *callsite,
 		//create a cgnode
 		obj := a.nextNode()
 		fakeCgn := a.makeCGNode(fakeFn, obj, nil) //bz: should not consider the context here
-		a.endObject(fakeCgn.obj, fakeCgn, fn).flags |= otFunction
+		sig := fakeFn.Signature
+		a.addOneNode(sig, "func.cgnode", nil) // (scalar with Signature type)
+		if recv := sig.Recv(); recv != nil {
+			a.addNodes(recv.Type(), "func.recv")
+		}
+		a.addNodes(sig.Params(), "func.params")
+		a.addNodes(sig.Results(), "func.results")
+		a.endObject(obj, fakeCgn, fakeFn).flags |= otFunction
+
+		if a.log != nil {
+			fmt.Fprintf(a.log, "\t---- \n")
+		}
+
+		//udpate with fake callsite for fakefn
 		fakeCgn.callersite = caller.callersite //same ctx as caller
 		a.gencb = append(a.gencb, fakeCgn)     //manually queue it
 
+		//udpate maps
 		fakeCgns = make([]*cgnode, 1)
 		fakeCgns[0] = fakeCgn
 
@@ -1259,20 +1271,28 @@ func (a *analysis) genCallBack(caller *cgnode, fn *ssa.Function, site *callsite,
 		}
 	}
 
-	//create ssa.Call instruction for this callback
-	a.genFakeConstraints(targetFn, v, call, fakeCgns)
+	//create ssa.Call instruction for this fakeFn
+	a.genFakeConstraints(fakeFn, v, call, fakeCgns)
 
 	//create a basic block to hold the invoke callback fn instruction
 	fakeFn.Pkg.CreateSyntheticCallForCallBack(fakeFn, targetFn)
 
-	//add call edge
 	//TODO: why virtual calls (also be added in AnalyzeWCtx()) has duplicate edges?
 	for _, id := range ids {
-		a.callEdge(caller, site, id + 1)
+		obj := id + 1
+		//add call edge
+		a.callEdge(caller, site, obj)
+
+		//other receive/param constraints
+		var result nodeid
+		if v := instr.Value(); v != nil {
+			result = a.valueNode(v)
+		}
+		a.genStaticCallCommon(caller, obj, site, call, result)
 	}
 }
 
-//bz: generat fake target/constraints for fake function
+//bz: generate fake target/constraints for fake function --> manually add it
 func (a *analysis) genFakeConstraints(targetFn ssa.Value, v ssa.Value, call *ssa.CallCommon, fakeCgns []*cgnode) {
 	targets := a.addOneNode(targetFn.Type(), "synthetic.targets", nil)
 	site := &callsite{targets: targets}
@@ -1281,20 +1301,20 @@ func (a *analysis) genFakeConstraints(targetFn ssa.Value, v ssa.Value, call *ssa
 	}
 	a.copy(targets, a.valueNode(v), 1) //bz: same as above, no context -> cb must exist a obj already before this point
 
-	//match input param for callback (targetFn)
-	if fn, ok := targetFn.(*ssa.Function); ok {
-		if len(fn.Params) > 1 { //includes receiver if any
-			for _, arg := range call.Args { //which params is callback fn's input params?
-				if arg != v {
-					for _, param := range fn.Params {
-						if param.Type() == arg.Type() { //matched
-							fmt.Println()
-						}
-					}
-				}
-			}
-		}
-	}
+	////match input param for callback (targetFn)
+	//if fn, ok := targetFn.(*ssa.Function); ok {// if real target func has parameters
+	//	if len(fn.Params) > 1 { //includes receiver if any
+	//		for _, arg := range call.Args { //which params is callback fn's input params?
+	//			if arg != v {
+	//				for _, param := range fn.Params {
+	//					if param.Type() == arg.Type() { //matched
+	//						fmt.Println()
+	//					}
+	//				}
+	//			}
+	//		}
+	//	}
+	//}
 }
 
 //bz: if exist nodeid for *cgnode of fn with callersite as callsite, return nodeids of *cgnode
@@ -1321,7 +1341,7 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 			fmt.Println("Level excluded: " + fn.String())
 		}
 		if a.config.DoCallback || IsCallBack(fn) { //bz: if fn is in callback.yml
-			a.genCallBack(caller, fn, site, call)
+			a.genCallBack(caller, instr, fn, site, call)
 		}
 		return
 	}

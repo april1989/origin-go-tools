@@ -22,7 +22,7 @@ var PrintCGNodes = false //bz: print #cgnodes (before solve())
 var DoPerforamnce = true
 var DoDetail = false   //bz: print out all data from countReachUnreachXXX
 var DoCommonPart = false //bz: do compute common path
-var DoYml = true //bz: test and use callback.yml
+var DoYml = false //bz: test and use callback.yml
 
 //different run scenario
 var DoSameRoot = false //bz: do all main in a pkg together from the same root -> all mains linked by the root node

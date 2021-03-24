@@ -38,9 +38,11 @@ var DefaultElapsed int64
 //do preparation job
 func InitialMain() []*ssa.Package {
 	flags.ParseFlags()
-	if flags.DoYml {
+	if flags.DoYml || flags.DoCallback {
 		flags.DoLevel = 1 //only consider app func
-		pointer.DecodeYaml("/Users/bozhen/Documents/GO2/go_tools/main/callback.yml")
+		if flags.DoYml {
+			pointer.DecodeYaml("/Users/bozhen/Documents/GO2/go_tools/main/callback.yml")
+		}
 	}
 
 	args := flag.Args()
