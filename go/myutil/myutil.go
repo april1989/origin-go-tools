@@ -20,7 +20,7 @@ import (
 
 //utility functions and var for my use
 
-var scope []string   //bz: now extract from pkgs
+var scope []string           //bz: now extract from pkgs
 var excludedPkgs = []string{ //bz: excluded a lot of default constraints
 	//"runtime",
 	//"reflect",
@@ -33,7 +33,6 @@ var MyElapsed int64
 var DefaultMaxTime time.Duration
 var DefaultMinTime time.Duration
 var DefaultElapsed int64
-
 
 //do preparation job
 func InitialMain() []*ssa.Package {
@@ -52,6 +51,11 @@ func InitialMain() []*ssa.Package {
 		Tests: false,                  // setting Tests will include related test packages
 	}
 	return initial(args, cfg)
+}
+
+//bz: for my tests only
+func InitialTest() { //default scope of tests
+	scope = append(scope, "main")
 }
 
 //do preparation job: commom
@@ -111,7 +115,6 @@ func initial(args []string, cfg *packages.Config) []*ssa.Package {
 	return mains
 }
 
-
 // mainPackages returns the main packages to analyze.
 // Each resulting package is named "main" and has a main function.
 func findMainPackages(pkgs []*ssa.Package) ([]*ssa.Package, error) {
@@ -156,14 +159,14 @@ func DoSeq(mains []*ssa.Package) {
 		Origin: true, //origin
 		//shared config
 		K:             1,
-		LimitScope:    true,                //bz: only consider app methods now -> no import will be considered
-		DEBUG:         false,               //bz: rm all printed out info in console
-		Scope:         scope,               //bz: analyze scope + input path
-		Exclusion:     excludedPkgs,        //bz: copied from race_checker if any
-		TrackMore:     true,                //bz: track pointers with all types
-		Level:         level,               //bz: see pointer.Config
+		LimitScope:    true,                              //bz: only consider app methods now -> no import will be considered
+		DEBUG:         false,                             //bz: rm all printed out info in console
+		Scope:         scope,                             //bz: analyze scope + input path
+		Exclusion:     excludedPkgs,                      //bz: copied from race_checker if any
+		TrackMore:     true,                              //bz: track pointers with all types
+		Level:         level,                             //bz: see pointer.Config
 		DoCallback:    (flags.DoYml || flags.DoCallback), //bz: sythesize callback
-		DoPerformance: flags.DoPerforamnce, //bz: i want to see this performance
+		DoPerformance: flags.DoPerforamnce,               //bz: i want to see this performance
 	}
 
 	start := time.Now()                                    //performance
@@ -193,14 +196,14 @@ func doSameRootMy(mains []*ssa.Package) *pointer.Result {
 		Origin: true, //origin
 		//shared config
 		K:             1,
-		LimitScope:    true,                //bz: only consider app methods now -> no import will be considered
-		DEBUG:         false,               //bz: rm all printed out info in console
-		Scope:         scope,               //bz: analyze scope + input path
-		Exclusion:     excludedPkgs,        //bz: copied from race_checker if any
-		TrackMore:     true,                //bz: track pointers with all types
-		Level:         0,                   //bz: see pointer.Config
+		LimitScope:    true,                              //bz: only consider app methods now -> no import will be considered
+		DEBUG:         false,                             //bz: rm all printed out info in console
+		Scope:         scope,                             //bz: analyze scope + input path
+		Exclusion:     excludedPkgs,                      //bz: copied from race_checker if any
+		TrackMore:     true,                              //bz: track pointers with all types
+		Level:         0,                                 //bz: see pointer.Config
 		DoCallback:    (flags.DoYml || flags.DoCallback), //bz: sythesize callback
-		DoPerformance: flags.DoPerforamnce, //bz: if we output performance related info
+		DoPerformance: flags.DoPerforamnce,               //bz: if we output performance related info
 	}
 
 	//*** compute pta here
@@ -379,15 +382,15 @@ func DoEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 		//CallSiteSensitive: true, //kcfa
 		Origin: true, //origin
 		//shared config
-		K:             1,                   //bz: how many level of origins? default = 1
-		LimitScope:    true,                //bz: only consider app methods now -> no import will be considered
-		DEBUG:         false,               //bz: rm all printed out info in console
-		Scope:         scope,               //bz: analyze scope + input path
-		Exclusion:     excludedPkgs,        //bz: copied from race_checker if any
-		TrackMore:     true,                //bz: track pointers with types declared in Analyze Scope
-		Level:         flags.DoLevel,                   //bz: see pointer.Config
+		K:             1,                                 //bz: how many level of origins? default = 1
+		LimitScope:    true,                              //bz: only consider app methods now -> no import will be considered
+		DEBUG:         false,                             //bz: rm all printed out info in console
+		Scope:         scope,                             //bz: analyze scope + input path
+		Exclusion:     excludedPkgs,                      //bz: copied from race_checker if any
+		TrackMore:     true,                              //bz: track pointers with types declared in Analyze Scope
+		Level:         flags.DoLevel,                     //bz: see pointer.Config
 		DoCallback:    (flags.DoYml || flags.DoCallback), //bz: sythesize callback
-		DoPerformance: flags.DoPerforamnce, //bz: if we output performance related info
+		DoPerformance: flags.DoPerforamnce,               //bz: if we output performance related info
 	}
 
 	//*** compute pta here
@@ -619,7 +622,3 @@ func DoParallel(mains []*ssa.Package) map[*ssa.Package]*pointer.ResultWCtx {
 
 	return ret
 }
-
-
-
-

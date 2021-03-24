@@ -1038,7 +1038,9 @@ func (a *analysis) fromExclusion(fn *ssa.Function) bool {
 	return true
 }
 
-//bz: to check whether a go routine is inside a loop; also record the result in *analysis
+//bz: to check whether a go routine is inside a loop in fn; also record the result in *analysis
+//TODO: what if fn has no loop, but its caller has loop enclosing fn?
+//      we need to recursively check loop existence til reach main?
 func (a *analysis) isInLoop(fn *ssa.Function, inst ssa.Instruction) bool {
 	instbb := inst.Block()  //basic block of inst
 	instIdx := instbb.Index // index of instbb in all bbs

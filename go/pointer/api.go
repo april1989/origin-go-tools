@@ -496,6 +496,7 @@ func (r *ResultWCtx) pointsToRegular(v ssa.Value) []PointerWCtx {
 }
 
 //bz: return []PointerWCtx for a free var,
+//UPDATE: NOT USED
 func (r *ResultWCtx) pointsToFreeVar(v ssa.Value) []PointerWCtx {
 	if globalv, ok := v.(*ssa.Global); ok {
 		pointers := r.GlobalQueries[globalv]

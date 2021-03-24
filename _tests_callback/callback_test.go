@@ -1,6 +1,7 @@
 package _tests_callback
 
 import (
+	"fmt"
 	"github.tamu.edu/April1989/go_tools/go/loader"
 	"github.tamu.edu/April1989/go_tools/go/myutil"
 	"github.tamu.edu/April1989/go_tools/go/myutil/flags"
@@ -18,8 +19,11 @@ import (
 
 var inputs = []string{
 	"testcases/cb_long.go",
-	"testcases/cb_namefn.go",
-	"testcases/cb_typefn.go",
+	//"testcases/cb_namefn.go",
+	//"testcases/cb_typefn.go",
+
+	"/Users/bozhen/Documents/GO2/go2/race_checker/tests/GoBench/Grpc/1862/main.go",
+	"/Users/bozhen/Documents/GO2/go2/race_checker/tests/GoBench/Istio/8144/main.go",
 }
 
 type expectPTS struct {
@@ -73,7 +77,9 @@ func expectation(f *ast.File) []*expectPTS {
 
 //bz: verify the correctness of using callback on benchmarks from _tests_callback
 func TestCallback(t *testing.T) {
+	myutil.InitialTest()
 	for i, filename := range inputs {
+		fmt.Println("\n--- testing: ", filename)
 		content, err := ioutil.ReadFile(filename)
 		if err != nil {
 			t.Errorf("couldn't read file '%s': %s", filename, err)
@@ -123,12 +129,10 @@ func TestCallback(t *testing.T) {
 
 func verifyPTS(result *pointer.ResultWCtx, want []*expectPTS) map[*expectPTS][]pointer.PointerWCtx {
 	ret := make(map[*expectPTS][]pointer.PointerWCtx)
-	cg := result.CallGraph
-
 	//check
 	for _, exp := range want {
-		lhsV := retrieveV(cg, exp.lhs)
-		rhsV := retrieveV(cg, exp.rhs)
+		lhsV := retrieveV(result, exp.lhs)
+		rhsV := retrieveV(result, exp.rhs)
 		if lhsV == nil || rhsV == nil {
 			panic("nil lhsV/rhsV. ")
 		}
@@ -136,11 +140,11 @@ func verifyPTS(result *pointer.ResultWCtx, want []*expectPTS) map[*expectPTS][]p
 		// should only be one pts in these test cases
 		lhss := result.PointsTo(lhsV)
 		rhss := result.PointsTo(rhsV)
-		if len(lhss) == 0 && len(rhss) == 0 { //both empty ... why ...
-			set := make([]pointer.PointerWCtx, 2)
-			set[0] = pointer.PointerWCtx{}
-			set[1] = pointer.PointerWCtx{}
-			ret[exp] = set
+		if len(lhss) == 0 && len(rhss) == 0 { //both empty
+			//set := make([]pointer.PointerWCtx, 2)
+			//set[0] = pointer.PointerWCtx{}
+			//set[1] = pointer.PointerWCtx{}
+			//ret[exp] = set
 			continue
 		} else if len(lhss) == 0 { //not the same
 			set := make([]pointer.PointerWCtx, 2)
@@ -172,13 +176,24 @@ func verifyPTS(result *pointer.ResultWCtx, want []*expectPTS) map[*expectPTS][]p
 	return ret
 }
 
-func retrieveV(cg *pointer.GraphWCtx, loc *loc) ssa.Value {
+//bz: nil if not exist in localv
+func retrieveV(result *pointer.ResultWCtx, loc *loc) ssa.Value {
+	cg := result.CallGraph
 	for fn, cgns := range cg.Fn2CGNode { // should only be one cgn in these test cases
-		if fn.Name() == loc.fn {
+		if fn.String() == loc.fn {
 			cgn := cgns[0]
 			for v, _ := range cgn.Getlocalval() {
 				if v.Name() == loc.name {
+					//bz: when write the comment: use the lhs of ir, e.g.,
+					// t0 = &c.callbacks [#0]
+					// write as: t0@(...).fn
 					return v
+				}
+			}
+			//check if in free var of fn
+			for _, freeV := range fn.FreeVars {
+				if freeV.Name() == loc.name {
+					return freeV
 				}
 			}
 		}

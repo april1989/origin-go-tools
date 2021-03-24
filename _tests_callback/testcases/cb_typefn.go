@@ -8,10 +8,10 @@ import (
 	"github.tamu.edu/April1989/go_tools/_tests_callback/lib"
 )
 
-func Myfn1(i int) {// @pointsto i@Myfn1=t0@main
+func Myfn1(i int) {// @pointsto i@main.Myfn1=t0@main.main
 	fmt.Printf("\ni is %v", i)
 }
-func Myfn2(i int) {// @pointsto i@Myfn2=t1@main
+func Myfn2(i int) {// @pointsto i@main.Myfn2=t1@main.main
 	fmt.Printf("\ni is %v", i)
 }
 

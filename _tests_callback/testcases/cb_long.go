@@ -9,7 +9,7 @@ import (
 )
 
 
-func getCallBack(b *lib.Wrapper) func() {// @pointsto b@getCallBack=t2@main
+func getCallBack(b *lib.Wrapper) func() {// @pointsto b@main.getCallBack=t2@main.main
 	return func() { fmt.Println(b.B == true) }
 }
 
