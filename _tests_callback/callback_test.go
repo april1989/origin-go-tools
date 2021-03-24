@@ -22,8 +22,8 @@ var inputs = []string{
 	//"testcases/cb_namefn.go",
 	//"testcases/cb_typefn.go",
 
-	"/Users/bozhen/Documents/GO2/go2/race_checker/tests/GoBench/Grpc/1862/main.go",
-	"/Users/bozhen/Documents/GO2/go2/race_checker/tests/GoBench/Istio/8144/main.go",
+	"testcases/Grpc/1862/main.go",
+	"testcases/Istio/8144/main.go",
 }
 
 type expectPTS struct {
