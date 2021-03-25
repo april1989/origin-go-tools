@@ -1447,7 +1447,7 @@ func (a *analysis) genStaticCallForGoCall(caller *cgnode, instr ssa.CallInstruct
 	objs, ok, c2id := a.existClosure(fn, caller.callersite[0])
 	if ok { //exist closure, add its new context, but no constraints
 	} else if c2id != nil {
-		fmt.Println()
+		fmt.Println("TODO .... @genStaticCallForGoCall")
 	} else { //bz: case 1 and 3: we need a new contour and a new context for origin
 		if a.config.Origin && a.isInLoop(fn, instr) {
 			objs = make([]nodeid, 2)
