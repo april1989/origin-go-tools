@@ -755,10 +755,10 @@ func (r *Result) PointsToByGo(v ssa.Value, goInstr *ssa.Go) PointerWCtx {
 	_, ok1 := v.(*ssa.FreeVar)
 	_, ok2 := v.(*ssa.Global)
 	_, ok3 := v.(*ssa.UnOp)
+	if len(ptss) == 0 {
+		return PointerWCtx{a: nil}
+	}
 	if ok1 || ok2 || ok3 { //free var: only one pts available
-		if len(ptss) == 0 {
-			return PointerWCtx{a: nil}
-		}
 		return ptss[0]
 	}
 
@@ -797,10 +797,10 @@ func (r *Result) PointsToByGoWithLoopID(v ssa.Value, goInstr *ssa.Go, loopID int
 	_, ok1 := v.(*ssa.FreeVar)
 	_, ok2 := v.(*ssa.Global)
 	_, ok3 := v.(*ssa.UnOp)
+	if len(ptss) == 0 {
+		return PointerWCtx{a: nil}
+	}
 	if ok1 || ok2 || ok3 { //free var: only one pts available
-		if len(ptss) == 0 {
-			return PointerWCtx{a: nil}
-		}
 		return ptss[0]
 	}
 
@@ -1006,6 +1006,9 @@ func (p PointerWCtx) MatchMyContext(go_instr *ssa.Go) bool {
 	}
 	//double check actualCallerSite
 	for _, actualCS := range p.cgn.actualCallerSite {
+		if actualCS == nil || actualCS[0] == nil {
+			continue
+		}
 		actual_go_instr := actualCS[0].goInstr
 		if actual_go_instr == go_instr {
 			return true
@@ -1036,6 +1039,9 @@ func (p PointerWCtx) MatchMyContextWithLoopID(go_instr *ssa.Go, loopID int) bool
 	}
 	//double check actualCallerSite
 	for _, actualCS := range p.cgn.actualCallerSite {
+		if actualCS == nil || actualCS[0] == nil {
+			continue
+		}
 		actual_go_instr := actualCS[0].goInstr
 		if actual_go_instr == go_instr {
 			if loopID == 0 {
@@ -1051,6 +1057,29 @@ func (p PointerWCtx) MatchMyContextWithLoopID(go_instr *ssa.Go, loopID int) bool
 //bz: return the context of cgn which calls setValueNode() to record this pointer;
 func (p PointerWCtx) GetMyContext() []*callsite {
 	return p.cgn.callersite
+}
+
+
+//bz: user API, expose to user
+type GoLoopID struct {
+	GoInstr *ssa.Go
+	LoopID  int
+}
+
+//bz: return the goInstruction and loopID of the context of cgn (1st *callsite)
+//    return value can be nil if context is shared contour or pts == empty
+func (p PointerWCtx) GetMyGoAndLoopID() *GoLoopID {
+	if p.cgn == nil || p.cgn.callersite == nil || p.cgn.callersite[0] == nil {
+		return &GoLoopID{
+			GoInstr: nil,
+			LoopID:  -1,
+		}
+	}
+	cs := p.cgn.callersite[0]
+	return &GoLoopID{
+		GoInstr: cs.goInstr,
+		LoopID:  cs.loopID,
+	}
 }
 
 //bz: add ctx
