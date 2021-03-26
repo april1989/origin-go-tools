@@ -22,5 +22,5 @@ func main() {
 		abort = &lib.Wrapper{ B: false}
 	}
 	f := getCallBack(abort)
-	lib.Level1(f, abort) //pass as a pointer
+	lib.Level1(f, abort) //pass as a pointer with free var: abort
 }

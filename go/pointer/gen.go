@@ -1225,7 +1225,11 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 	//we need to create a whole set (fakefn, fakecgn), since callsite is different, basicblock/instruction is different
 	if !okFn || !okCS {
 		if a.log != nil {
-			fmt.Fprintf(a.log, "\t---- \n\tCreate fake function and cgnode for: %s@%s\n", fn.String(), caller.callersite)
+			if caller.callersite[0] == nil {
+				fmt.Fprintf(a.log, "\t---- \n\tCreate fake function and cgnode for: %s@nil\n", fn.String())
+			}else{
+				fmt.Fprintf(a.log, "\t---- \n\tCreate fake function and cgnode for: %s@%s\n", fn.String(), caller.callersite)
+			}
 		}
 
 		//create a fake function
@@ -1301,7 +1305,7 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 		a.genStaticCallCommon(caller, obj, site, call, result)
 	}
 
-	//fmt.Println("---> caught: ", key, "\t ", targetFn)
+	fmt.Println("---> caught: ", key, "\t ", targetFn)
 }
 
 //bz: generate fake target/constraints for fake function --> manually add it
