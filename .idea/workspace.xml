@@ -88,6 +88,13 @@
       <recent name="$PROJECT_DIR$/go" />
       <recent name="$PROJECT_DIR$/go/myutil" />
     </key>
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/_myresult" />
+      <recent name="$PROJECT_DIR$/_logs" />
+      <recent name="$PROJECT_DIR$" />
+      <recent name="$PROJECT_DIR$/main" />
+      <recent name="$PROJECT_DIR$/_local" />
+    </key>
   </component>
   <component name="RunManager" selected="Go Build.go build main in grpc">
     <configuration name="go build main in etcd" type="GoApplicationRunConfiguration" factoryName="Go Application">
@@ -352,6 +359,16 @@
           <url>file://$PROJECT_DIR$/go/myutil/myutil.go</url>
           <line>184</line>
           <option name="timeStamp" value="210" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/go/pointer/analysis.go</url>
+          <line>388</line>
+          <option name="timeStamp" value="213" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/go/pointer/analysis.go</url>
+          <line>415</line>
+          <option name="timeStamp" value="215" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
