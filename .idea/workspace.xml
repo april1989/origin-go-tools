@@ -30,9 +30,6 @@
   <component name="ChangeListManager">
     <list default="true" id="02839b5a-55a2-4e24-b425-23255e76dae7" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/_tests_callback/testcases/cb_long.go" beforeDir="false" afterPath="$PROJECT_DIR$/_tests_callback/testcases/cb_long.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go/pointer/gen.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/gen.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/main/main.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -79,19 +76,19 @@
     <property name="settings.editor.selected.configurable" value="preferences.keymap" />
   </component>
   <component name="RecentsManager">
-    <key name="MoveFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/_logs/grpc_cb" />
-      <recent name="$PROJECT_DIR$/go/pointer" />
-      <recent name="$PROJECT_DIR$/_tests_callback" />
-      <recent name="$PROJECT_DIR$/go" />
-      <recent name="$PROJECT_DIR$/go/myutil" />
-    </key>
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/_logs/tidb_cb" />
       <recent name="$PROJECT_DIR$/_logs/grpc_cb" />
       <recent name="$PROJECT_DIR$/_tests_callback/testcases" />
       <recent name="$PROJECT_DIR$/_myresult" />
       <recent name="$PROJECT_DIR$/_logs" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/_logs/grpc_cb" />
+      <recent name="$PROJECT_DIR$/go/pointer" />
+      <recent name="$PROJECT_DIR$/_tests_callback" />
+      <recent name="$PROJECT_DIR$/go" />
+      <recent name="$PROJECT_DIR$/go/myutil" />
     </key>
   </component>
   <component name="RunManager" selected="Go Build.go build main in grpc">
@@ -200,13 +197,13 @@
       <method v="2" />
     </configuration>
     <list>
-      <item itemvalue="Go Build.go build main in grpc" />
-      <item itemvalue="Go Build.go build main in grpc specific 1" />
-      <item itemvalue="Go Build.go build main in istio" />
-      <item itemvalue="Go Build.go build tests" />
       <item itemvalue="Go Build.go build main in etcd" />
+      <item itemvalue="Go Build.go build main in grpc specific 1" />
+      <item itemvalue="Go Build.go build main in grpc" />
+      <item itemvalue="Go Build.go build main in istio" />
       <item itemvalue="Go Build.go build main in tidb" />
       <item itemvalue="Go Build.go build main.go" />
+      <item itemvalue="Go Build.go build tests" />
       <item itemvalue="Go Test.TestCallback in github.tamu.edu/April1989/go_tools/_tests_callback" />
     </list>
     <recent_temporary>
