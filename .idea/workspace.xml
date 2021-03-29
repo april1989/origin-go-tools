@@ -95,6 +95,13 @@
       <recent name="$PROJECT_DIR$/main" />
       <recent name="$PROJECT_DIR$/_local" />
     </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/_tests_callback" />
+      <recent name="$PROJECT_DIR$/go" />
+      <recent name="$PROJECT_DIR$/go/pointer" />
+      <recent name="$PROJECT_DIR$/go/myutil" />
+      <recent name="$PROJECT_DIR$/myutil/flags" />
+    </key>
   </component>
   <component name="RunManager" selected="Go Build.go build main in grpc">
     <configuration name="go build main in etcd" type="GoApplicationRunConfiguration" factoryName="Go Application">
