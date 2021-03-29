@@ -92,7 +92,7 @@
       <recent name="$PROJECT_DIR$/myutil/flags" />
     </key>
   </component>
-  <component name="RunManager" selected="Go Build.go build main in grpc">
+  <component name="RunManager" selected="Go Build.go build main.go">
     <configuration name="go build main in etcd" type="GoApplicationRunConfiguration" factoryName="Go Application">
       <output_file path="$PROJECT_DIR$/_local/console.txt" is_save="true" />
       <module name="go_tools" />
