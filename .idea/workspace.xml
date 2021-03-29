@@ -28,13 +28,7 @@
     </select>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="02839b5a-55a2-4e24-b425-23255e76dae7" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go/packages/golist.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/packages/golist.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go/pointer/analysis.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/analysis.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go/pointer/api.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/api.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go/pointer/callback.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/callback.go" afterDir="false" />
-    </list>
+    <list default="true" id="02839b5a-55a2-4e24-b425-23255e76dae7" name="Default Changelist" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -267,36 +261,36 @@
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state x="693" y="360" key="#com.intellij.fileTypes.FileTypeChooser/0.23.1920.1057@0.23.1920.1057" timestamp="1614972680932" />
-    <state x="1096" y="343" width="824" height="417" key="#xdebugger.evaluate" timestamp="1616703821363">
+    <state x="1096" y="343" width="824" height="417" key="#xdebugger.evaluate" timestamp="1617044147874">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state x="593" y="371" width="733" height="502" key="#xdebugger.evaluate/0.23.1440.877@0.23.1440.877" timestamp="1613883650553" />
-    <state x="1096" y="343" width="824" height="417" key="#xdebugger.evaluate/0.23.1920.1057@0.23.1920.1057" timestamp="1616703821363" />
+    <state x="1096" y="343" width="824" height="417" key="#xdebugger.evaluate/0.23.1920.1057@0.23.1920.1057" timestamp="1617044147874" />
     <state width="1096" height="562" key="DebuggerActiveHint" timestamp="1616769112623">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1033" height="466" key="DebuggerActiveHint/0.23.1440.877@0.23.1440.877" timestamp="1613881922898" />
     <state width="1096" height="562" key="DebuggerActiveHint/0.23.1920.1057@0.23.1920.1057" timestamp="1616769112623" />
-    <state width="1878" height="311" key="GridCell.Tab.0.bottom" timestamp="1617042733164">
+    <state width="1878" height="351" key="GridCell.Tab.0.bottom" timestamp="1617044214965">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="160" key="GridCell.Tab.0.bottom/0.23.1440.877@0.23.1440.877" timestamp="1614203163002" />
-    <state width="1878" height="311" key="GridCell.Tab.0.bottom/0.23.1920.1057@0.23.1920.1057" timestamp="1617042733164" />
-    <state width="1878" height="311" key="GridCell.Tab.0.center" timestamp="1617042733164">
+    <state width="1878" height="351" key="GridCell.Tab.0.bottom/0.23.1920.1057@0.23.1920.1057" timestamp="1617044214965" />
+    <state width="1878" height="351" key="GridCell.Tab.0.center" timestamp="1617044214965">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="160" key="GridCell.Tab.0.center/0.23.1440.877@0.23.1440.877" timestamp="1614203163002" />
-    <state width="1878" height="311" key="GridCell.Tab.0.center/0.23.1920.1057@0.23.1920.1057" timestamp="1617042733164" />
-    <state width="1878" height="311" key="GridCell.Tab.0.left" timestamp="1617042733164">
+    <state width="1878" height="351" key="GridCell.Tab.0.center/0.23.1920.1057@0.23.1920.1057" timestamp="1617044214965" />
+    <state width="1878" height="351" key="GridCell.Tab.0.left" timestamp="1617044214964">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="160" key="GridCell.Tab.0.left/0.23.1440.877@0.23.1440.877" timestamp="1614203163001" />
-    <state width="1878" height="311" key="GridCell.Tab.0.left/0.23.1920.1057@0.23.1920.1057" timestamp="1617042733164" />
-    <state width="1878" height="311" key="GridCell.Tab.0.right" timestamp="1617042733164">
+    <state width="1878" height="351" key="GridCell.Tab.0.left/0.23.1920.1057@0.23.1920.1057" timestamp="1617044214964" />
+    <state width="1878" height="351" key="GridCell.Tab.0.right" timestamp="1617044214965">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="160" key="GridCell.Tab.0.right/0.23.1440.877@0.23.1440.877" timestamp="1614203163002" />
-    <state width="1878" height="311" key="GridCell.Tab.0.right/0.23.1920.1057@0.23.1920.1057" timestamp="1617042733164" />
+    <state width="1878" height="351" key="GridCell.Tab.0.right/0.23.1920.1057@0.23.1920.1057" timestamp="1617044214965" />
     <state x="295" y="116" key="SettingsEditor" timestamp="1616510000346">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
@@ -364,6 +358,26 @@
           <line>415</line>
           <option name="timeStamp" value="215" />
         </line-breakpoint>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/go/pointer/analysis.go</url>
+          <line>743</line>
+          <option name="timeStamp" value="218" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/go/pointer/analysis.go</url>
+          <line>737</line>
+          <option name="timeStamp" value="219" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/go/pointer/analysis.go</url>
+          <line>729</line>
+          <option name="timeStamp" value="220" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/go/pointer/analysis.go</url>
+          <line>722</line>
+          <option name="timeStamp" value="222" />
+        </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
     <watches-manager>
@@ -372,6 +386,8 @@
         <watch expression="callee.String()" language="go" />
         <watch expression="fn.String()" language="go" />
         <watch expression="cgn.fn.String()" language="go" />
+        <watch expression="val.String()" language="go" />
+        <watch expression="obj.String()" language="go" />
       </configuration>
       <configuration name="GoTestRunConfiguration">
         <watch expression="call.String()" language="go" />
