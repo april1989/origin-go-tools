@@ -28,7 +28,10 @@
     </select>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="02839b5a-55a2-4e24-b425-23255e76dae7" name="Default Changelist" comment="" />
+    <list default="true" id="02839b5a-55a2-4e24-b425-23255e76dae7" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go/pointer/api.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/api.go" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -74,19 +77,12 @@
     <property name="settings.editor.selected.configurable" value="preferences.keymap" />
   </component>
   <component name="RecentsManager">
-    <key name="CopyFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/_logs/tidb_cb" />
-      <recent name="$PROJECT_DIR$/_logs/grpc_cb" />
-      <recent name="$PROJECT_DIR$/_tests_callback/testcases" />
-      <recent name="$PROJECT_DIR$/_myresult" />
-      <recent name="$PROJECT_DIR$/_logs" />
-    </key>
     <key name="MoveFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/_logs/grpc_cb" />
-      <recent name="$PROJECT_DIR$/go/pointer" />
       <recent name="$PROJECT_DIR$/_tests_callback" />
       <recent name="$PROJECT_DIR$/go" />
+      <recent name="$PROJECT_DIR$/go/pointer" />
       <recent name="$PROJECT_DIR$/go/myutil" />
+      <recent name="$PROJECT_DIR$/myutil/flags" />
     </key>
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/_myresult" />
@@ -94,13 +90,6 @@
       <recent name="$PROJECT_DIR$" />
       <recent name="$PROJECT_DIR$/main" />
       <recent name="$PROJECT_DIR$/_local" />
-    </key>
-    <key name="MoveFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/_tests_callback" />
-      <recent name="$PROJECT_DIR$/go" />
-      <recent name="$PROJECT_DIR$/go/pointer" />
-      <recent name="$PROJECT_DIR$/go/myutil" />
-      <recent name="$PROJECT_DIR$/myutil/flags" />
     </key>
   </component>
   <component name="RunManager" selected="Go Build.go build main in grpc">
@@ -361,11 +350,6 @@
           <url>file://$PROJECT_DIR$/go/pointer/gen.go</url>
           <line>1430</line>
           <option name="timeStamp" value="201" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
-          <url>file://$PROJECT_DIR$/go/myutil/myutil.go</url>
-          <line>184</line>
-          <option name="timeStamp" value="210" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="DlvLineBreakpoint">
           <url>file://$PROJECT_DIR$/go/pointer/analysis.go</url>
