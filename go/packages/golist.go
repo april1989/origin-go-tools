@@ -349,7 +349,9 @@ func goListDriverRecursiveSeq(subdirs []string, size int, response *responseDedu
 		if _err != nil {
 			fmt.Println("ERROR from _state.createDriverResponse: %s", _err)
 		}
-		response.addAll(_dr)
+		if _dr != nil {
+			response.addAll(_dr)
+		}
 	}
 }
 

@@ -759,12 +759,12 @@ func (r *Result) GetMySyntheticFn(fn *ssa.Function) *ssa.Function {
 //output: PointerWCtx; this can be empty if we cannot match any v with its goInstr
 func (r *Result) PointsToByGo(v ssa.Value, goInstr *ssa.Go) PointerWCtx {
 	ptss := r.a.result.pointsToRegular(v) //return type: []PointerWCtx
-	_, ok1 := v.(*ssa.FreeVar)
-	_, ok2 := v.(*ssa.Global)
-	_, ok3 := v.(*ssa.UnOp)
 	if len(ptss) == 0 {
 		return PointerWCtx{a: nil}
 	}
+	_, ok1 := v.(*ssa.FreeVar)
+	_, ok2 := v.(*ssa.Global)
+	_, ok3 := v.(*ssa.UnOp)
 	if ok1 || ok2 || ok3 { //free var: only one pts available
 		return ptss[0]
 	}
@@ -802,12 +802,12 @@ func (r *Result) PointsToByGo(v ssa.Value, goInstr *ssa.Go) PointerWCtx {
 //Update: many same v from different functions ... further separate them
 func (r *Result) PointsToByGoWithLoopID(v ssa.Value, goInstr *ssa.Go, loopID int) PointerWCtx {
 	ptss := r.a.result.pointsToRegular(v) //return type: []PointerWCtx
-	_, ok1 := v.(*ssa.FreeVar)
-	_, ok2 := v.(*ssa.Global)
-	_, ok3 := v.(*ssa.UnOp)
 	if len(ptss) == 0 {
 		return PointerWCtx{a: nil}
 	}
+	_, ok1 := v.(*ssa.FreeVar)
+	_, ok2 := v.(*ssa.Global)
+	_, ok3 := v.(*ssa.UnOp)
 	if ok1 || ok2 || ok3 { //free var: only one pts available
 		return ptss[0]
 	}

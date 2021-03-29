@@ -59,7 +59,7 @@ func DecodeYaml(path string)  {
 	}
 
 	if debugCB {
-		fmt.Println("------------------------------\nDump callback.yml: \n",
+		fmt.Println("------------------------------\nDump callback.yml: (lib calls spawn new goroutines)\n",
 			cbs.String(), "------------------------------")
 	}
 
