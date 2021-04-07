@@ -1,6 +1,6 @@
 package assign
 
-import "github.tamu.edu/April1989/go_tools/internal/lsp/assign/internal/secret"
+import "github.com/april1989/origin-go-tools/internal/lsp/assign/internal/secret"
 
 func _() {
 	secret.Hello()

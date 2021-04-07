@@ -3,9 +3,9 @@ package mod
 import (
 	"context"
 
-	"github.tamu.edu/April1989/go_tools/internal/event"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/source"
+	"github.com/april1989/origin-go-tools/internal/event"
+	"github.com/april1989/origin-go-tools/internal/lsp/protocol"
+	"github.com/april1989/origin-go-tools/internal/lsp/source"
 )
 
 func Format(ctx context.Context, snapshot source.Snapshot, fh source.FileHandle) ([]protocol.TextEdit, error) {

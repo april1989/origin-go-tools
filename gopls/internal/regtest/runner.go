@@ -20,14 +20,14 @@ import (
 	"testing"
 	"time"
 
-	"github.tamu.edu/April1989/go_tools/gopls/internal/hooks"
-	"github.tamu.edu/April1989/go_tools/internal/jsonrpc2"
-	"github.tamu.edu/April1989/go_tools/internal/jsonrpc2/servertest"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/cache"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/debug"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fake"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/lsprpc"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
+	"github.com/april1989/origin-go-tools/gopls/internal/hooks"
+	"github.com/april1989/origin-go-tools/internal/jsonrpc2"
+	"github.com/april1989/origin-go-tools/internal/jsonrpc2/servertest"
+	"github.com/april1989/origin-go-tools/internal/lsp/cache"
+	"github.com/april1989/origin-go-tools/internal/lsp/debug"
+	"github.com/april1989/origin-go-tools/internal/lsp/fake"
+	"github.com/april1989/origin-go-tools/internal/lsp/lsprpc"
+	"github.com/april1989/origin-go-tools/internal/lsp/protocol"
 )
 
 // Mode is a bitmask that defines for which execution modes a test should run.

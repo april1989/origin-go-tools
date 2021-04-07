@@ -3,8 +3,8 @@
 // license that can be found in the LICENSE file.
 
 // This program takes an HTML file and outputs a corresponding article file in
-// present format. See: github.tamu.edu/April1989/go_tools/present
-package main // import "github.tamu.edu/April1989/go_tools/cmd/html2article"
+// present format. See: github.com/april1989/origin-go-tools/present
+package main // import "github.com/april1989/origin-go-tools/cmd/html2article"
 
 import (
 	"bytes"

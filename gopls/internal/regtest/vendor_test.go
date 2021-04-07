@@ -3,8 +3,8 @@ package regtest
 import (
 	"testing"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp"
-	"github.tamu.edu/April1989/go_tools/internal/testenv"
+	"github.com/april1989/origin-go-tools/internal/lsp"
+	"github.com/april1989/origin-go-tools/internal/testenv"
 )
 
 const basicProxy = `

@@ -17,9 +17,9 @@ import (
 	"runtime/debug"
 	"sort"
 
-	"github.tamu.edu/April1989/go_tools/go/callgraph"
-	"github.tamu.edu/April1989/go_tools/go/ssa"
-	"github.tamu.edu/April1989/go_tools/go/types/typeutil"
+	"github.com/april1989/origin-go-tools/go/callgraph"
+	"github.com/april1989/origin-go-tools/go/ssa"
+	"github.com/april1989/origin-go-tools/go/types/typeutil"
 )
 
 const (

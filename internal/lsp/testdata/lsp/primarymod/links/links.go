@@ -2,12 +2,13 @@ package links
 
 import (
 	"fmt" //@link(`fmt`,"https://pkg.go.dev/fmt")
+	errors "golang.org/x/xerrors"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/foo" //@link(`github.tamu.edu/April1989/go_tools/internal/lsp/foo`,`https://pkg.go.dev/github.tamu.edu/April1989/go_tools/internal/lsp/foo`)
+	"github.com/april1989/origin-go-tools/internal/lsp/testdata/lsp/primarymod/foo" //@link(`github.com/april1989/origin-go-tools/internal/lsp/foo`,`https://pkg.go.dev/github.com/april1989/origin-go-tools/internal/lsp/foo`)
 
 	_ "database/sql" //@link(`database/sql`, `https://pkg.go.dev/database/sql`)
 
-	_ "example.com/extramodule/pkg" //@link(`example.com/extramodule/pkg`,`https://pkg.go.dev/example.com/extramodule@v1.0.0/pkg`)
+	//_ "example.com/extramodule/pkg" //@link(`example.com/extramodule/pkg`,`https://pkg.go.dev/example.com/extramodule@v1.0.0/pkg`)//bz: does not matter, comment off
 )
 
 var (

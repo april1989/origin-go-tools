@@ -19,7 +19,7 @@ import (
 )
 
 // This file is a harness for writing your main function.
-// The original version of the file is in github.tamu.edu/April1989/go_tools/internal/tool.
+// The original version of the file is in github.com/april1989/origin-go-tools/internal/tool.
 //
 // It adds a method to the Application type
 //     Main(name, usage string, args []string)

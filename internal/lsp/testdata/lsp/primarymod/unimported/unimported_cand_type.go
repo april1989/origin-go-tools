@@ -3,8 +3,8 @@ package unimported
 import (
 	_ "context"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/baz"
-	_ "github.tamu.edu/April1989/go_tools/internal/lsp/signature" // provide type information for unimported completions in the other file
+	"github.com/april1989/origin-go-tools/internal/lsp/baz"
+	_ "github.com/april1989/origin-go-tools/internal/lsp/signature" // provide type information for unimported completions in the other file
 )
 
 func _() {

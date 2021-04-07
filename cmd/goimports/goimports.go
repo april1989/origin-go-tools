@@ -21,8 +21,8 @@ import (
 	"runtime/pprof"
 	"strings"
 
-	"github.tamu.edu/April1989/go_tools/internal/gocommand"
-	"github.tamu.edu/April1989/go_tools/internal/imports"
+	"github.com/april1989/origin-go-tools/internal/gocommand"
+	"github.com/april1989/origin-go-tools/internal/imports"
 )
 
 var (

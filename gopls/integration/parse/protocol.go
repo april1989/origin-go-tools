@@ -7,7 +7,7 @@ package parse
 import (
 	"log"
 
-	p "github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
+	p "github.com/april1989/origin-go-tools/internal/lsp/protocol"
 )
 
 // Requests and notifications are fixed types

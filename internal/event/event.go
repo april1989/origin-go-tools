@@ -7,9 +7,9 @@ package event
 import (
 	"context"
 
-	"github.tamu.edu/April1989/go_tools/internal/event/core"
-	"github.tamu.edu/April1989/go_tools/internal/event/keys"
-	"github.tamu.edu/April1989/go_tools/internal/event/label"
+	"github.com/april1989/origin-go-tools/internal/event/core"
+	"github.com/april1989/origin-go-tools/internal/event/keys"
+	"github.com/april1989/origin-go-tools/internal/event/label"
 )
 
 // Exporter is a function that handles events.

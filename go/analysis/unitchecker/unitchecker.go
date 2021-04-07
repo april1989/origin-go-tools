@@ -48,9 +48,9 @@ import (
 	"sync"
 	"time"
 
-	"github.tamu.edu/April1989/go_tools/go/analysis"
-	"github.tamu.edu/April1989/go_tools/go/analysis/internal/analysisflags"
-	"github.tamu.edu/April1989/go_tools/go/analysis/internal/facts"
+	"github.com/april1989/origin-go-tools/go/analysis"
+	"github.com/april1989/origin-go-tools/go/analysis/internal/analysisflags"
+	"github.com/april1989/origin-go-tools/go/analysis/internal/facts"
 )
 
 // A Config describes a compilation unit to be analyzed.

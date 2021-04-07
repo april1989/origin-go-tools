@@ -12,10 +12,10 @@ import (
 	"go/format"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/go/analysis"
-	"github.tamu.edu/April1989/go_tools/go/analysis/passes/inspect"
-	"github.tamu.edu/April1989/go_tools/go/ast/inspector"
-	"github.tamu.edu/April1989/go_tools/internal/analysisinternal"
+	"github.com/april1989/origin-go-tools/go/analysis"
+	"github.com/april1989/origin-go-tools/go/analysis/passes/inspect"
+	"github.com/april1989/origin-go-tools/go/ast/inspector"
+	"github.com/april1989/origin-go-tools/internal/analysisinternal"
 )
 
 const Doc = `suggested fixes for "no new vars on left side of :="

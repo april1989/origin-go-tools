@@ -2,7 +2,7 @@ package pointer
 
 import (
 	"fmt"
-	"github.tamu.edu/April1989/go_tools/go/ssa"
+	"github.com/april1989/origin-go-tools/go/ssa"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"log"

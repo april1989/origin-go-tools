@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.tamu.edu/April1989/go_tools/internal/event"
-	"github.tamu.edu/April1989/go_tools/internal/event/keys"
+	"github.com/april1989/origin-go-tools/internal/event"
+	"github.com/april1989/origin-go-tools/internal/event/keys"
 )
 
 func TestEncodeMetric(t *testing.T) {

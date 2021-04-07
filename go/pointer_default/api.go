@@ -11,10 +11,10 @@ import (
 	"io"
 	"os"
 
-	"github.tamu.edu/April1989/go_tools/container/intsets"
-	"github.tamu.edu/April1989/go_tools/go/callgraph"
-	"github.tamu.edu/April1989/go_tools/go/ssa"
-	"github.tamu.edu/April1989/go_tools/go/types/typeutil"
+	"github.com/april1989/origin-go-tools/container/intsets"
+	"github.com/april1989/origin-go-tools/go/callgraph"
+	"github.com/april1989/origin-go-tools/go/ssa"
+	"github.com/april1989/origin-go-tools/go/types/typeutil"
 )
 
 // A Config formulates a pointer analysis problem for Analyze. It is

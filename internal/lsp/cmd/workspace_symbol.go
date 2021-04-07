@@ -9,9 +9,9 @@ import (
 	"flag"
 	"fmt"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/source"
-	"github.tamu.edu/April1989/go_tools/internal/tool"
+	"github.com/april1989/origin-go-tools/internal/lsp/protocol"
+	"github.com/april1989/origin-go-tools/internal/lsp/source"
+	"github.com/april1989/origin-go-tools/internal/tool"
 )
 
 // workspaceSymbol implements the workspace_symbol verb for gopls.

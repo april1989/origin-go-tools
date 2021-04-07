@@ -17,14 +17,14 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.tamu.edu/April1989/go_tools/internal/event"
-	"github.tamu.edu/April1989/go_tools/internal/gocommand"
-	"github.tamu.edu/April1989/go_tools/internal/jsonrpc2"
-	"github.tamu.edu/April1989/go_tools/internal/lsp"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/cache"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/debug"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/debug/tag"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
+	"github.com/april1989/origin-go-tools/internal/event"
+	"github.com/april1989/origin-go-tools/internal/gocommand"
+	"github.com/april1989/origin-go-tools/internal/jsonrpc2"
+	"github.com/april1989/origin-go-tools/internal/lsp"
+	"github.com/april1989/origin-go-tools/internal/lsp/cache"
+	"github.com/april1989/origin-go-tools/internal/lsp/debug"
+	"github.com/april1989/origin-go-tools/internal/lsp/debug/tag"
+	"github.com/april1989/origin-go-tools/internal/lsp/protocol"
 	errors "golang.org/x/xerrors"
 )
 

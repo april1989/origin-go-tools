@@ -11,9 +11,9 @@ import (
 	"go/types"
 	"strings"
 
-	"github.tamu.edu/April1989/go_tools/go/analysis"
-	"github.tamu.edu/April1989/go_tools/go/analysis/passes/inspect"
-	"github.tamu.edu/April1989/go_tools/go/ast/inspector"
+	"github.com/april1989/origin-go-tools/go/analysis"
+	"github.com/april1989/origin-go-tools/go/analysis/passes/inspect"
+	"github.com/april1989/origin-go-tools/go/ast/inspector"
 )
 
 const Doc = `check for unkeyed composite literals

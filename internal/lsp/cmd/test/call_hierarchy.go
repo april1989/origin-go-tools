@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/tests"
-	"github.tamu.edu/April1989/go_tools/internal/span"
+	"github.com/april1989/origin-go-tools/internal/lsp/protocol"
+	"github.com/april1989/origin-go-tools/internal/lsp/tests"
+	"github.com/april1989/origin-go-tools/internal/span"
 )
 
 func (r *runner) CallHierarchy(t *testing.T, spn span.Span, expectedCalls *tests.CallHierarchyResult) {

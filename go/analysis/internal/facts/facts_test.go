@@ -13,10 +13,10 @@ import (
 	"reflect"
 	"testing"
 
-	"github.tamu.edu/April1989/go_tools/go/analysis/analysistest"
-	"github.tamu.edu/April1989/go_tools/go/analysis/internal/facts"
-	"github.tamu.edu/April1989/go_tools/go/packages"
-	"github.tamu.edu/April1989/go_tools/internal/testenv"
+	"github.com/april1989/origin-go-tools/go/analysis/analysistest"
+	"github.com/april1989/origin-go-tools/go/analysis/internal/facts"
+	"github.com/april1989/origin-go-tools/go/packages"
+	"github.com/april1989/origin-go-tools/internal/testenv"
 )
 
 type myFact struct {

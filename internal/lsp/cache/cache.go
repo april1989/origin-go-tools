@@ -21,12 +21,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.tamu.edu/April1989/go_tools/internal/event"
-	"github.tamu.edu/April1989/go_tools/internal/gocommand"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/debug/tag"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/source"
-	"github.tamu.edu/April1989/go_tools/internal/memoize"
-	"github.tamu.edu/April1989/go_tools/internal/span"
+	"github.com/april1989/origin-go-tools/internal/event"
+	"github.com/april1989/origin-go-tools/internal/gocommand"
+	"github.com/april1989/origin-go-tools/internal/lsp/debug/tag"
+	"github.com/april1989/origin-go-tools/internal/lsp/source"
+	"github.com/april1989/origin-go-tools/internal/memoize"
+	"github.com/april1989/origin-go-tools/internal/span"
 )
 
 func New(ctx context.Context, options func(*source.Options)) *Cache {

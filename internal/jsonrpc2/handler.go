@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.tamu.edu/April1989/go_tools/internal/event"
+	"github.com/april1989/origin-go-tools/internal/event"
 )
 
 // Handler is invoked to handle incoming requests.

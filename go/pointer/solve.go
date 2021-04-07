@@ -9,8 +9,8 @@ package pointer
 
 import (
 	"fmt"
-	"github.tamu.edu/April1989/go_tools/go/myutil/flags"
-	"github.tamu.edu/April1989/go_tools/go/ssa"
+	"github.com/april1989/origin-go-tools/go/myutil/flags"
+	"github.com/april1989/origin-go-tools/go/ssa"
 	"go/types"
 )
 

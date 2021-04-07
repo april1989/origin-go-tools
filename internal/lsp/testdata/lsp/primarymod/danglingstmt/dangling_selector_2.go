@@ -1,6 +1,6 @@
 package danglingstmt
 
-import "github.tamu.edu/April1989/go_tools/internal/lsp/foo"
+import "github.com/april1989/origin-go-tools/internal/lsp/foo"
 
 func _() {
 	foo. //@rank(" //", Foo)

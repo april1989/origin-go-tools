@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 // Package httpfs implements http.FileSystem using a godoc vfs.FileSystem.
-package httpfs // import "github.tamu.edu/April1989/go_tools/godoc/vfs/httpfs"
+package httpfs // import "github.com/april1989/origin-go-tools/godoc/vfs/httpfs"
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.tamu.edu/April1989/go_tools/godoc/vfs"
+	"github.com/april1989/origin-go-tools/godoc/vfs"
 )
 
 func New(fs vfs.FileSystem) http.FileSystem {

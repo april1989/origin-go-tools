@@ -5,13 +5,13 @@
 // Package hooks adds all the standard gopls implementations.
 // This can be used in tests without needing to use the gopls main, and is
 // also the place to edit for custom builds of gopls.
-package hooks // import "github.tamu.edu/April1989/go_tools/gopls/internal/hooks"
+package hooks // import "github.com/april1989/origin-go-tools/gopls/internal/hooks"
 
 import (
 	"context"
 	"regexp"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/source"
+	"github.com/april1989/origin-go-tools/internal/lsp/source"
 	"mvdan.cc/gofumpt/format"
 	"mvdan.cc/xurls/v2"
 )

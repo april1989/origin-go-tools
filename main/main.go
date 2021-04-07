@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.tamu.edu/April1989/go_tools/go/myutil"
-	"github.tamu.edu/April1989/go_tools/go/myutil/flags"
+	"github.com/april1989/origin-go-tools/go/myutil"
+	"github.com/april1989/origin-go-tools/go/myutil/flags"
 	"time"
 )
 

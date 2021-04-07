@@ -15,13 +15,13 @@ import (
 	"strings"
 	"sync"
 
-	"github.tamu.edu/April1989/go_tools/go/packages"
-	"github.tamu.edu/April1989/go_tools/internal/event"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/debug/tag"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/source"
-	"github.tamu.edu/April1989/go_tools/internal/memoize"
-	"github.tamu.edu/April1989/go_tools/internal/span"
-	"github.tamu.edu/April1989/go_tools/internal/typesinternal"
+	"github.com/april1989/origin-go-tools/go/packages"
+	"github.com/april1989/origin-go-tools/internal/event"
+	"github.com/april1989/origin-go-tools/internal/lsp/debug/tag"
+	"github.com/april1989/origin-go-tools/internal/lsp/source"
+	"github.com/april1989/origin-go-tools/internal/memoize"
+	"github.com/april1989/origin-go-tools/internal/span"
+	"github.com/april1989/origin-go-tools/internal/typesinternal"
 	errors "golang.org/x/xerrors"
 )
 

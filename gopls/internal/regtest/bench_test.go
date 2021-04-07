@@ -9,9 +9,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fake"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
+	"github.com/april1989/origin-go-tools/internal/lsp"
+	"github.com/april1989/origin-go-tools/internal/lsp/fake"
+	"github.com/april1989/origin-go-tools/internal/lsp/protocol"
 )
 
 var iwlBench = struct {

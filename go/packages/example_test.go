@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.tamu.edu/April1989/go_tools/go/packages"
+	"github.com/april1989/origin-go-tools/go/packages"
 )
 
 // Example demonstrates how to load the packages specified on the

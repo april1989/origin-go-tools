@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
-	"github.tamu.edu/April1989/go_tools/go/ast/astutil"
-	"github.tamu.edu/April1989/go_tools/go/internal/cgo"
+	"github.com/april1989/origin-go-tools/go/ast/astutil"
+	"github.com/april1989/origin-go-tools/go/internal/cgo"
 )
 
 var ignoreVendor build.ImportMode

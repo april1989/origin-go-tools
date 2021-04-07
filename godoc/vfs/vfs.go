@@ -4,7 +4,7 @@
 
 // Package vfs defines types for abstract file system access and provides an
 // implementation accessing the file system of the underlying OS.
-package vfs // import "github.tamu.edu/April1989/go_tools/godoc/vfs"
+package vfs // import "github.com/april1989/origin-go-tools/godoc/vfs"
 
 import (
 	"io"

@@ -1,6 +1,6 @@
 package implementation
 
-import "github.tamu.edu/April1989/go_tools/internal/lsp/implementation/other"
+import "github.com/april1989/origin-go-tools/internal/lsp/testdata/lsp/primarymod/implementation/other"
 
 type ImpP struct{} //@ImpP,implementations("ImpP", Laugher, OtherLaugher)
 

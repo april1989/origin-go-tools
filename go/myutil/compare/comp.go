@@ -2,10 +2,10 @@ package compare
 
 import (
 	"fmt"
-	"github.tamu.edu/April1989/go_tools/go/callgraph"
-	"github.tamu.edu/April1989/go_tools/go/pointer"
-	default_algo "github.tamu.edu/April1989/go_tools/go/pointer_default"
-	"github.tamu.edu/April1989/go_tools/go/ssa"
+	"github.com/april1989/origin-go-tools/go/callgraph"
+	"github.com/april1989/origin-go-tools/go/pointer"
+	default_algo "github.com/april1989/origin-go-tools/go/pointer_default"
+	"github.com/april1989/origin-go-tools/go/ssa"
 	"strings"
 )
 

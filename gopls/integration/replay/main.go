@@ -17,10 +17,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.tamu.edu/April1989/go_tools/gopls/integration/parse"
-	"github.tamu.edu/April1989/go_tools/internal/fakenet"
-	"github.tamu.edu/April1989/go_tools/internal/jsonrpc2"
-	p "github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
+	"github.com/april1989/origin-go-tools/gopls/integration/parse"
+	"github.com/april1989/origin-go-tools/internal/fakenet"
+	"github.com/april1989/origin-go-tools/internal/jsonrpc2"
+	p "github.com/april1989/origin-go-tools/internal/lsp/protocol"
 )
 
 var (

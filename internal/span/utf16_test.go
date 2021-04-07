@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.tamu.edu/April1989/go_tools/internal/span"
+	"github.com/april1989/origin-go-tools/internal/span"
 )
 
 // The funny character below is 4 bytes long in UTF-8; two UTF-16 code points

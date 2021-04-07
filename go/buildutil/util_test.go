@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.tamu.edu/April1989/go_tools/go/buildutil"
-	"github.tamu.edu/April1989/go_tools/go/packages/packagestest"
+	"github.com/april1989/origin-go-tools/go/buildutil"
+	"github.com/april1989/origin-go-tools/go/packages/packagestest"
 )
 
 func TestContainingPackage(t *testing.T) {
@@ -23,7 +23,7 @@ func TestContainingPackage(t *testing.T) {
 	}
 
 	exported := packagestest.Export(t, packagestest.GOPATH, []packagestest.Module{
-		{Name: "github.tamu.edu/April1989/go_tools/go/buildutil", Files: packagestest.MustCopyFileTree(".")}})
+		{Name: "github.com/april1989/origin-go-tools/go/buildutil", Files: packagestest.MustCopyFileTree(".")}})
 	defer exported.Cleanup()
 
 	goroot := runtime.GOROOT()
@@ -47,8 +47,8 @@ func TestContainingPackage(t *testing.T) {
 		{gopath, goroot + "/src/fmt/print.go", "fmt"},
 		{gopath, goroot + "/src/encoding/json/foo.go", "encoding/json"},
 		{gopath, goroot + "/src/encoding/missing/foo.go", "(not found)"},
-		{gopath, gopath + "/src/github.tamu.edu/April1989/go_tools/go/buildutil/util_test.go",
-			"github.tamu.edu/April1989/go_tools/go/buildutil"},
+		{gopath, gopath + "/src/github.com/april1989/origin-go-tools/go/buildutil/util_test.go",
+			"github.com/april1989/origin-go-tools/go/buildutil"},
 	}
 
 	if runtime.GOOS != "windows" && runtime.GOOS != "plan9" {
@@ -66,9 +66,9 @@ func TestContainingPackage(t *testing.T) {
 			t.Fatal(err)
 		}
 		tests = append(tests, []Test{
-			{gopath, tmp + "/src/github.tamu.edu/April1989/go_tools/go/buildutil/util_test.go", "github.tamu.edu/April1989/go_tools/go/buildutil"},
-			{tmp, gopath + "/src/github.tamu.edu/April1989/go_tools/go/buildutil/util_test.go", "github.tamu.edu/April1989/go_tools/go/buildutil"},
-			{tmp, tmp + "/src/github.tamu.edu/April1989/go_tools/go/buildutil/util_test.go", "github.tamu.edu/April1989/go_tools/go/buildutil"},
+			{gopath, tmp + "/src/github.com/april1989/origin-go-tools/go/buildutil/util_test.go", "github.com/april1989/origin-go-tools/go/buildutil"},
+			{tmp, gopath + "/src/github.com/april1989/origin-go-tools/go/buildutil/util_test.go", "github.com/april1989/origin-go-tools/go/buildutil"},
+			{tmp, tmp + "/src/github.com/april1989/origin-go-tools/go/buildutil/util_test.go", "github.com/april1989/origin-go-tools/go/buildutil"},
 		}...)
 	}
 

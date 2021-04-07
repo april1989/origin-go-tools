@@ -8,11 +8,11 @@ import (
 	"os"
 	"testing"
 
-	"github.tamu.edu/April1989/go_tools/go/packages/packagestest"
-	"github.tamu.edu/April1989/go_tools/gopls/internal/hooks"
-	cmdtest "github.tamu.edu/April1989/go_tools/internal/lsp/cmd/test"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/source"
-	"github.tamu.edu/April1989/go_tools/internal/testenv"
+	"github.com/april1989/origin-go-tools/go/packages/packagestest"
+	"github.com/april1989/origin-go-tools/gopls/internal/hooks"
+	cmdtest "github.com/april1989/origin-go-tools/internal/lsp/cmd/test"
+	"github.com/april1989/origin-go-tools/internal/lsp/source"
+	"github.com/april1989/origin-go-tools/internal/testenv"
 )
 
 func TestMain(m *testing.M) {

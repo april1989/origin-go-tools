@@ -7,8 +7,8 @@ package core
 import (
 	"context"
 
-	"github.tamu.edu/April1989/go_tools/internal/event/keys"
-	"github.tamu.edu/April1989/go_tools/internal/event/label"
+	"github.com/april1989/origin-go-tools/internal/event/keys"
+	"github.com/april1989/origin-go-tools/internal/event/label"
 )
 
 // Log1 takes a message and one label delivers a log event to the exporter.

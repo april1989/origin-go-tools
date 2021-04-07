@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.tamu.edu/April1989/go_tools/go/gcexportdata"
+	"github.com/april1989/origin-go-tools/go/gcexportdata"
 )
 
 // Test to ensure that gcexportdata can read files produced by App

@@ -10,13 +10,13 @@ import (
 	"sort"
 	"strings"
 
-	"github.tamu.edu/April1989/go_tools/go/analysis"
-	"github.tamu.edu/April1989/go_tools/internal/event"
-	"github.tamu.edu/April1989/go_tools/internal/imports"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/debug/tag"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/source"
-	"github.tamu.edu/April1989/go_tools/internal/span"
+	"github.com/april1989/origin-go-tools/go/analysis"
+	"github.com/april1989/origin-go-tools/internal/event"
+	"github.com/april1989/origin-go-tools/internal/imports"
+	"github.com/april1989/origin-go-tools/internal/lsp/debug/tag"
+	"github.com/april1989/origin-go-tools/internal/lsp/protocol"
+	"github.com/april1989/origin-go-tools/internal/lsp/source"
+	"github.com/april1989/origin-go-tools/internal/span"
 )
 
 func (s *Server) codeAction(ctx context.Context, params *protocol.CodeActionParams) ([]protocol.CodeAction, error) {

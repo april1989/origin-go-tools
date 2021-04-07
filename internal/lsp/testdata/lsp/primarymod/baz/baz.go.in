@@ -3,9 +3,9 @@
 package baz
 
 import (
-	"github.tamu.edu/April1989/go_tools/internal/lsp/bar"
+	"github.com/april1989/origin-go-tools/internal/lsp/bar"
 
-	f "github.tamu.edu/April1989/go_tools/internal/lsp/foo"
+	f "github.com/april1989/origin-go-tools/internal/lsp/foo"
 )
 
 var FooStruct f.StructFoo

@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.tamu.edu/April1989/go_tools/internal/event/label"
+	"github.com/april1989/origin-go-tools/internal/event/label"
 )
 
 // Event holds the information about an event of note that ocurred.

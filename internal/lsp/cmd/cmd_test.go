@@ -12,11 +12,11 @@ import (
 	"runtime"
 	"testing"
 
-	"github.tamu.edu/April1989/go_tools/go/packages/packagestest"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/cmd"
-	cmdtest "github.tamu.edu/April1989/go_tools/internal/lsp/cmd/test"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/tests"
-	"github.tamu.edu/April1989/go_tools/internal/testenv"
+	"github.com/april1989/origin-go-tools/go/packages/packagestest"
+	"github.com/april1989/origin-go-tools/internal/lsp/cmd"
+	cmdtest "github.com/april1989/origin-go-tools/internal/lsp/cmd/test"
+	"github.com/april1989/origin-go-tools/internal/lsp/tests"
+	"github.com/april1989/origin-go-tools/internal/testenv"
 )
 
 func TestMain(m *testing.M) {

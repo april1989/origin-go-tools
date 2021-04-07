@@ -163,7 +163,7 @@ package pointer
 
 import (
 	"fmt"
-	"github.tamu.edu/April1989/go_tools/container/intsets"
+	"github.com/april1989/origin-go-tools/container/intsets"
 	"go/types"
 	"io"
 	"reflect"

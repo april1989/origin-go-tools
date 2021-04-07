@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.tamu.edu/April1989/go_tools/internal/stack"
+	"github.com/april1989/origin-go-tools/internal/stack"
 )
 
 //this is only needed to support pre 1.14 when golibexec_testing.TB did not have Cleanup

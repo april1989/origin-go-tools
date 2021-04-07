@@ -18,8 +18,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.tamu.edu/April1989/go_tools/go/buildutil"
-	"github.tamu.edu/April1989/go_tools/internal/testenv"
+	"github.com/april1989/origin-go-tools/go/buildutil"
+	"github.com/april1989/origin-go-tools/internal/testenv"
 )
 
 // TODO(adonovan): test reported source positions, somehow.

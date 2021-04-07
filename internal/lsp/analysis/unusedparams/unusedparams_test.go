@@ -7,8 +7,8 @@ package unusedparams_test
 import (
 	"testing"
 
-	"github.tamu.edu/April1989/go_tools/go/analysis/analysistest"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/analysis/unusedparams"
+	"github.com/april1989/origin-go-tools/go/analysis/analysistest"
+	"github.com/april1989/origin-go-tools/internal/lsp/analysis/unusedparams"
 )
 
 func Test(t *testing.T) {

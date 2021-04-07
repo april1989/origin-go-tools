@@ -5,7 +5,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"github.tamu.edu/April1989/go_tools/_tests_callback/lib"
+	"github.com/april1989/origin-go-tools/_tests_callback/lib"
 )
 
 func Myfn1(i int) {// @pointsto i@main.Myfn1=t0@main.main

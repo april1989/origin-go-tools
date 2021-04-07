@@ -13,10 +13,10 @@ import (
 	"strings"
 	"unicode"
 
-	"github.tamu.edu/April1989/go_tools/internal/event"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/diff"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/snippet"
+	"github.com/april1989/origin-go-tools/internal/event"
+	"github.com/april1989/origin-go-tools/internal/lsp/diff"
+	"github.com/april1989/origin-go-tools/internal/lsp/protocol"
+	"github.com/april1989/origin-go-tools/internal/lsp/snippet"
 )
 
 // literal generates composite literal, function literal, and make()

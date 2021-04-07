@@ -40,7 +40,7 @@
 // cmd/callgraph tool on its own source takes ~2.1s for RTA and ~5.4s
 // for points-to analysis.
 //
-package rta // import "github.tamu.edu/April1989/go_tools/go/callgraph/rta"
+package rta // import "github.com/april1989/origin-go-tools/go/callgraph/rta"
 
 // TODO(adonovan): test it by connecting it to the interpreter and
 // replacing all "unreachable" functions by a special intrinsic, and
@@ -50,9 +50,9 @@ import (
 	"fmt"
 	"go/types"
 
-	"github.tamu.edu/April1989/go_tools/go/callgraph"
-	"github.tamu.edu/April1989/go_tools/go/ssa"
-	"github.tamu.edu/April1989/go_tools/go/types/typeutil"
+	"github.com/april1989/origin-go-tools/go/callgraph"
+	"github.com/april1989/origin-go-tools/go/ssa"
+	"github.com/april1989/origin-go-tools/go/types/typeutil"
 )
 
 // A Result holds the results of Rapid Type Analysis, which includes the

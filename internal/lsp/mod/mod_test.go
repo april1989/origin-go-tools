@@ -10,10 +10,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/cache"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/tests"
-	"github.tamu.edu/April1989/go_tools/internal/span"
-	"github.tamu.edu/April1989/go_tools/internal/testenv"
+	"github.com/april1989/origin-go-tools/internal/lsp/cache"
+	"github.com/april1989/origin-go-tools/internal/lsp/tests"
+	"github.com/april1989/origin-go-tools/internal/span"
+	"github.com/april1989/origin-go-tools/internal/testenv"
 )
 
 func TestMain(m *testing.M) {

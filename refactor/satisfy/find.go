@@ -15,7 +15,7 @@
 // since it is computing it anyway, and it is robust for ill-typed
 // inputs, which this package is not.
 //
-package satisfy // import "github.tamu.edu/April1989/go_tools/refactor/satisfy"
+package satisfy // import "github.com/april1989/origin-go-tools/refactor/satisfy"
 
 // NOTES:
 //
@@ -50,8 +50,8 @@ import (
 	"go/token"
 	"go/types"
 
-	"github.tamu.edu/April1989/go_tools/go/ast/astutil"
-	"github.tamu.edu/April1989/go_tools/go/types/typeutil"
+	"github.com/april1989/origin-go-tools/go/ast/astutil"
+	"github.com/april1989/origin-go-tools/go/types/typeutil"
 )
 
 // A Constraint records the fact that the RHS type does and must
@@ -690,7 +690,7 @@ func (f *Finder) stmt(s ast.Stmt) {
 	}
 }
 
-// -- Plundered from github.tamu.edu/April1989/go_tools/go/ssa -----------------
+// -- Plundered from github.com/april1989/origin-go-tools/go/ssa -----------------
 
 // deref returns a pointer's element type; otherwise it returns typ.
 func deref(typ types.Type) types.Type {

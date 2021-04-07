@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fake"
-	"github.tamu.edu/April1989/go_tools/internal/testenv"
+	"github.com/april1989/origin-go-tools/internal/lsp/fake"
+	"github.com/april1989/origin-go-tools/internal/testenv"
 )
 
 func TestIssue38815(t *testing.T) {

@@ -15,13 +15,13 @@ import (
 	"strings"
 
 	"golang.org/x/mod/modfile"
-	"github.tamu.edu/April1989/go_tools/internal/event"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/debug/tag"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/diff"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/source"
-	"github.tamu.edu/April1989/go_tools/internal/memoize"
-	"github.tamu.edu/April1989/go_tools/internal/span"
+	"github.com/april1989/origin-go-tools/internal/event"
+	"github.com/april1989/origin-go-tools/internal/lsp/debug/tag"
+	"github.com/april1989/origin-go-tools/internal/lsp/diff"
+	"github.com/april1989/origin-go-tools/internal/lsp/protocol"
+	"github.com/april1989/origin-go-tools/internal/lsp/source"
+	"github.com/april1989/origin-go-tools/internal/memoize"
+	"github.com/april1989/origin-go-tools/internal/span"
 )
 
 type modTidyKey struct {
@@ -233,10 +233,10 @@ func modTidyErrors(ctx context.Context, snapshot source.Snapshot, pm *source.Par
 			// Example:
 			//
 			// import (
-			//   "github.tamu.edu/April1989/go_tools/go/expect"
-			//   "github.tamu.edu/April1989/go_tools/go/packages"
+			//   "github.com/april1989/origin-go-tools/go/expect"
+			//   "github.com/april1989/origin-go-tools/go/packages"
 			// )
-			// They both are related to the same module: "github.tamu.edu/April1989/go_tools".
+			// They both are related to the same module: "github.com/april1989/origin-go-tools".
 			var match string
 			for _, req := range ideal.Require {
 				if strings.HasPrefix(imp.PkgPath(), req.Mod.Path) && len(req.Mod.Path) > len(match) {

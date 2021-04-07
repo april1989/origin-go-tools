@@ -45,7 +45,7 @@ as well as generate a full log and a comparison with the default algorithm about
 *Note* that ```-doLog``` is very verbose and significantly slowdown the analysis.
 
 ## User APIs (for detector) 
-Go to https://github.tamu.edu/April1989/go_tools/main/main.go, check how to use the callgraph and queries. 
+Go to https://github.com/april1989/origin-go-tools/main/main.go, check how to use the callgraph and queries. 
 
 ## Origin-sensitive
 

@@ -1,4 +1,4 @@
-package foo //@mark(PackageFoo, "foo"),item(PackageFoo, "foo", "\"github.tamu.edu/April1989/go_tools/internal/lsp/foo\"", "package")
+package foo //@mark(PackageFoo, "foo"),item(PackageFoo, "foo", "\"github.com/april1989/origin-go-tools/internal/lsp/foo\"", "package")
 
 type StructFoo struct { //@item(StructFoo, "StructFoo", "struct{...}", "struct")
 	Value int //@item(Value, "Value", "int", "field")

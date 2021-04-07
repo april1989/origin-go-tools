@@ -19,7 +19,7 @@
 //  + the Env type provides a collection of resources to use in writing tests
 //    (for example a temporary working directory and fake text editor)
 //  + user interactions with these resources are scripted using test wrappers
-//    around the API provided by the github.tamu.edu/April1989/go_tools/internal/lsp/fake
+//    around the API provided by the github.com/april1989/origin-go-tools/internal/lsp/fake
 //    package.
 //
 // Regressions are expressed in terms of Expectations, which at a high level

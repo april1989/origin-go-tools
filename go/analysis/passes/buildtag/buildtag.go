@@ -12,8 +12,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.tamu.edu/April1989/go_tools/go/analysis"
-	"github.tamu.edu/April1989/go_tools/go/analysis/passes/internal/analysisutil"
+	"github.com/april1989/origin-go-tools/go/analysis"
+	"github.com/april1989/origin-go-tools/go/analysis/passes/internal/analysisutil"
 )
 
 const Doc = "check that +build tags are well-formed and correctly located"

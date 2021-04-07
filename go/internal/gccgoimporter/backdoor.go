@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// This file opens a back door to the parser for github.tamu.edu/April1989/go_tools/go/gccgoexportdata.
+// This file opens a back door to the parser for github.com/april1989/origin-go-tools/go/gccgoexportdata.
 
 package gccgoimporter
 

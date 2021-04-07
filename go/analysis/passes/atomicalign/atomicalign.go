@@ -14,10 +14,10 @@ import (
 	"go/token"
 	"go/types"
 
-	"github.tamu.edu/April1989/go_tools/go/analysis"
-	"github.tamu.edu/April1989/go_tools/go/analysis/passes/inspect"
-	"github.tamu.edu/April1989/go_tools/go/analysis/passes/internal/analysisutil"
-	"github.tamu.edu/April1989/go_tools/go/ast/inspector"
+	"github.com/april1989/origin-go-tools/go/analysis"
+	"github.com/april1989/origin-go-tools/go/analysis/passes/inspect"
+	"github.com/april1989/origin-go-tools/go/analysis/passes/internal/analysisutil"
+	"github.com/april1989/origin-go-tools/go/ast/inspector"
 )
 
 const Doc = "check for non-64-bits-aligned arguments to sync/atomic functions"

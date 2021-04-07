@@ -1,6 +1,6 @@
 package pointer
 
-import "github.tamu.edu/April1989/go_tools/go/ssa"
+import "github.com/april1989/origin-go-tools/go/ssa"
 
 /*
    bz: used when two cgnodes with the same function and context (must be shared contour) are same across different mains,

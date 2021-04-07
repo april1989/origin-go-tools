@@ -1,13 +1,13 @@
 // Package imports implements a Go pretty-printer (like package "go/format")
 // that also adds or removes import statements as necessary.
-package imports // import "github.tamu.edu/April1989/go_tools/imports"
+package imports // import "github.com/april1989/origin-go-tools/imports"
 
 import (
 	"io/ioutil"
 	"log"
 
-	"github.tamu.edu/April1989/go_tools/internal/gocommand"
-	intimp "github.tamu.edu/April1989/go_tools/internal/imports"
+	"github.com/april1989/origin-go-tools/internal/gocommand"
+	intimp "github.com/april1989/origin-go-tools/internal/imports"
 )
 
 // Options specifies options for processing files.

@@ -14,15 +14,15 @@ import (
 	"sort"
 	"testing"
 
-	"github.tamu.edu/April1989/go_tools/go/packages/packagestest"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/cache"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/diff"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/diff/myers"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/source"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/tests"
-	"github.tamu.edu/April1989/go_tools/internal/span"
-	"github.tamu.edu/April1989/go_tools/internal/testenv"
+	"github.com/april1989/origin-go-tools/go/packages/packagestest"
+	"github.com/april1989/origin-go-tools/internal/lsp/cache"
+	"github.com/april1989/origin-go-tools/internal/lsp/diff"
+	"github.com/april1989/origin-go-tools/internal/lsp/diff/myers"
+	"github.com/april1989/origin-go-tools/internal/lsp/protocol"
+	"github.com/april1989/origin-go-tools/internal/lsp/source"
+	"github.com/april1989/origin-go-tools/internal/lsp/tests"
+	"github.com/april1989/origin-go-tools/internal/span"
+	"github.com/april1989/origin-go-tools/internal/testenv"
 )
 
 func TestMain(m *testing.M) {

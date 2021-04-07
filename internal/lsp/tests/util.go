@@ -14,11 +14,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/diff"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/diff/myers"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/source"
-	"github.tamu.edu/April1989/go_tools/internal/span"
+	"github.com/april1989/origin-go-tools/internal/lsp/diff"
+	"github.com/april1989/origin-go-tools/internal/lsp/diff/myers"
+	"github.com/april1989/origin-go-tools/internal/lsp/protocol"
+	"github.com/april1989/origin-go-tools/internal/lsp/source"
+	"github.com/april1989/origin-go-tools/internal/span"
 )
 
 // DiffLinks takes the links we got and checks if they are located within the source or a Note.

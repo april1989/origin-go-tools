@@ -1,7 +1,7 @@
 // The eg command performs example-based refactoring.
 // For documentation, run the command, or see Help in
-// github.tamu.edu/April1989/go_tools/refactor/eg.
-package main // import "github.tamu.edu/April1989/go_tools/cmd/eg"
+// github.com/april1989/origin-go-tools/refactor/eg.
+package main // import "github.com/april1989/origin-go-tools/cmd/eg"
 
 import (
 	"flag"
@@ -14,9 +14,9 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.tamu.edu/April1989/go_tools/go/buildutil"
-	"github.tamu.edu/April1989/go_tools/go/loader"
-	"github.tamu.edu/April1989/go_tools/refactor/eg"
+	"github.com/april1989/origin-go-tools/go/buildutil"
+	"github.com/april1989/origin-go-tools/go/loader"
+	"github.com/april1989/origin-go-tools/refactor/eg"
 )
 
 var (

@@ -23,8 +23,8 @@ import (
 	"sync"
 	"unicode"
 
-	"github.tamu.edu/April1989/go_tools/go/internal/packagesdriver"
-	"github.tamu.edu/April1989/go_tools/internal/gocommand"
+	"github.com/april1989/origin-go-tools/go/internal/packagesdriver"
+	"github.com/april1989/origin-go-tools/internal/gocommand"
 	"golang.org/x/xerrors"
 )
 

@@ -9,7 +9,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 var foop int
@@ -151,7 +151,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type emptyStruct struct{}
@@ -263,7 +263,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -371,7 +371,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type emptyStruct struct{}
@@ -483,7 +483,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type emptyStruct struct{}
@@ -595,7 +595,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -733,7 +733,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 var foop int
@@ -873,7 +873,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -1011,7 +1011,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 var foop int
@@ -1151,7 +1151,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -1288,7 +1288,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -1428,7 +1428,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 var foop int
@@ -1570,7 +1570,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -1708,7 +1708,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 var foop int
@@ -1848,7 +1848,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -1986,7 +1986,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 var foop int
@@ -2126,7 +2126,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type emptyStruct struct{}
@@ -2236,7 +2236,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -2375,7 +2375,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 var foop int
@@ -2516,7 +2516,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -2621,7 +2621,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type emptyStruct struct{}
@@ -2732,7 +2732,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -2871,7 +2871,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type emptyStruct struct{}
@@ -2980,7 +2980,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -3118,7 +3118,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 var foop int
@@ -3259,7 +3259,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 var foop int
@@ -3399,7 +3399,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -3506,7 +3506,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -3612,7 +3612,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type emptyStruct struct{}
@@ -3723,7 +3723,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type emptyStruct struct{}
@@ -3833,7 +3833,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -3975,7 +3975,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 var foop int
@@ -4119,7 +4119,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -4229,7 +4229,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -4368,7 +4368,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 var foop int
@@ -4509,7 +4509,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type emptyStruct struct{}
@@ -4623,7 +4623,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -4730,7 +4730,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -4869,7 +4869,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type emptyStruct struct{}
@@ -4980,7 +4980,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 var foop int
@@ -5121,7 +5121,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -5228,7 +5228,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -5367,7 +5367,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 var foop int
@@ -5508,7 +5508,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type emptyStruct struct{}
@@ -5619,7 +5619,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -5726,7 +5726,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type emptyStruct struct{}
@@ -5837,7 +5837,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -5976,7 +5976,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 var foop int
@@ -6117,7 +6117,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -6224,7 +6224,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type emptyStruct struct{}
@@ -6335,7 +6335,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -6479,7 +6479,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 var foop int
@@ -6625,7 +6625,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -6737,7 +6737,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type emptyStruct struct{}
@@ -6853,7 +6853,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -6993,7 +6993,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 var foop int
@@ -7135,7 +7135,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -7275,7 +7275,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -7383,7 +7383,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 var foop int
@@ -7525,7 +7525,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {
@@ -7665,7 +7665,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fillstruct/data"
+	"github.com/april1989/origin-go-tools/internal/lsp/fillstruct/data"
 )
 
 type basicStruct struct {

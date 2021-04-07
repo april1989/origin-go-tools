@@ -14,7 +14,7 @@ import (
 	"math"
 	"testing"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fuzzy"
+	"github.com/april1989/origin-go-tools/internal/lsp/fuzzy"
 )
 
 type comparator struct {

@@ -7,7 +7,7 @@ package fake
 import (
 	"fmt"
 
-	"github.tamu.edu/April1989/go_tools/internal/proxydir"
+	"github.com/april1989/origin-go-tools/internal/proxydir"
 )
 
 // WriteProxy creates a new proxy file tree using the txtar-encoded content,

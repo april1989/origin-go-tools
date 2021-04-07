@@ -1,8 +1,8 @@
 package snippets
 
 import (
-	"github.tamu.edu/April1989/go_tools/internal/lsp/signature"
-	t "github.tamu.edu/April1989/go_tools/internal/lsp/types"
+	"github.com/april1989/origin-go-tools/internal/lsp/signature"
+	t "github.com/april1989/origin-go-tools/internal/lsp/types"
 )
 
 type structy struct {

@@ -23,14 +23,14 @@ import (
 	"testing"
 	"time"
 
-	"github.tamu.edu/April1989/go_tools/go/expect"
-	"github.tamu.edu/April1989/go_tools/go/packages"
-	"github.tamu.edu/April1989/go_tools/go/packages/packagestest"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/source"
-	"github.tamu.edu/April1989/go_tools/internal/span"
-	"github.tamu.edu/April1989/go_tools/internal/testenv"
-	"github.tamu.edu/April1989/go_tools/txtar"
+	"github.com/april1989/origin-go-tools/go/expect"
+	"github.com/april1989/origin-go-tools/go/packages"
+	"github.com/april1989/origin-go-tools/go/packages/packagestest"
+	"github.com/april1989/origin-go-tools/internal/lsp/protocol"
+	"github.com/april1989/origin-go-tools/internal/lsp/source"
+	"github.com/april1989/origin-go-tools/internal/span"
+	"github.com/april1989/origin-go-tools/internal/testenv"
+	"github.com/april1989/origin-go-tools/txtar"
 )
 
 const (
@@ -38,7 +38,7 @@ const (
 	goldenFileSuffix  = ".golden"
 	inFileSuffix      = ".in"
 	summaryFile       = "summary.txt"
-	testModule        = "github.tamu.edu/April1989/go_tools/internal/lsp"
+	testModule        = "github.com/april1989/origin-go-tools/internal/lsp"
 )
 
 var UpdateGolden = flag.Bool("golden", false, "Update golden files")

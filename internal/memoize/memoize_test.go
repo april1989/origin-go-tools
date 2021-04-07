@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.tamu.edu/April1989/go_tools/internal/memoize"
+	"github.com/april1989/origin-go-tools/internal/memoize"
 )
 
 func TestGet(t *testing.T) {

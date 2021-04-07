@@ -18,7 +18,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.tamu.edu/April1989/go_tools/internal/xcontext"
+	"github.com/april1989/origin-go-tools/internal/xcontext"
 )
 
 var (

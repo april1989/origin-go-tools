@@ -14,9 +14,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.tamu.edu/April1989/go_tools/internal/event/export/eventtest"
-	"github.tamu.edu/April1989/go_tools/internal/jsonrpc2"
-	"github.tamu.edu/April1989/go_tools/internal/stack/stacktest"
+	"github.com/april1989/origin-go-tools/internal/event/export/eventtest"
+	"github.com/april1989/origin-go-tools/internal/jsonrpc2"
+	"github.com/april1989/origin-go-tools/internal/stack/stacktest"
 )
 
 var logRPC = flag.Bool("logrpc", false, "Enable jsonrpc2 communication logging")

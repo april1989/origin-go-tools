@@ -3,7 +3,7 @@ package b
 import (
 	"fmt"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/godef/a"
+	"github.com/april1989/origin-go-tools/internal/lsp/godef/a"
 )
 
 func useThings() {

@@ -26,10 +26,10 @@ import (
 	"testing"
 	"time"
 
-	"github.tamu.edu/April1989/go_tools/go/packages"
-	"github.tamu.edu/April1989/go_tools/go/packages/packagestest"
-	"github.tamu.edu/April1989/go_tools/internal/packagesinternal"
-	"github.tamu.edu/April1989/go_tools/internal/testenv"
+	"github.com/april1989/origin-go-tools/go/packages"
+	"github.com/april1989/origin-go-tools/go/packages/packagestest"
+	"github.com/april1989/origin-go-tools/internal/packagesinternal"
+	"github.com/april1989/origin-go-tools/internal/testenv"
 )
 
 // testCtx is canceled when the test binary is about to time out.

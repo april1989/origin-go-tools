@@ -1,4 +1,4 @@
-module github.tamu.edu/April1989/go_tools
+module github.com/april1989/origin-go-tools
 
 go 1.11
 

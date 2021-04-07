@@ -27,10 +27,10 @@ import (
 	"testing"
 	"time"
 
-	"github.tamu.edu/April1989/go_tools/go/loader"
-	"github.tamu.edu/April1989/go_tools/go/ssa"
-	"github.tamu.edu/April1989/go_tools/go/ssa/interp"
-	"github.tamu.edu/April1989/go_tools/go/ssa/ssautil"
+	"github.com/april1989/origin-go-tools/go/loader"
+	"github.com/april1989/origin-go-tools/go/ssa"
+	"github.com/april1989/origin-go-tools/go/ssa/interp"
+	"github.com/april1989/origin-go-tools/go/ssa/ssautil"
 )
 
 // Each line contains a space-separated list of $GOROOT/test/
@@ -160,7 +160,7 @@ func run(t *testing.T, input string) bool {
 		interp.CapturedOutput = nil
 	}()
 
-	hint = fmt.Sprintf("To dump SSA representation, run:\n%% go build github.tamu.edu/April1989/go_tools/cmd/ssadump && ./ssadump -test -build=CFP %s\n", input)
+	hint = fmt.Sprintf("To dump SSA representation, run:\n%% go build github.com/april1989/origin-go-tools/cmd/ssadump && ./ssadump -test -build=CFP %s\n", input)
 
 	iprog, err := conf.Load()
 	if err != nil {
@@ -178,7 +178,7 @@ func run(t *testing.T, input string) bool {
 
 	interp.CapturedOutput = new(bytes.Buffer)
 
-	hint = fmt.Sprintf("To trace execution, run:\n%% go build github.tamu.edu/April1989/go_tools/cmd/ssadump && ./ssadump -build=C -test -run --interp=T %s\n", input)
+	hint = fmt.Sprintf("To trace execution, run:\n%% go build github.com/april1989/origin-go-tools/cmd/ssadump && ./ssadump -build=C -test -run --interp=T %s\n", input)
 	exitCode := interp.Interpret(mainPkg, 0, &types.StdSizes{WordSize: 8, MaxAlign: 8}, input, []string{})
 	if exitCode != 0 {
 		t.Fatalf("interpreting %s: exit code was %d", input, exitCode)

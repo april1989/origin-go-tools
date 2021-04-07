@@ -13,8 +13,8 @@ import (
 	"sort"
 	"strconv"
 
-	"github.tamu.edu/April1989/go_tools/internal/event"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
+	"github.com/april1989/origin-go-tools/internal/event"
+	"github.com/april1989/origin-go-tools/internal/lsp/protocol"
 	errors "golang.org/x/xerrors"
 )
 

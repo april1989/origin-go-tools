@@ -19,8 +19,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.tamu.edu/April1989/go_tools/go/packages/packagestest"
-	"github.tamu.edu/April1989/go_tools/internal/gocommand"
+	"github.com/april1989/origin-go-tools/go/packages/packagestest"
+	"github.com/april1989/origin-go-tools/internal/gocommand"
 )
 
 var testDebug = flag.Bool("debug", false, "enable debug output")

@@ -13,10 +13,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.tamu.edu/April1989/go_tools/go/analysis"
-	"github.tamu.edu/April1989/go_tools/go/analysis/passes/inspect"
-	"github.tamu.edu/April1989/go_tools/go/analysis/passes/internal/analysisutil"
-	"github.tamu.edu/April1989/go_tools/go/ast/inspector"
+	"github.com/april1989/origin-go-tools/go/analysis"
+	"github.com/april1989/origin-go-tools/go/analysis/passes/inspect"
+	"github.com/april1989/origin-go-tools/go/analysis/passes/internal/analysisutil"
+	"github.com/april1989/origin-go-tools/go/ast/inspector"
 )
 
 // TODO(adonovan): make this analysis modular: export a mustUseResult

@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 
 	"golang.org/x/mod/modfile"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/source"
-	"github.tamu.edu/April1989/go_tools/internal/span"
+	"github.com/april1989/origin-go-tools/internal/lsp/protocol"
+	"github.com/april1989/origin-go-tools/internal/lsp/source"
+	"github.com/april1989/origin-go-tools/internal/span"
 )
 
 // LensFuncs returns the supported lensFuncs for go.mod files.

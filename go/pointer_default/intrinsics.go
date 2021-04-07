@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"go/types"
 
-	"github.tamu.edu/April1989/go_tools/go/ssa"
+	"github.com/april1989/origin-go-tools/go/ssa"
 )
 
 // Instances of 'intrinsic' generate analysis constraints for calls to

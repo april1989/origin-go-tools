@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.tamu.edu/April1989/go_tools/internal/stack/stacktest"
+	"github.com/april1989/origin-go-tools/internal/stack/stacktest"
 )
 
 func TestIdleTimeout(t *testing.T) {

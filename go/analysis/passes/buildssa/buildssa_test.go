@@ -9,8 +9,8 @@ import (
 	"os"
 	"testing"
 
-	"github.tamu.edu/April1989/go_tools/go/analysis/analysistest"
-	"github.tamu.edu/April1989/go_tools/go/analysis/passes/buildssa"
+	"github.com/april1989/origin-go-tools/go/analysis/analysistest"
+	"github.com/april1989/origin-go-tools/go/analysis/passes/buildssa"
 )
 
 func Test(t *testing.T) {

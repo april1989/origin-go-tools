@@ -4,7 +4,7 @@
 
 package callhierarchy
 
-import "github.tamu.edu/April1989/go_tools/internal/lsp/callhierarchy/outgoing"
+import "github.com/april1989/origin-go-tools/internal/lsp/testdata/lsp/primarymod/callhierarchy/outgoing"
 
 func a() { //@mark(hierarchyA, "a")
 	D()

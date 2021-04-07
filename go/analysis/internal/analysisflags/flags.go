@@ -20,7 +20,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.tamu.edu/April1989/go_tools/go/analysis"
+	"github.com/april1989/origin-go-tools/go/analysis"
 )
 
 // flags common to all {single,multi,unit}checkers.

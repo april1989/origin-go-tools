@@ -13,8 +13,8 @@ import (
 	"os"
 	"strings"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/browser"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/debug"
+	"github.com/april1989/origin-go-tools/internal/lsp/browser"
+	"github.com/april1989/origin-go-tools/internal/lsp/debug"
 )
 
 // version implements the version command.

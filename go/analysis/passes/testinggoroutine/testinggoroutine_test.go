@@ -7,8 +7,8 @@ package testinggoroutine_test
 import (
 	"testing"
 
-	"github.tamu.edu/April1989/go_tools/go/analysis/analysistest"
-	"github.tamu.edu/April1989/go_tools/go/analysis/passes/testinggoroutine"
+	"github.com/april1989/origin-go-tools/go/analysis/analysistest"
+	"github.com/april1989/origin-go-tools/go/analysis/passes/testinggoroutine"
 )
 
 func Test(t *testing.T) {

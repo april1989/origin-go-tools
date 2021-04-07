@@ -13,8 +13,8 @@ import (
 	"go/types"
 	"strings"
 
-	"github.tamu.edu/April1989/go_tools/go/ast/astutil"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fuzzy"
+	"github.com/april1989/origin-go-tools/go/ast/astutil"
+	"github.com/april1989/origin-go-tools/internal/lsp/fuzzy"
 )
 
 var (

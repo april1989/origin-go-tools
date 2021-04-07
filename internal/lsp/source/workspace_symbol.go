@@ -13,9 +13,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.tamu.edu/April1989/go_tools/internal/event"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/fuzzy"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
+	"github.com/april1989/origin-go-tools/internal/event"
+	"github.com/april1989/origin-go-tools/internal/lsp/fuzzy"
+	"github.com/april1989/origin-go-tools/internal/lsp/protocol"
 )
 
 // maxSymbols defines the maximum number of symbol results that should ever be

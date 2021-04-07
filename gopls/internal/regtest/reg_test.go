@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/cmd"
-	"github.tamu.edu/April1989/go_tools/internal/testenv"
-	"github.tamu.edu/April1989/go_tools/internal/tool"
+	"github.com/april1989/origin-go-tools/internal/lsp/cmd"
+	"github.com/april1989/origin-go-tools/internal/testenv"
+	"github.com/april1989/origin-go-tools/internal/tool"
 )
 
 var (

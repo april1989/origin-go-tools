@@ -3,8 +3,8 @@ package testy
 import (
 	"testing"
 
-	sig "github.tamu.edu/April1989/go_tools/internal/lsp/signature"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/snippets"
+	sig "github.com/april1989/origin-go-tools/internal/lsp/signature"
+	"github.com/april1989/origin-go-tools/internal/lsp/snippets"
 )
 
 func TestSomething(t *testing.T) { //@item(TestSomething, "TestSomething(t *golibexec_testing.T)", "", "func")

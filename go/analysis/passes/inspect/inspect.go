@@ -3,15 +3,15 @@
 // license that can be found in the LICENSE file.
 
 // Package inspect defines an Analyzer that provides an AST inspector
-// (github.tamu.edu/April1989/go_tools/go/ast/inspect.Inspect) for the syntax trees of a
+// (github.com/april1989/origin-go-tools/go/ast/inspect.Inspect) for the syntax trees of a
 // package. It is only a building block for other analyzers.
 //
 // Example of use in another analysis:
 //
 //	import (
-//		"github.tamu.edu/April1989/go_tools/go/analysis"
-//		"github.tamu.edu/April1989/go_tools/go/analysis/passes/inspect"
-//		"github.tamu.edu/April1989/go_tools/go/ast/inspector"
+//		"github.com/april1989/origin-go-tools/go/analysis"
+//		"github.com/april1989/origin-go-tools/go/analysis/passes/inspect"
+//		"github.com/april1989/origin-go-tools/go/ast/inspector"
 //	)
 //
 //	var Analyzer = &analysis.Analyzer{
@@ -32,8 +32,8 @@ package inspect
 import (
 	"reflect"
 
-	"github.tamu.edu/April1989/go_tools/go/analysis"
-	"github.tamu.edu/April1989/go_tools/go/ast/inspector"
+	"github.com/april1989/origin-go-tools/go/analysis"
+	"github.com/april1989/origin-go-tools/go/ast/inspector"
 )
 
 var Analyzer = &analysis.Analyzer{

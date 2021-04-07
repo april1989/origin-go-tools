@@ -8,10 +8,10 @@ import (
 	"strings"
 
 	"golang.org/x/mod/modfile"
-	"github.tamu.edu/April1989/go_tools/internal/event"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
-	"github.tamu.edu/April1989/go_tools/internal/lsp/source"
-	"github.tamu.edu/April1989/go_tools/internal/span"
+	"github.com/april1989/origin-go-tools/internal/event"
+	"github.com/april1989/origin-go-tools/internal/lsp/protocol"
+	"github.com/april1989/origin-go-tools/internal/lsp/source"
+	"github.com/april1989/origin-go-tools/internal/span"
 	errors "golang.org/x/xerrors"
 )
 
@@ -139,9 +139,9 @@ func formatExplanation(text string, req *modfile.Require, options source.Options
 	b.WriteString("This module is necessary because " + reference + " is imported in")
 
 	// If the explanation is 3 lines, then it is of the form:
-	// # github.tamu.edu/April1989/go_tools
+	// # github.com/april1989/origin-go-tools
 	// modtest
-	// github.tamu.edu/April1989/go_tools/go/packages
+	// github.com/april1989/origin-go-tools/go/packages
 	if length == 3 {
 		msg := fmt.Sprintf(" `%s`.", splt[1])
 		b.WriteString(msg)

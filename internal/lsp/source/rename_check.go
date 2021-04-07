@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 //
-// Taken from github.tamu.edu/April1989/go_tools/refactor/rename.
+// Taken from github.com/april1989/origin-go-tools/refactor/rename.
 
 package source
 
@@ -16,8 +16,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.tamu.edu/April1989/go_tools/go/ast/astutil"
-	"github.tamu.edu/April1989/go_tools/refactor/satisfy"
+	"github.com/april1989/origin-go-tools/go/ast/astutil"
+	"github.com/april1989/origin-go-tools/refactor/satisfy"
 )
 
 // errorf reports an error (e.g. conflict) and prevents file modification.

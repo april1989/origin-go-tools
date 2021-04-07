@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
+	"github.com/april1989/origin-go-tools/internal/lsp/protocol"
 )
 
 const data = `

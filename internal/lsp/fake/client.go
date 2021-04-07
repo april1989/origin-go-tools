@@ -8,7 +8,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
+	"github.com/april1989/origin-go-tools/internal/lsp/protocol"
 )
 
 // ClientHooks are called to handle the corresponding client LSP method.

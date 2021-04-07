@@ -38,14 +38,14 @@ import (
 	"runtime"
 	"strings"
 
-	"github.tamu.edu/April1989/go_tools/godoc"
-	"github.tamu.edu/April1989/go_tools/godoc/analysis"
-	"github.tamu.edu/April1989/go_tools/godoc/static"
-	"github.tamu.edu/April1989/go_tools/godoc/vfs"
-	"github.tamu.edu/April1989/go_tools/godoc/vfs/gatefs"
-	"github.tamu.edu/April1989/go_tools/godoc/vfs/mapfs"
-	"github.tamu.edu/April1989/go_tools/godoc/vfs/zipfs"
-	"github.tamu.edu/April1989/go_tools/internal/gocommand"
+	"github.com/april1989/origin-go-tools/godoc"
+	"github.com/april1989/origin-go-tools/godoc/analysis"
+	"github.com/april1989/origin-go-tools/godoc/static"
+	"github.com/april1989/origin-go-tools/godoc/vfs"
+	"github.com/april1989/origin-go-tools/godoc/vfs/gatefs"
+	"github.com/april1989/origin-go-tools/godoc/vfs/mapfs"
+	"github.com/april1989/origin-go-tools/godoc/vfs/zipfs"
+	"github.com/april1989/origin-go-tools/internal/gocommand"
 	"golang.org/x/xerrors"
 )
 

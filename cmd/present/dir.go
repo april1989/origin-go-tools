@@ -15,7 +15,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.tamu.edu/April1989/go_tools/present"
+	"github.com/april1989/origin-go-tools/present"
 )
 
 func init() {

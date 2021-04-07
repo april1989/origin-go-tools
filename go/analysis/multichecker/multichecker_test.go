@@ -9,10 +9,10 @@ import (
 	"runtime"
 	"testing"
 
-	"github.tamu.edu/April1989/go_tools/go/analysis"
-	"github.tamu.edu/April1989/go_tools/go/analysis/multichecker"
-	"github.tamu.edu/April1989/go_tools/go/analysis/passes/findcall"
-	"github.tamu.edu/April1989/go_tools/internal/testenv"
+	"github.com/april1989/origin-go-tools/go/analysis"
+	"github.com/april1989/origin-go-tools/go/analysis/multichecker"
+	"github.com/april1989/origin-go-tools/go/analysis/passes/findcall"
+	"github.com/april1989/origin-go-tools/internal/testenv"
 )
 
 func main() {

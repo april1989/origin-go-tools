@@ -4,7 +4,7 @@
 
 package callgraph
 
-import "github.tamu.edu/April1989/go_tools/go/ssa"
+import "github.com/april1989/origin-go-tools/go/ssa"
 
 // This file provides various utilities over call graphs, such as
 // visitation and path search.

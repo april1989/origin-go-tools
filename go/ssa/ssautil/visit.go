@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package ssautil // import "github.tamu.edu/April1989/go_tools/go/ssa/ssautil"
+package ssautil // import "github.com/april1989/origin-go-tools/go/ssa/ssautil"
 
-import "github.tamu.edu/April1989/go_tools/go/ssa"
+import "github.com/april1989/origin-go-tools/go/ssa"
 
 // This file defines utilities for visiting the SSA representation of
 // a Program.

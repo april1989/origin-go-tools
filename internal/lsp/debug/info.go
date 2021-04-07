@@ -11,7 +11,7 @@ import (
 	"io"
 	"strings"
 
-	"github.tamu.edu/April1989/go_tools/internal/gocommand"
+	"github.com/april1989/origin-go-tools/internal/gocommand"
 )
 
 type PrintMode int

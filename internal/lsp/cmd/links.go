@@ -11,9 +11,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.tamu.edu/April1989/go_tools/internal/lsp/protocol"
-	"github.tamu.edu/April1989/go_tools/internal/span"
-	"github.tamu.edu/April1989/go_tools/internal/tool"
+	"github.com/april1989/origin-go-tools/internal/lsp/protocol"
+	"github.com/april1989/origin-go-tools/internal/span"
+	"github.com/april1989/origin-go-tools/internal/tool"
 	errors "golang.org/x/xerrors"
 )
 

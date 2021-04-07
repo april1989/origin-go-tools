@@ -1,7 +1,7 @@
 package errors
 
 import (
-	"github.tamu.edu/April1989/go_tools/internal/lsp/types"
+	"github.com/april1989/origin-go-tools/internal/lsp/types"
 )
 
 func _() {

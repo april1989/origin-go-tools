@@ -17,7 +17,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.tamu.edu/April1989/go_tools/cover"
+	"github.com/april1989/origin-go-tools/cover"
 )
 
 // htmlOutput reads the profile data from profile and generates an HTML

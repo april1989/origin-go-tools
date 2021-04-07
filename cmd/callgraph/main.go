@@ -4,7 +4,7 @@
 
 // callgraph: a tool for reporting the call graph of a Go program.
 // See Usage for details, or run with -help.
-package main // import "github.tamu.edu/April1989/go_tools/cmd/callgraph"
+package main // import "github.com/april1989/origin-go-tools/cmd/callgraph"
 
 // TODO(adonovan):
 //
@@ -32,15 +32,15 @@ import (
 	"runtime"
 	"text/template"
 
-	"github.tamu.edu/April1989/go_tools/go/buildutil"
-	"github.tamu.edu/April1989/go_tools/go/callgraph"
-	"github.tamu.edu/April1989/go_tools/go/callgraph/cha"
-	"github.tamu.edu/April1989/go_tools/go/callgraph/rta"
-	"github.tamu.edu/April1989/go_tools/go/callgraph/static"
-	"github.tamu.edu/April1989/go_tools/go/packages"
-	"github.tamu.edu/April1989/go_tools/go/pointer"
-	"github.tamu.edu/April1989/go_tools/go/ssa"
-	"github.tamu.edu/April1989/go_tools/go/ssa/ssautil"
+	"github.com/april1989/origin-go-tools/go/buildutil"
+	"github.com/april1989/origin-go-tools/go/callgraph"
+	"github.com/april1989/origin-go-tools/go/callgraph/cha"
+	"github.com/april1989/origin-go-tools/go/callgraph/rta"
+	"github.com/april1989/origin-go-tools/go/callgraph/static"
+	"github.com/april1989/origin-go-tools/go/packages"
+	"github.com/april1989/origin-go-tools/go/pointer"
+	"github.com/april1989/origin-go-tools/go/ssa"
+	"github.com/april1989/origin-go-tools/go/ssa/ssautil"
 )
 
 // flags
@@ -89,7 +89,7 @@ Flags:
            One of:
 
             digraph     output suitable for input to
-                        github.tamu.edu/April1989/go_tools/cmd/digraph.
+                        github.com/april1989/origin-go-tools/cmd/digraph.
             graphviz    output in AT&T GraphViz (.dot) format.
 
            All other values are interpreted using text/template syntax.
@@ -138,8 +138,8 @@ Examples:
 
   Show all functions directly called by the callgraph tool's main function:
 
-    callgraph -format=digraph github.tamu.edu/April1989/go_tools/cmd/callgraph |
-      digraph succs github.tamu.edu/April1989/go_tools/cmd/callgraph.main
+    callgraph -format=digraph github.com/april1989/origin-go-tools/cmd/callgraph |
+      digraph succs github.com/april1989/origin-go-tools/cmd/callgraph.main
 `
 
 func init() {

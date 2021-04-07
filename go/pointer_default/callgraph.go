@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"go/token"
 
-	"github.tamu.edu/April1989/go_tools/go/ssa"
+	"github.com/april1989/origin-go-tools/go/ssa"
 )
 
 type cgnode struct {

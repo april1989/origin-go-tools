@@ -607,4 +607,4 @@ ACM, New York, NY, USA, 47-56. DOI=10.1145/349299.349310
 http://doi.acm.org/10.1145/349299.349310
 
 */
-package pointer // import "github.tamu.edu/April1989/go_tools/go/pointer"
+package pointer // import "github.com/april1989/origin-go-tools/go/pointer"

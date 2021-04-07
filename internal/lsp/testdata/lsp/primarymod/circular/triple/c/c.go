@@ -1,5 +1,5 @@
 package c
 
 import (
-	_ "github.tamu.edu/April1989/go_tools/internal/lsp/circular/triple/a"
+	_ "github.com/april1989/origin-go-tools/internal/lsp/testdata/lsp/primarymod/circular/triple/a"
 )

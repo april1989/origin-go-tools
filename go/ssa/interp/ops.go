@@ -16,7 +16,7 @@ import (
 	"sync"
 	"unsafe"
 
-	"github.tamu.edu/April1989/go_tools/go/ssa"
+	"github.com/april1989/origin-go-tools/go/ssa"
 )
 
 // If the target program panics, the interpreter panics with this type.

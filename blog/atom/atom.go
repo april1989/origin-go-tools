@@ -5,7 +5,7 @@
 // Adapted from encoding/xml/read_test.go.
 
 // Package atom defines XML data structures for an Atom feed.
-package atom // import "github.tamu.edu/April1989/go_tools/blog/atom"
+package atom // import "github.com/april1989/origin-go-tools/blog/atom"
 
 import (
 	"encoding/xml"

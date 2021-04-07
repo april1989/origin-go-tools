@@ -6,7 +6,7 @@
 package tag
 
 import (
-	"github.tamu.edu/April1989/go_tools/internal/event/keys"
+	"github.com/april1989/origin-go-tools/internal/event/keys"
 )
 
 var (
