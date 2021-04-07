@@ -54,7 +54,7 @@ func InitialMain() []*ssa.Package {
 func InitialTest() { //default scope of tests
 	flags.ParseFlags()
 	if flags.DoCallback {
-		doCallback()true
+		doCallback(true)
 	}
 	scope = append(scope, "main")
 }
