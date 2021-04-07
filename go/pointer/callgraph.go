@@ -172,6 +172,9 @@ type callsite struct {
 
 //bz: user api: race checke uses
 func (c *callsite) GetLoopID() int {
+	if c == nil {
+		return -1
+	}
 	return c.loopID
 }
 

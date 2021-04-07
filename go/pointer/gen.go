@@ -2550,8 +2550,7 @@ func (a *analysis) generate() {
 	if a.log != nil {
 		fmt.Fprintf(a.log, "\nStart to analyze cgns from genCallBack(). \n\n")
 	}
-
-	fmt.Println("\nStart to analyze cgns from genCallBack().")
+	//fmt.Println("\nStart to analyze cgns from genCallBack().")
 
 	//bz: from genCallBack, we solve these at the end
 	for len(a.gencb) > 0 {
