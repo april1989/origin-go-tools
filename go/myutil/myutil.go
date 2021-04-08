@@ -38,7 +38,7 @@ var DefaultElapsed int64
 func InitialMain() []*ssa.Package {
 	flags.ParseFlags()
 	if flags.DoCallback {
-		doCallback(true)
+		doCallback("")
 	}
 
 	args := flag.Args()
@@ -54,29 +54,24 @@ func InitialMain() []*ssa.Package {
 func InitialTest() { //default scope of tests
 	flags.ParseFlags()
 	if flags.DoCallback {
-		doCallback(true)
+		doCallback("")
 	}
 	scope = append(scope, "main")
 }
 
 //bz: for race checker of callback branch use only
-func InitialChecker(config *pointer.Config) {
+func InitialChecker(filepathh string, config *pointer.Config) {
 	if config.DoCallback {
-		doCallback(false)
+		doCallback(filepathh)
 	}
 }
 
-func doCallback(isInMyProj bool) {
-	pwd, err := os.Getwd() //the root path of this proj
-	if err != nil {
-		panic(err)
-		os.Exit(1)
-	}
+func doCallback(filepath string) {
 	flags.DoLevel = 1 //only consider app func
-	if isInMyProj {
-		pointer.DecodeYaml(pwd + "/go/pointer/callback.yml")
+	if filepath == "" {
+		pointer.DecodeYaml("/Users/bozhen/Documents/Go2/origin-go-tools/go/pointer/callback.yml")
 	}else{
-		pointer.DecodeYaml(pwd + "/callback.yml")
+		pointer.DecodeYaml(filepath + "/callback.yml")
 	}
 }
 
