@@ -1152,11 +1152,11 @@ func (a *analysis) hasFuncParam(call *ssa.CallCommon) (ssa.Value, ssa.Value, boo
 			// finally pass to the caller and cast back
 			if sig, ok := v.Type().(*types.Signature); ok {
 				//from go1.15 doc: A Signature (*types.Signature) represents a (non-builtin) function or method type.
-				//-> then this should be a function pointer; however, I need to create a ssa.instruction of type change here before this sequence
+				//-> then this should be a function pointer; however, I need to create a ssa.instruction of type change in IR before creating this sequence
 				//   of creating constraints
 				//TODO: what is exactly the target func here?
 				if a.withinScope(sig.String()) {
-					return v, v, true
+					return v, v, true //bz: THIS IS THE ONLY ONE THAT IS NOT OF TYPE *ssa.Function
 				}
 			}
 
@@ -1200,12 +1200,17 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 	}
 
 	if targetFn == nil {
-		panic("No callback fn in *ssa.MakeClosure @" + call.String() + ". Please adjust your callback.yml.")
+		panic("No callback fn in *ssa.MakeClosure @" + call.String() + ". DEBUG or Adjust your callback.yml.")
 	}
 
 	//the key of a.globalcb -> different callsite has different ir in fakeFn
 	//for virtual function, we need to change the key to include receiver type
 	key := fn.String() + "@" + caller.contourkFull()
+
+	//bz: skip recursive relations between lib call <-> callback fn
+	if a.recursiveCallback(fn, caller.callersite[0], targetFn) {
+		return //skip it, already computed enough calls
+	}
 
 	//check if fake function has spawned its own go routine
 	spawn := HasGoSpawn(fn)
@@ -1218,7 +1223,7 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 	var okCS bool
 	var c2ids map[*callsite][]nodeid
 	if okFn { //check if call site is the same
-		ids, okCS, c2ids = a.existCallback(fakeFn, caller.callersite[0])
+		ids, okCS, c2ids = a.existCallback(fakeFn, caller.callersite[0]) //TODO: bz: only works for k=1
 	}
 
 	//we need to create a whole set (fakefn, fakecgn), since callsite is different, basicblock/instruction is different
@@ -1305,6 +1310,67 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 	}
 
 	fmt.Println("---> caught: ", key, "\t ", targetFn) //bz: key is lib func call + ctx; targetFn is app make closure
+}
+
+//bz: used by a.recursiveCallback(): record the relations among: callback fn, caller lib fn and its context to avoid recursive calls
+type callbackRecord struct {
+	caller2ctx   map[*ssa.Function][]*callsite //TODO: bz: now k = 1 for origin, this is ok; if k>1, this will have problem
+}
+
+//bz: skip recursive relations between lib call (caller) <-> callback fn (callee)
+//solution: check if # of existing ctx of callers of callback fn >= 3; if so, already traversed, skip
+func (a *analysis) recursiveCallback(caller *ssa.Function, callerCtx *callsite, callee ssa.Value) bool {
+	fn, ok := callee.(*ssa.Function)
+	if !ok {
+		return false //this is from type assert, do not know how to handle now ...
+	}
+
+	record := a.cb2Callers[fn]
+	if record == nil { //new callback fn
+		caller2ctx := make(map[*ssa.Function][]*callsite)
+		ctx := make([]*callsite, 0)
+		ctx = append(ctx, callerCtx)
+		caller2ctx[caller] = ctx
+		a.cb2Callers[fn] = &callbackRecord{
+			caller2ctx: caller2ctx,
+		}
+		return false
+	}else{ //exist callback fn
+		caller2ctx := record.caller2ctx
+		ctx := caller2ctx[caller]
+		if ctx == nil { //new for this caller
+			ctx := make([]*callsite, 0)
+			ctx = append(ctx, callerCtx)
+			caller2ctx[caller] = ctx
+
+			return false
+		}else{//exist this caller: check if callerCtx.goInstr already considered
+			if callerCtx == nil || callerCtx.goInstr == nil { //no goroutine spawned in this callback
+				ctx = append(ctx, callerCtx)
+				caller2ctx[caller] = ctx
+				return false
+			}
+
+			size := 0
+			for _, c := range ctx {
+				if c == nil || c.goInstr == nil { //no goroutine spawned in this callback
+					continue
+				}
+				if c.goInstr == callerCtx.goInstr {
+					size++
+				}
+			}
+			if size > numGoCallback {
+				return true //skip
+			}
+
+			ctx = append(ctx, callerCtx)
+			caller2ctx[caller] = ctx
+			return false
+		}
+	}
+
+	return false
 }
 
 //bz: generate fake target/constraints for fake function --> manually add it
@@ -1559,6 +1625,13 @@ func (a *analysis) genConstraintsOnline() {
 	for len(a.genq) > 0 {
 		cgn := a.genq[0]
 		a.genq = a.genq[1:]
+		a.genFunc(cgn)
+	}
+
+	//from genCallBack
+	for len(a.gencb) > 0 {
+		cgn := a.gencb[0]
+		a.gencb = a.gencb[1:]
 		a.genFunc(cgn)
 	}
 
@@ -2550,7 +2623,6 @@ func (a *analysis) generate() {
 	if a.log != nil {
 		fmt.Fprintf(a.log, "\nStart to analyze cgns from genCallBack(). \n\n")
 	}
-	//fmt.Println("\nStart to analyze cgns from genCallBack().")
 
 	//bz: from genCallBack, we solve these at the end
 	for len(a.gencb) > 0 {

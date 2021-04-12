@@ -147,7 +147,8 @@ func initial(args []string, cfg *packages.Config) []*ssa.Package {
 		parts := strings.Split(s, " ")
 		scope = append(scope, parts[1])
 	}else {  //else: default input .go file with default scope
-		scope = append(scope, "google.golang.org/grpc") //bz: debug purpose
+		//scope = append(scope, "google.golang.org/grpc") //bz: debug purpose
+		scope = append(scope, "github.com/pingcap/tidb") //bz: debug purpose
 	}
 
 	//initial set

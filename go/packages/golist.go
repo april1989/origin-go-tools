@@ -275,8 +275,7 @@ func handleDriverUnderDir(restPatterns []string, patterns []string, response *re
 	}
 
 	if !skip {
-		//TODO: bz: tmp condition filter to do the list all main entry points
-		//Update: to conside windows os console cmd;
+		//bz: condition filter (skip) to do the list all main entry points if input is not a .go file
 		//bz: list this subdir recursively until none
 		var subdirs []string //bz: the subdirectories
 		if runtime.GOOS == "windows" {//this does not work ... @https://helpdesk.kaseya.com/hc/en-gb/articles/229044948-Recursive-directory-listing-in-Windows

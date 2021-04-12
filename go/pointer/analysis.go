@@ -35,6 +35,10 @@ const (
 	debugHVNVerbose    = false // enable extra HVN logging
 	debugHVNCrossCheck = false // run solver with/without HVN and compare (caveats below)
 	debugTimers        = false // show running time of each phase
+
+	//bz: for callback: for recursive calls between lib call and callback fn (with goroutines spawned),
+	// how many times of duplicate goroutines from different contexts do we consider?
+	numGoCallback = 1
 )
 
 // object.flags bitmask values.
@@ -44,11 +48,13 @@ const (
 	otFunction             // function object
 )
 
-var ( //bz: my performance
+var (
+	//bz: for my performance
 	maxTime time.Duration
 	minTime time.Duration
 	total   int64
 
+	//bz: for user uses
 	main2Result map[*ssa.Package]*Result //bz: return value of AnalyzeMultiMains(), skip redo everytime calls Analyze()
 	main2ResultWCtx map[*ssa.Package]*ResultWCtx //bz: return value of AnalyzeMultiMains(), skip redo everytime calls Analyze()
 )
@@ -161,20 +167,21 @@ type analysis struct {
 	closures    map[*ssa.Function]*Ctx2nodeid //bz: solution for makeclosure
 	result      *ResultWCtx                   //bz: our result, dump all
 	closureWOGo map[nodeid]nodeid             //bz: solution@field actualCallerSite []*callsite of cgnode type
+	isWithinScope bool //bz: whether the current genInstr() is working on a method within our scope
+	online        bool //bz: whether a constraint is from genInvokeOnline()
 
+	//bz: performance-related data
 	num_constraints int             //bz:  performance
 	numObjs         int             //bz: number of objects allocated
 	numOrigins      int             //bz: number of origins
 	preGens         []*ssa.Function //bz: number of pregenerated functions/cgs/constraints for reflection, os, runtime
-
-	globalcb     map[string]*ssa.Function       //bz: a map of synthetic fakeFn and its fn nodeid -> cannot use map of newFunction directly ...
-	callbacks    map[*ssa.Function]*Ctx2nodeid  //bz: fakeFn invoked by different context/call sites
-	gencb        []*cgnode                      //bz: queue of functions to generate constraints from genCallBack, we solve these at the end
-
-	//bz: make the following from var to here, to keep thread safe
-	isWithinScope bool //bz: whether the current genInstr() is working on a method within our scope
-	online        bool //bz: whether a constraint is from genInvokeOnline()
 	recordPreGen  bool //bz: when to record preGens
+
+	//bz: callback-related fields
+	globalcb   map[string]*ssa.Function           //bz: a map of synthetic fakeFn and its fn nodeid -> cannot use map of newFunction directly ...
+	callbacks  map[*ssa.Function]*Ctx2nodeid      //bz: fakeFn invoked by different context/call sites
+	gencb      []*cgnode                          //bz: queue of functions to generate constraints from genCallBack, we solve these at the end
+	cb2Callers map[*ssa.Function]*callbackRecord  //bz: record the relations among: callback fn, caller lib fn and its context to avoid recursive calls
 
 	/** bz:
 	    we do have panics when turn on hvn optimization. panics are due to that hvn wrongly computes sccs.
@@ -406,6 +413,8 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 			DoPerformance: config.DoPerformance,
 		}
 
+		fmt.Println("\n\n", i, ": "+main.String(), " ... ")
+
 		//we initially run the analysis
 		start := time.Now()
 		_result, err := AnalyzeWCtx(_config, false)
@@ -424,7 +433,7 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 		total = total + elapse.Milliseconds()
 
 		//performance
-		fmt.Println(strconv.Itoa(i)+": "+main.String(), " (use "+elapse.String()+")")
+		fmt.Println(i, ": "+main.String(), " (use "+elapse.String()+")")
 	}
 	fmt.Println(" *********************************** ")
 
@@ -506,14 +515,14 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool) (result *ResultWCtx, err er
 			DEBUG:           config.DEBUG,
 		},
 		deltaSpace: make([]int, 0, 100),
-		//bz: i did not clear the following two after offline
+		//bz: mine
 		fn2cgnodeIdx: make(map[*ssa.Function][]int),
 		closures:     make(map[*ssa.Function]*Ctx2nodeid),
 		closureWOGo:  make(map[nodeid]nodeid),
 		skipTypes:    make(map[string]string),
-
 		callbacks:    make(map[*ssa.Function]*Ctx2nodeid),
 		globalcb:     make(map[string]*ssa.Function),
+		cb2Callers:   make(map[*ssa.Function]*callbackRecord),
 	}
 
 	if false {
