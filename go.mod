@@ -3,6 +3,8 @@ module github.com/april1989/origin-go-tools
 go 1.11
 
 require (
+	github.com/sirupsen/logrus v1.8.1 // indirect
+	github.com/twmb/algoimpl v0.0.0-20170717182524-076353e90b94 // indirect
 	github.com/yuin/goldmark v1.2.1
 	golang.org/x/mod v0.3.0
 	golang.org/x/net v0.0.0-20200822124328-c89045814202

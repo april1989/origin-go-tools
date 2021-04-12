@@ -16,7 +16,6 @@ var TimeLimit time.Duration //bz: time limit, unit: ?h?m?s
 var DoLevel = 0 //bz: set the analysis scope to level ? default = 0
 var DoCallback = true //bz: simplify callback fn
 
-
 //my use
 var PrintCGNodes = false //bz: print #cgnodes (before solve())
 var DoPerforamnce = true
@@ -28,7 +27,6 @@ var DoCommonPart = false //bz: do compute common path
 var DoSameRoot = false //bz: do all main in a pkg together from the same root -> all mains linked by the root node
 var DoParallel = false //bz: do all mains in a pkg in parallel, do each main by itself by parallel
 var DoSeq = false //bz: do all mains in a pkg sequential, but input is multiple mains (test useage in race checker)
-
 
 //bz: analyze all flags from input
 func ParseFlags() {

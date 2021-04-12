@@ -1,6 +1,7 @@
 package myutil
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"github.com/april1989/origin-go-tools/go/callgraph"
@@ -120,9 +121,33 @@ func initial(args []string, cfg *packages.Config) []*ssa.Package {
 
 	//extract scope from pkgs
 	if len(pkgs) > 1 { //run under proj dir
-		scope = append(scope, pkgs[0].Pkg.Path()) //bz: the 1st pkg has the scope info == the root pkg
+		//bz: compute the scope info == the root pkg: should follow the pattern xxx.xxx.xx/xxx
+		path, err := os.Getwd() //current working directory == project path
+		if err != nil {
+			panic("Error while os.Getwd: " + err.Error())
+		}
+
+		gomodFile, err := os.Open(path + "/go.mod") // For read access.
+		if err != nil {
+			panic("Error while reading go.mod: " + err.Error())
+		}
+		defer gomodFile.Close()
+
+		scanner := bufio.NewScanner(gomodFile)
+		var s string
+		for scanner.Scan() {
+			s = scanner.Text()
+			break
+		}
+
+		if err := scanner.Err(); err != nil {
+			panic("Error while scanning go.mod: " + err.Error())
+		}
+
+		parts := strings.Split(s, " ")
+		scope = append(scope, parts[1])
 	}else {  //else: default input .go file with default scope
-		scope = append(scope, "google.golang.org/grpc")
+		scope = append(scope, "google.golang.org/grpc") //bz: debug purpose
 	}
 
 	//initial set

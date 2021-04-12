@@ -1304,7 +1304,7 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 		a.genStaticCallCommon(caller, obj, site, call, result)
 	}
 
-	fmt.Println("---> caught: ", key, "\t ", targetFn)
+	fmt.Println("---> caught: ", key, "\t ", targetFn) //bz: key is lib func call + ctx; targetFn is app make closure
 }
 
 //bz: generate fake target/constraints for fake function --> manually add it
