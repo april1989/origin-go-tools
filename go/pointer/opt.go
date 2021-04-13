@@ -136,6 +136,24 @@ func (a *analysis) renumber() {
 		val.renumber(renumbering)
 	}
 
+	// Renumber callback-related
+	if a.config.DoCallback {
+		for _, val := range a.callbacks {
+			val.renumber(renumbering)
+		}
+
+		for _, record := range a.cb2Callers {
+			for _, ctx := range record.caller2ctx {
+				for _, c := range ctx {
+					if c == nil {
+						continue
+					}
+					c.targets = renumbering[c.targets]
+				}
+			}
+		}
+	}
+
 	////bz: special options -> discarded
 	//if !a.config.DiscardQueries {
 	//	//bz: if using queries (old), we are now using this, update for all recorded queries

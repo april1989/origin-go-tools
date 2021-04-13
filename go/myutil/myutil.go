@@ -13,6 +13,7 @@ import (
 	"github.com/april1989/origin-go-tools/go/ssa"
 	"github.com/april1989/origin-go-tools/go/ssa/ssautil"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -70,7 +71,19 @@ func InitialChecker(filepathh string, config *pointer.Config) {
 func doCallback(filepath string) {
 	flags.DoLevel = 1 //only consider app func
 	if filepath == "" {
-		pointer.DecodeYaml("/Users/bozhen/Documents/Go2/origin-go-tools/go/pointer/callback.yml")
+		os := runtime.GOOS
+		var path string
+		switch os {
+		case "darwin":
+			fmt.Println("MAC operating system")
+			path = "/Users/bozhen/Documents/Go2/origin-go-tools/go/pointer/callback.yml"
+		case "linux":
+			fmt.Println("Linux")
+			path = "/home/ubuntu/go/origin-go-tools/go/pointer/callback.yml" //bz: aws lightsail
+		default:
+			panic("Not defined path for OS: " + os)
+		}
+		pointer.DecodeYaml(path)
 	}else{
 		pointer.DecodeYaml(filepath + "/callback.yml")
 	}

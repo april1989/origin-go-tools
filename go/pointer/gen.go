@@ -1182,6 +1182,7 @@ func (a *analysis) hasFuncParam(call *ssa.CallCommon) (ssa.Value, ssa.Value, boo
 }
 
 //bz: link the callback here
+//caller -> app func; instr -> invoke; fn -> target lib func of invoke; targetFn -> callback func invoked by fn
 //    fake a fn with one call site linked to the callback function
 //    for callback from makecloser, it has been created already, but caller + context becomes different
 //    -> tmp solution: we use the context of caller as the context of fakeCgn; assume they share the same ctx
@@ -1239,7 +1240,7 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 		//create a fake function
 		//we use fn's signature/params below to match the params and return val
 		fnName := fn.Name()
-		fakeFn = a.prog.NewFunction(fnName, fn.Signature, "synthetic of "+fn.Name())
+		fakeFn = a.prog.NewFunction(fnName, fn.Signature, "synthetic of " + fn.Name())
 		fakeFn.Pkg = fn.Pkg
 		fakeFn.Params = fn.Params
 		fakeFn.IsMySynthetic = true
@@ -1284,6 +1285,9 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 		fakeCgns = make([]*cgnode, len(ids))
 		for i, id := range ids {
 			obj := id + 1
+			if a.nodes[obj].obj == nil {
+				fmt.Println()
+			}
 			fakeCgn := a.nodes[obj].obj.cgn //retrieve it
 			fakeCgns[i] = fakeCgn
 		}
@@ -1320,22 +1324,23 @@ type callbackRecord struct {
 //bz: skip recursive relations between lib call (caller) <-> callback fn (callee)
 //solution: check if # of existing ctx of callers of callback fn >= 3; if so, already traversed, skip
 func (a *analysis) recursiveCallback(caller *ssa.Function, callerCtx *callsite, callee ssa.Value) bool {
-	fn, ok := callee.(*ssa.Function)
+	targetFn, ok := callee.(*ssa.Function)
 	if !ok {
 		return false //this is from type assert, do not know how to handle now ...
 	}
 
-	record := a.cb2Callers[fn]
-	if record == nil { //new callback fn
+	//bz: cb2Callers: a map of targetFn <-> {fn <-> callersite}
+	record := a.cb2Callers[targetFn]
+	if record == nil { //new callback targetFn
 		caller2ctx := make(map[*ssa.Function][]*callsite)
 		ctx := make([]*callsite, 0)
 		ctx = append(ctx, callerCtx)
 		caller2ctx[caller] = ctx
-		a.cb2Callers[fn] = &callbackRecord{
+		a.cb2Callers[targetFn] = &callbackRecord{
 			caller2ctx: caller2ctx,
 		}
 		return false
-	}else{ //exist callback fn
+	}else{ //exist callback targetFn
 		caller2ctx := record.caller2ctx
 		ctx := caller2ctx[caller]
 		if ctx == nil { //new for this caller
@@ -1357,7 +1362,9 @@ func (a *analysis) recursiveCallback(caller *ssa.Function, callerCtx *callsite, 
 					continue
 				}
 				if c.goInstr == callerCtx.goInstr {
-					size++
+					if c.loopID == callerCtx.loopID {
+						size++
+					}
 				}
 			}
 			if size > numGoCallback {

@@ -27,7 +27,7 @@ import (
 const (
 	// optimization options; enable all when committing
 	// TODO: bz: optHVN mess up my constraints and also make it sloooooow, tmp turn it off ....
-	optRenumber = false  // enable renumbering optimization (makes logs hard to read)
+	optRenumber = true  // enable renumbering optimization (makes logs hard to read)
 	optHVN      = false // enable pointer equivalence via Hash-Value Numbering
 
 	// debugging options; disable all when committing
@@ -178,7 +178,7 @@ type analysis struct {
 	recordPreGen  bool //bz: when to record preGens
 
 	//bz: callback-related fields
-	globalcb   map[string]*ssa.Function           //bz: a map of synthetic fakeFn and its fn nodeid -> cannot use map of newFunction directly ...
+	globalcb   map[string]*ssa.Function           //bz: a map of synthetic fakeFn and its fn -> cannot use map of newFunction directly ...
 	callbacks  map[*ssa.Function]*Ctx2nodeid      //bz: fakeFn invoked by different context/call sites
 	gencb      []*cgnode                          //bz: queue of functions to generate constraints from genCallBack, we solve these at the end
 	cb2Callers map[*ssa.Function]*callbackRecord  //bz: record the relations among: callback fn, caller lib fn and its context to avoid recursive calls
@@ -592,7 +592,11 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool) (result *ResultWCtx, err er
 	a.showCounts() //bz: print out size ...
 
 	if optRenumber { //bz: default true
+		fmt.Println("Renumbering ...")
+		start := time.Now() //bz: i add performance
 		a.renumber()
+		elapsed := time.Now().Sub(start)
+		fmt.Println("Renumber using ", elapsed)
 	}
 
 	N := len(a.nodes) // excludes solver-created nodes
@@ -619,6 +623,7 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool) (result *ResultWCtx, err er
 			a.rtypes.SetHasher(a.hasher)
 		}
 
+		fmt.Println("HVNing ...")
 		start := time.Now() //bz: i add performance
 		a.hvn()             //default: do this hvn
 		elapsed := time.Now().Sub(start)
