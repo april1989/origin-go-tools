@@ -436,7 +436,7 @@ type Global struct {
 	typ    types.Type
 	pos    token.Pos
 
-	Pkg *Package
+	Pkg    *Package
 }
 
 // A Builtin represents a specific use of a built-in function, e.g. len.

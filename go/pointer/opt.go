@@ -136,6 +136,16 @@ func (a *analysis) renumber() {
 		val.renumber(renumbering)
 	}
 
+	// Renumber nodeid in node.callsite
+	for _, n := range newNodes {
+		if n.callsite == nil || n.callsite[0] == nil {
+			continue
+		}
+		for _, site := range n.callsite {
+			site.targets = renumbering[site.targets]
+		}
+	}
+
 	// Renumber callback-related
 	if a.config.DoCallback {
 		for _, val := range a.callbacks {

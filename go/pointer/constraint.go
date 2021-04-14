@@ -143,7 +143,7 @@ type invokeConstraint struct {
 	iface  nodeid      // (ptr) the interface
 	params nodeid      // the start of the identity/params/results block
 
-	// bz: to genFunc() Online; kcfa -> need both; origin -> need caller.callsites[]
+	// bz: for genFunc() Online; kcfa -> need both; origin -> need caller.callsites[]
 	site   *callsite
 	caller *cgnode
 }
@@ -153,3 +153,16 @@ func (c *invokeConstraint) renumber(mapping []nodeid) {
 	c.iface = mapping[c.iface]
 	c.params = mapping[c.params]
 }
+
+
+
+////bz: fake constraint -> just want a record for the interface type of receiver and its caller, site and invoked funcs from genStaticCallCommon and genDynamicCall
+////    do not need the methods in constraint interface
+//type recvConstraint struct {
+//	iface    types.Type
+//	method   *ssa.Function
+//
+//	// bz: similar to invokeConstraint
+//	site   *callsite
+//	caller *cgnode
+//}

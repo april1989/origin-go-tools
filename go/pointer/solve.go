@@ -10,7 +10,6 @@ package pointer
 import (
 	"fmt"
 	"github.com/april1989/origin-go-tools/go/myutil/flags"
-	"github.com/april1989/origin-go-tools/go/ssa"
 	"go/types"
 )
 
@@ -122,7 +121,7 @@ func (a *analysis) processNewConstraints() {
 	a.constraints = nil
 
 	if a.config.Log != nil {
-		fmt.Fprintf(a.log, "\t\tnew constraints...........\n")
+		fmt.Fprintf(a.log, "\t\tnew constraints........... #%d\n", len(constraints))
 	}
 	// Initialize points-to sets from addr-of (base) constraints.
 	for _, c := range constraints {
@@ -369,51 +368,11 @@ func (c *invokeConstraint) solve(a *analysis, delta *nodeset) {
 		sig := fn.Signature
 		fnObj := a.globalobj[fn] // dynamic calls use shared contour  ---> bz: fnObj is nodeid
 
-		if fnObj == 0 { //bz: because a.objectNode(fn) was not called during gen phase.
-			if a.log != nil { //debug
-				fmt.Fprintf(a.log, "\n\n------------- GENERATING INVOKE FUNC HERE: "+fn.String()+" ------------------------------ \n")
-			}
-
-			if a.considerMyContext(fn.String()) {
-				if c.caller == nil && c.site == nil {
-					if a.config.DEBUG {
-						fmt.Println("!! GENERATING INVOKE FUNC ONLINE (share contour): " + fn.String())
-					}
-					fnObj = a.genInvokeOnline(nil, nil, fn)
-				} else { //bz: special handling of invoke targets, create here
-					if a.config.DEBUG {
-						fmt.Println("!! GENERATING INVOKE FUNC ONLINE (ctx-sensitive): " + fn.String())
-					}
-					fnObj = a.genInvokeOnline(c.caller, c.site, fn)
-				}
-			} else { //newly created app func invokes lib func: use share contour
-				if !a.createForLevelX(nil, fn) {
-					if a.config.DEBUG {
-						fmt.Println("Level excluded: " + fn.String())
-					}
-					if a.config.DoCallback && fn.IsMySynthetic { //bz: this is the callback
-						instr := c.site.instr.(ssa.CallInstruction)
-						call := instr.Common()
-						a.genCallBack(c.caller, instr, fn, c.site, call)
-					}
-					continue
-				}
-
-				fnObj = a.genInvokeOnline(nil, nil, fn) //bz: if reaches here, fn can only be lib from import
-			}
-			if a.log != nil { //debug
-				fmt.Fprintf(a.log, "------------------------------ ------------------------------ ---------------------------- \n")
-			}
-
-			// bz: we continue our Online process
-			if a.log != nil { //debug
-				fmt.Fprintf(a.log, "\n\n----------- GENERATING CONSTRAINTS HERE -------------------------- ----------------------- ")
-			}
-
-			a.genConstraintsOnline()
-
-			if a.log != nil { //debug
-				fmt.Fprintf(a.log, "------------------------------ ------------------------------ ---------------------------- \n")
+		if fnObj == 0 { //bz: because a.objectNode(fn) was not called during gen phase or fn is stored at other fields
+			//bz: this should not create new constraints anymore; just retrieve the existing nodeid for fn
+			fnObj = a.genMissingFn(fn, c.caller, c.site, "online")
+			if fnObj == 0 {
+				continue
 			}
 		} else {
 			if a.log != nil { //debug

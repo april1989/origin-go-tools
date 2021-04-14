@@ -213,7 +213,7 @@ func (a *analysis) endObject(obj nodeid, cgn *cgnode, data interface{}) *object 
 		cgn:  cgn,  //here has the context if needed
 		data: data,
 	}
-	objNode.obj = o //bz: points-to heap ? this is the only place that assigned to node.obj
+	objNode.obj = o //bz: points-to heap; this is the only place that assigned to node.obj
 
 	return o
 }
@@ -289,16 +289,9 @@ func (a *analysis) makeFunctionObjectWithContext(caller *cgnode, fn *ssa.Functio
 	if a.config.Origin { //bz: origin -> we only create new callsite[] for specific instr, not everyone
 		assert(callersite != nil, "Unexpected nil callersite.instr @ makeFunctionObjectWithContext().")
 
-		if _, ok := callersite.instr.(*ssa.Go); callersite == nil || ok {
-			existFnIdx, multiFn, existNodeID, isNew = a.existContextForComb(fn, callersite, caller)
-			if !isNew {
-				return existNodeID, isNew
-			}
-		} else {
-			existFnIdx, multiFn, existNodeID, isNew = a.existContextFor(fn, caller)
-			if !isNew {
-				return existNodeID, isNew
-			}
+		existFnIdx, multiFn, existNodeID, isNew = a.existContext(fn, callersite, caller)
+		if !isNew {
+			return existNodeID, isNew
 		}
 	} else if a.config.CallSiteSensitive { //bz: for kcfa
 		existFnIdx, multiFn, existNodeID, isNew = a.existContextForComb(fn, callersite, caller)
@@ -320,6 +313,15 @@ func (a *analysis) makeFunctionObjectWithContext(caller *cgnode, fn *ssa.Functio
 	a.updateFn2NodeID(fn, multiFn, newFnIdx, existFnIdx)
 
 	return obj, true
+}
+
+//bz: a summary of existContextXXX()
+func (a *analysis) existContext(fn *ssa.Function, callersite *callsite, caller *cgnode) ([]int, bool, nodeid, bool) {
+	if _, ok := callersite.instr.(*ssa.Go); callersite == nil || ok {
+		return a.existContextForComb(fn, callersite, caller)
+	} else {
+		return a.existContextFor(fn, caller)
+	}
 }
 
 //bz: if exist this caller for fn?
@@ -670,11 +672,6 @@ func (a *analysis) copy(dst, src nodeid, sizeof uint32) {
 	}
 	for i := uint32(0); i < sizeof; i++ {
 		a.addConstraint(&copyConstraint{dst, src})
-
-		//if Online { //bz: Online solving
-		//	a.addWork(dst)
-		//}
-
 		src++
 		dst++
 	}
@@ -1181,7 +1178,7 @@ func (a *analysis) hasFuncParam(call *ssa.CallCommon) (ssa.Value, ssa.Value, boo
 	return nil, nil, false
 }
 
-//bz: link the callback here
+//bz: link the callback here, return value can be nil
 //caller -> app func; instr -> invoke; fn -> target lib func of invoke; targetFn -> callback func invoked by fn
 //    fake a fn with one call site linked to the callback function
 //    for callback from makecloser, it has been created already, but caller + context becomes different
@@ -1193,11 +1190,11 @@ func (a *analysis) hasFuncParam(call *ssa.CallCommon) (ssa.Value, ssa.Value, boo
 //Update: ASSUME the parameter together of the caller (of callback) with callback func also is the parameter to callback func
 //     if callback needs any input
 //TODO: 1. why this change mess up the renumber phase?
-func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ssa.Function, site *callsite, call *ssa.CallCommon) {
+func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ssa.Function, site *callsite, call *ssa.CallCommon) []nodeid {
 	//relation: caller -(invoke)-> fn -(invoke)-> callback/targetFn
 	v, targetFn, isCallback := a.hasFuncParam(call) //v -> arg that wrapping callback; targetFn -> callback fn
 	if !isCallback {
-		return //not callback or not in scope
+		return nil //not callback or not in scope
 	}
 
 	if targetFn == nil {
@@ -1210,7 +1207,7 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 
 	//bz: skip recursive relations between lib call <-> callback fn
 	if a.recursiveCallback(fn, caller.callersite[0], targetFn) {
-		return //skip it, already computed enough calls
+		return nil //skip it, already computed enough calls
 	}
 
 	//check if fake function has spawned its own go routine
@@ -1232,7 +1229,7 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 		if a.log != nil {
 			if caller.callersite[0] == nil {
 				fmt.Fprintf(a.log, "\t---- \n\tCreate fake function and cgnode for: %s@nil\n", fn.String())
-			}else{
+			} else {
 				fmt.Fprintf(a.log, "\t---- \n\tCreate fake function and cgnode for: %s@%s\n", fn.String(), caller.callersite)
 			}
 		}
@@ -1240,7 +1237,7 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 		//create a fake function
 		//we use fn's signature/params below to match the params and return val
 		fnName := fn.Name()
-		fakeFn = a.prog.NewFunction(fnName, fn.Signature, "synthetic of " + fn.Name())
+		fakeFn = a.prog.NewFunction(fnName, fn.Signature, "synthetic of "+fn.Name())
 		fakeFn.Pkg = fn.Pkg
 		fakeFn.Params = fn.Params
 		fakeFn.IsMySynthetic = true
@@ -1285,9 +1282,6 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 		fakeCgns = make([]*cgnode, len(ids))
 		for i, id := range ids {
 			obj := id + 1
-			if a.nodes[obj].obj == nil {
-				fmt.Println()
-			}
 			fakeCgn := a.nodes[obj].obj.cgn //retrieve it
 			fakeCgns[i] = fakeCgn
 		}
@@ -1300,8 +1294,10 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 	fakeFn.Pkg.CreateSyntheticCallForCallBack(fakeFn, targetFn, spawn)
 
 	//TODO: why virtual calls (also be added in AnalyzeWCtx()) has duplicate edges?
-	for _, id := range ids {
+	objs := make([]nodeid, len(ids))
+	for i, id := range ids {
 		obj := id + 1
+		objs[i] = obj
 		//add call edge
 		a.callEdge(caller, site, obj)
 
@@ -1314,11 +1310,17 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 	}
 
 	fmt.Println("---> caught: ", key, "\t ", targetFn) //bz: key is lib func call + ctx; targetFn is app make closure
+
+	if a.online {
+		return objs
+	} else {
+		return ids
+	}
 }
 
 //bz: used by a.recursiveCallback(): record the relations among: callback fn, caller lib fn and its context to avoid recursive calls
 type callbackRecord struct {
-	caller2ctx   map[*ssa.Function][]*callsite //TODO: bz: now k = 1 for origin, this is ok; if k>1, this will have problem
+	caller2ctx map[*ssa.Function][]*callsite //TODO: bz: now k = 1 for origin, this is ok; if k>1, this will have problem
 }
 
 //bz: skip recursive relations between lib call (caller) <-> callback fn (callee)
@@ -1340,7 +1342,7 @@ func (a *analysis) recursiveCallback(caller *ssa.Function, callerCtx *callsite, 
 			caller2ctx: caller2ctx,
 		}
 		return false
-	}else{ //exist callback targetFn
+	} else { //exist callback targetFn
 		caller2ctx := record.caller2ctx
 		ctx := caller2ctx[caller]
 		if ctx == nil { //new for this caller
@@ -1349,7 +1351,7 @@ func (a *analysis) recursiveCallback(caller *ssa.Function, callerCtx *callsite, 
 			caller2ctx[caller] = ctx
 
 			return false
-		}else{//exist this caller: check if callerCtx.goInstr already considered
+		} else {                                              //exist this caller: check if callerCtx.goInstr already considered
 			if callerCtx == nil || callerCtx.goInstr == nil { //no goroutine spawned in this callback
 				ctx = append(ctx, callerCtx)
 				caller2ctx[caller] = ctx
@@ -1560,8 +1562,11 @@ func (a *analysis) genStaticCallForGoCall(caller *cgnode, instr ssa.CallInstruct
 //bz: the common part of genStaticCall(); for each input obj (with type nodeid)
 func (a *analysis) genStaticCallCommon(caller *cgnode, obj nodeid, site *callsite, call *ssa.CallCommon, result nodeid) {
 	a.callEdge(caller, site, obj)
-
 	sig := call.Signature()
+
+	if strings.Contains(site.String(), "(*ScalarFunction).EvalReal") {
+		fmt.Print()
+	}
 
 	// Copy receiver, if any.
 	params := a.funcParams(obj)
@@ -1571,6 +1576,14 @@ func (a *analysis) genStaticCallCommon(caller *cgnode, obj nodeid, site *callsit
 		a.copy(params, a.valueNode(args[0]), sz)
 		params += nodeid(sz)
 		args = args[1:]
+
+		////bz: update for preSolve()
+		//a.recvConstraints = append(a.recvConstraints, &recvConstraint{
+		//	iface:  sig.Recv().Type(),
+		//	method: call.Value.(*ssa.Function), //bz: here call.Value is func value (call mode)
+		//	caller: caller,
+		//	site:   site,
+		//})
 	}
 
 	// Copy actual parameters into formal params block.
@@ -1588,7 +1601,6 @@ func (a *analysis) genStaticCallCommon(caller *cgnode, obj nodeid, site *callsit
 }
 
 // genDynamicCall generates constraints for a dynamic function call.
-// bz: working on this
 func (a *analysis) genDynamicCall(caller *cgnode, site *callsite, call *ssa.CallCommon, result nodeid) {
 	// pts(targets) will be the set of possible call targets.
 	site.targets = a.valueNode(call.Value)
@@ -1605,6 +1617,7 @@ func (a *analysis) genDynamicCall(caller *cgnode, site *callsite, call *ssa.Call
 		a.genStore(caller, call.Value, a.valueNode(arg), offset, sz)
 		offset += sz
 	}
+
 	if result != 0 {
 		a.genLoad(caller, result, call.Value, offset, a.sizeof(sig.Results()))
 	}
@@ -1635,13 +1648,6 @@ func (a *analysis) genConstraintsOnline() {
 		a.genFunc(cgn)
 	}
 
-	//from genCallBack
-	for len(a.gencb) > 0 {
-		cgn := a.gencb[0]
-		a.gencb = a.gencb[1:]
-		a.genFunc(cgn)
-	}
-
 	a.online = false //set back
 }
 
@@ -1661,7 +1667,7 @@ func (a *analysis) valueNodeInvoke(caller *cgnode, site *callsite, fn *ssa.Funct
 	}
 
 	//similar with valueNode(), created on demand. Instead of a.globalval[], we use a.fn2cgnodeid[] due to contexts
-	_, _, obj, isNew := a.existContextForComb(fn, site, caller)
+	_, _, obj, isNew := a.existContext(fn, site, caller) //existContextForComb
 	if isNew {
 		var comment string
 		if a.log != nil {
@@ -1996,7 +2002,7 @@ func (a *analysis) objectNode(cgn *cgnode, v ssa.Value) nodeid {
 				if isClosure && a.considerMyContext(v.String()) {
 					panic("WRONG PATH @objectNode() FOR MAKE CLOSURE: " + v.String())
 				}
-				obj = a.makeFunctionObject(v, nil) //TODO: missing scope func here
+				obj = a.makeFunctionObject(v, nil) //TODO: bz: missing scope func here
 
 			case *ssa.Const:
 				// not addressable
@@ -2527,7 +2533,7 @@ func (a *analysis) genMethodsOf(T types.Type) {
 		m := a.prog.MethodValue(mset.At(i))
 		a.valueNode(m)
 
-		if a.recordPreGen {
+		if a.recordPreGen { //bz: performance info
 			a.preGens = append(a.preGens, m)
 		}
 
@@ -2627,17 +2633,6 @@ func (a *analysis) generate() {
 		a.genFunc(cgn)
 	}
 
-	if a.log != nil {
-		fmt.Fprintf(a.log, "\nStart to analyze cgns from genCallBack(). \n\n")
-	}
-
-	//bz: from genCallBack, we solve these at the end
-	for len(a.gencb) > 0 {
-		cgn := a.gencb[0]
-		a.gencb = a.gencb[1:]
-		a.genFunc(cgn)
-	}
-
 	// The runtime magically allocates os.Args; so should we.
 	//bz: we are trying to skip this iff "runtime" and "os" are both in exclusions
 	if os := a.prog.ImportedPackage("os"); os != nil {
@@ -2656,5 +2651,196 @@ func (a *analysis) generate() {
 	a.localval = nil
 	a.localobj = nil
 
+	//bz: the scalability problem now is: there is repeated pts update for the same pointer everytime when there is new obj discovered during genConstraintsOnline()
+	// this leads to so bad performance
+	// try -> we create a list of type-tagged obj, match the type of obj with the receiver type of each invokeConstraint, if matched, we do genInstr() with the given obj and callersite
+	//        because probably this obj will be propagated to the receiver later during solve(); we do the renumbering and HVN afterwards, which probably will not mess up the two opts like before
+	a.preSolve()
+
 	stop("Constraint generation")
+}
+
+//bz: see info from its caller
+func (a *analysis) preSolve() {
+	start("Presolving")
+	if a.log != nil {
+		fmt.Fprintln(a.log, "\n\n\n==== Presolving constraints")
+	}
+
+	cIdx := -1//for this iteration, what are the start point of constraints (cIdx) to presolve
+	cNextIdx := 0 //for next iteration
+	iface2invoke := make(map[types.Type][]*invokeConstraint) //implicitly supplied to the concrete method implementation <-> [] of its invoked constraints
+	updated := true //whether this iteration has solved any invokes
+
+	for cIdx < cNextIdx && updated {
+		//update idx: traverse from cidx to len(a.xxx) for this iteration
+		cIdx = cNextIdx
+		cNextIdx = len(a.constraints)
+		updated = false
+		if a.log != nil {
+			fmt.Fprintln(a.log, "Iteration From", cIdx, " to ", cNextIdx)
+		}
+		////clear and use for next iteration
+		//recvConstraints := a.recvConstraints
+		//a.recvConstraints = nil
+
+		//organize invoke constraints
+		for i:= cIdx; i<cNextIdx; i++ {
+			c := a.constraints[i]
+			if invoke, ok := c.(*invokeConstraint); ok {
+				typ := a.nodes[invoke.iface].typ //this is an interface
+				invokes := iface2invoke[typ]
+				if invokes != nil { //exist mapping
+					invokes = append(invokes, invoke)
+				} else { //new iface
+					invokes = make([]*invokeConstraint, 1)
+					invokes[0] = invoke
+				}
+				iface2invoke[typ] = invokes
+			}
+		}
+
+		//check if obj can be receiver: traverse all is necessary
+		for id, node := range a.nodes {
+			if node.obj == nil {
+				continue //not an obj
+			}
+			flags := node.obj.flags
+			if flags&otTagged == 0 && flags&otIndirect != 0 {
+				continue //not-tagged obj and not indirect tagged object -> cannot be used during a.solve(), will panic
+			}
+
+			tDyn := node.typ //the type of this obj: real struct type
+			if _, ok := tDyn.(*types.Signature); ok || isInterface(tDyn) { //func body or interface
+				continue
+			}
+			if id == 191172 {
+				fmt.Print()
+			}
+
+			//from genInvoke: do not remove solved iface from iface2invoke -> lead to missing unsolved constraints
+			for typ, invokes := range iface2invoke {
+				if strings.Contains(typ.String(), "github.com/pingcap/tidb/expression.functionClass") {
+					//strings.Contains(tDyn.String(), "github.com/pingcap/tidb/expression.castAsIntFunctionClass")
+					fmt.Print()
+				}
+				ityp, ok := typ.Underlying().(*types.Interface)
+				if ok && types.Implements(tDyn, ityp) {
+					if a.log != nil {
+						fmt.Fprintln(a.log, "Handle invokes for tDyn: ", tDyn, " \n\tiface: ", ityp)
+					}
+
+					//updated
+					updated = true
+					for _, c := range invokes { //similar to func (c *invokeConstraint) solve()
+						fn := a.prog.LookupMethod(tDyn, c.method.Pkg(), c.method.Name())
+						if fn == nil {
+							if a.log != nil {
+								fmt.Fprintf(a.log, "\t -> n%d: no ssa.Function for %s\n", c.iface, c.method)
+							}
+							continue
+						}
+
+						fnObj := a.globalobj[fn] // dynamic calls use shared contour  ---> bz: fnObj is nodeid
+						if fnObj == 0 { //a.objectNode(fn) was not called during gen phase -> call genInstr() here to create its constraints and everything
+							a.genMissingFn(fn, c.caller, c.site, "presolve")
+						}
+					}
+
+				}
+			}
+
+			////from genStaticCallCommon and genDynamicCall
+			//for _, recvC := range recvConstraints {
+			//	typ := recvC.iface
+			//	if tDyn == typ {
+			//		method := recvC.method
+			//		fn := a.prog.LookupMethod(tDyn, method.Pkg.Pkg, method.Name())
+			//		if fn == nil {
+			//			if a.log != nil {
+			//				fmt.Fprintf(a.log, "\t -> n%d: no ssa.Function for %s\n", typ, method)
+			//			}
+			//			continue
+			//		}
+			//		fmt.Println(fn)
+			//
+			//		fnObj := a.globalobj[fn] // dynamic calls use shared contour  ---> bz: fnObj is nodeid
+			//		if fnObj == 0 {          //a.objectNode(fn) was not called during gen phase -> call genInstr() here to create its constraints and everything
+			//			a.genMissingFn(fn, recvC.caller, recvC.site)
+			//		}
+			//	}
+			//}
+
+
+			if a.log != nil {
+				fmt.Fprintf(a.log, "\nAnalyze cgns from genCallBack(). \n")
+			}
+
+			//bz: from genCallBack, we solve these at the end, since preSolve() may also add new calls to the following cgns
+			for len(a.gencb) > 0 {
+				cgn := a.gencb[0]
+				a.gencb = a.gencb[1:]
+				a.genFunc(cgn)
+				updated = true
+			}
+		}
+	}
+	stop("Presolving")
+}
+
+
+//bz: generate constraints and everything for fn, since they are not created during generate()@go/pointer/gen.go:2630
+func (a *analysis) genMissingFn(fn *ssa.Function, caller *cgnode, site *callsite, where string) nodeid {
+	if a.log != nil { //debug
+		fmt.Fprintln(a.log, "\n------------- GENERATING INVOKE FUNC HERE: (", where,") "+fn.String()+" ------------------------------ ")
+	}
+
+	var fnObj nodeid
+	if a.considerMyContext(fn.String()) {
+		if caller == nil && site == nil {
+			if a.config.DEBUG {
+				fmt.Println("!! GENERATING INVOKE FUNC ONLINE (share contour): " + fn.String())
+			}
+			fnObj = a.genInvokeOnline(nil, nil, fn)
+		} else { //bz: special handling of invoke targets, create here
+			if a.config.DEBUG {
+				fmt.Println("!! GENERATING INVOKE FUNC ONLINE (ctx-sensitive): " + fn.String())
+			}
+			fnObj = a.genInvokeOnline(caller, site, fn)
+		}
+	} else { //newly created app func invokes lib func: use share contour
+		if !a.createForLevelX(nil, fn) {
+			if a.config.DEBUG {
+				fmt.Println("Level excluded: " + fn.String())
+			}
+			if a.log != nil { //debug
+				fmt.Fprintf(a.log, "Level excluded: " + fn.String() + "\n")
+			}
+			if a.config.DoCallback && fn.IsMySynthetic { //bz: this is the callback
+				instr := site.instr.(ssa.CallInstruction)
+				call := instr.Common()
+				fnObjs := a.genCallBack(caller, instr, fn, site, call)
+				fmt.Println(fnObjs)
+			}
+			return 0 //not consider
+		}
+
+		fnObj = a.genInvokeOnline(nil, nil, fn) //bz: if reaches here, fn can only be lib from import
+	}
+	if a.log != nil { //debug
+		fmt.Fprintf(a.log, "------------------------------ ------------------------------ ---------------------------- \n")
+	}
+
+	// bz: we continue our Online process
+	if a.log != nil { //debug
+		fmt.Fprintf(a.log, "\n----------- GENERATING CONSTRAINTS HERE (", where,") -------------------------- -----------------------\n")
+	}
+
+	a.genConstraintsOnline()
+
+	if a.log != nil { //debug
+		fmt.Fprintf(a.log, "\n------------------------------ ------------------------------ ---------------------------- \n")
+	}
+
+	return fnObj
 }

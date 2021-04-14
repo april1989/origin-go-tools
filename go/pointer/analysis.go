@@ -28,7 +28,7 @@ const (
 	// optimization options; enable all when committing
 	// TODO: bz: optHVN mess up my constraints and also make it sloooooow, tmp turn it off ....
 	optRenumber = true  // enable renumbering optimization (makes logs hard to read)
-	optHVN      = false // enable pointer equivalence via Hash-Value Numbering
+	optHVN      = true // enable pointer equivalence via Hash-Value Numbering
 
 	// debugging options; disable all when committing
 	debugHVN           = false // enable assertions in HVN
@@ -177,11 +177,12 @@ type analysis struct {
 	preGens         []*ssa.Function //bz: number of pregenerated functions/cgs/constraints for reflection, os, runtime
 	recordPreGen  bool //bz: when to record preGens
 
-	//bz: callback-related fields
-	globalcb   map[string]*ssa.Function           //bz: a map of synthetic fakeFn and its fn -> cannot use map of newFunction directly ...
-	callbacks  map[*ssa.Function]*Ctx2nodeid      //bz: fakeFn invoked by different context/call sites
-	gencb      []*cgnode                          //bz: queue of functions to generate constraints from genCallBack, we solve these at the end
-	cb2Callers map[*ssa.Function]*callbackRecord  //bz: record the relations among: callback fn, caller lib fn and its context to avoid recursive calls
+	//bz: callback-related
+	globalcb        map[string]*ssa.Function          //bz: a map of synthetic fakeFn and its fn -> cannot use map of newFunction directly ...
+	callbacks       map[*ssa.Function]*Ctx2nodeid     //bz: fakeFn invoked by different context/call sites
+	gencb           []*cgnode                         //bz: queue of functions to generate constraints from genCallBack, we solve these at the end
+	cb2Callers      map[*ssa.Function]*callbackRecord //bz: record the relations among: callback fn, caller lib fn and its context to avoid recursive calls
+	//recvConstraints []*recvConstraint                 //bz: record of recvConstraint from genStaticCallCommon and genDynamicCall
 
 	/** bz:
 	    we do have panics when turn on hvn optimization. panics are due to that hvn wrongly computes sccs.
