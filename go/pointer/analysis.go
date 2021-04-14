@@ -27,8 +27,8 @@ import (
 const (
 	// optimization options; enable all when committing
 	// TODO: bz: optHVN mess up my constraints and also make it sloooooow, tmp turn it off ....
-	optRenumber = true  // enable renumbering optimization (makes logs hard to read)
-	optHVN      = true // enable pointer equivalence via Hash-Value Numbering
+	optRenumber = false  // enable renumbering optimization (makes logs hard to read)
+	optHVN      = false // enable pointer equivalence via Hash-Value Numbering
 
 	// debugging options; disable all when committing
 	debugHVN           = false // enable assertions in HVN
