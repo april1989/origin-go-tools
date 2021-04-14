@@ -800,26 +800,30 @@ func (a *analysis) updateActualCallSites() {
 	cg := a.result.CallGraph
 	var total nodeset
 	waiting := a.closureWOGo
-	for _, nid := range waiting {
-		cgn := a.nodes[nid].obj.cgn
-		total.Insert(cgn.idx) //record
+	for len(waiting) > 0 {
+		next := make(map[nodeid]nodeid) //next iteration
+		for _, nid := range waiting {
+			cgn := a.nodes[nid].obj.cgn
+			total.Insert(cgn.idx) //record
 
-		node := cg.GetNodeWCtx(cgn)
-		for _, outEdge := range node.Out {
-			target := outEdge.Callee.cgn
-			if !total.Has(target.idx) {
-				if a.log != nil {
-					fmt.Fprintf(a.log, "* Update actualCallerSite for ----> \n%s -> [%s] \n", target, cgn.contourkActualFull())
+			node := cg.GetNodeWCtx(cgn)
+			for _, outEdge := range node.Out {
+				target := outEdge.Callee.cgn
+				if !total.Has(target.idx) {
+					if a.log != nil {
+						fmt.Fprintf(a.log, "* Update actualCallerSitefor ----> \n%s -> [%s] \n", target, cgn.contourkActualFull())
+					}
+					if a.config.DEBUG {
+						fmt.Printf("* Update actualCallerSite for ----> \n%s -> [%s] \n", target, cgn.contourkActualFull())
+					}
+					for _, actual := range cgn.actualCallerSite {
+						target.updateActualCallerSite(actual)//update
+					}
+					next[target.obj] = target.obj //next round
 				}
-				if a.config.DEBUG {
-					fmt.Printf("* Update actualCallerSite for ----> \n%s -> [%s] \n", target, cgn.contourkActualFull())
-				}
-				for _, actual := range cgn.actualCallerSite {
-					target.actualCallerSite = append(target.actualCallerSite, actual) //update
-				}
-				waiting[target.obj] = target.obj //next round
 			}
 		}
+		waiting = next
 	}
 }
 
@@ -835,14 +839,14 @@ func (a *analysis) callEdge(caller *cgnode, site *callsite, calleeid nodeid) {
 
 	//bz: solution@field actualCallerSite []*callsite of cgnode type
 	if a.closureWOGo[calleeid] != 0 {
-		if !a.equalContextFor(caller.callersite, callee.callersite) {
+		if !equalContext(caller.callersite, callee.callersite) {
 			if a.log != nil {
 				fmt.Fprintf(a.log, "Update actualCallerSite for ----> \n%s -> [%s] \n", callee, caller.contourkFull())
 			}
 			if a.config.DEBUG {
 				fmt.Printf("Update actualCallerSite for ----> \n%s -> [%s] \n", callee, caller.contourkFull())
 			}
-			callee.actualCallerSite = append(callee.actualCallerSite, caller.callersite) //update
+			callee.updateActualCallerSite(caller.callersite) //update
 		}
 	}
 

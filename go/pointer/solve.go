@@ -25,6 +25,7 @@ func (a *analysis) solve() {
 		a.num_constraints = 0
 		fmt.Println("#constraints (before solve()): ", len(a.constraints))
 		fmt.Println("#cgnodes (before solve()): ", len(a.cgnodes))
+		fmt.Println("#nodes (before solve()): ", len(a.nodes))
 
 		if flags.PrintCGNodes { //bz: debug
 			fmt.Println("\nDump cgnodes (before solve()): ")

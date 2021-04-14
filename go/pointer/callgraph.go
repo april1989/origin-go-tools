@@ -35,7 +35,7 @@ type cgnode struct {
 	callersite []*callsite // where called from, if known; nil for shared contours ----> bz: k-caller site and context
 	idx        int         // the index of this in a.cgnodes[]
 
-	actualCallerSite [][]*callsite //bz: makeclosure of func and pass as a parameter, then it is called by a new go routine.
+	actualCallerSite [][]*callsite //bz: makeclosure of func and pass as a parameter, then it is called by a new go routine; these two ops are far away from each other.
 	// e.g., Kubernetes.81091 : func (g *genericScheduler) findNodesThatFit().
 	// cannot update this actualCallerSite during the iteration (genConstraint <-> solve), since its genDynamicCall()
 	// -> I did not find a good way to fix this, so I attached the new go routine ctx here as actual_callersite
@@ -45,7 +45,7 @@ type cgnode struct {
 	localobj map[ssa.Value]nodeid //bz: same as above
 }
 
-//bz: test use only
+//bz: my test use only
 func (n *cgnode) Getlocalval() map[ssa.Value]nodeid {
 	return n.localval
 }
@@ -53,6 +53,21 @@ func (n *cgnode) Getlocalval() map[ssa.Value]nodeid {
 //bz: do i have a shared contour as my context?
 func (n *cgnode) IsSharedContour() bool {
 	return n.callersite == nil || len(n.callersite) == 0 || n.callersite[0] == nil
+}
+
+//bz: check existence of cs in n.actualCallerSite; if no, append it
+func (n *cgnode) updateActualCallerSite(cs []*callsite) {
+	exist := false
+	for _, actual := range n.actualCallerSite {
+		if equalContext(actual, cs) {
+			exist = true
+			break
+		}
+	}
+	if exist {
+		return
+	}
+	n.actualCallerSite = append(n.actualCallerSite, cs)
 }
 
 //bz: going to replace and store (borrow them a pointer) a.localval and a.localobj here when calling genFunc() (gen.go)
@@ -485,4 +500,20 @@ func (g *GraphWCtx) GetNodesForFn(fn *ssa.Function) []*Node {
 		result = append(result, n)
 	}
 	return result
+}
+
+
+//bz: if two []*callsite, csa and csb, are the same
+func equalContext(csa []*callsite, csb []*callsite) bool {
+	if len(csa) != len(csb) {
+		return false
+	}
+	for _, cs1 := range csa {
+		for _, cs2 := range csb {
+			if !cs1.equal(cs2) {
+				return false
+			}
+		}
+	}
+	return true
 }

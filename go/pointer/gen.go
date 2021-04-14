@@ -330,7 +330,7 @@ func (a *analysis) existContextFor(fn *ssa.Function, caller *cgnode) ([]int, boo
 	if multiFn { //check if we already have the caller + callsite ?? recursive/duplicate call
 		for i, existIdx := range existFnIdx { // idx -> index of fn cgnode in a.cgnodes[]
 			_fnCGNode := a.cgnodes[existIdx]
-			if a.equalContextFor(_fnCGNode.callersite, caller.callersite) { //check all callsites
+			if equalContext(_fnCGNode.callersite, caller.callersite) { //check all callsites
 				//duplicate combination, return this
 				if a.log != nil { //debug
 					fmt.Fprintf(a.log, "    EXIST**: "+strconv.Itoa(i+1)+"th: K-CALLSITE -- "+_fnCGNode.contourkFull()+"\n")
@@ -343,21 +343,6 @@ func (a *analysis) existContextFor(fn *ssa.Function, caller *cgnode) ([]int, boo
 		}
 	}
 	return existFnIdx, multiFn, 0, true
-}
-
-//bz: if two existCSs and curCallerCSs are the same
-func (a *analysis) equalContextFor(existCSs []*callsite, curCallerCSs []*callsite) bool {
-	if len(existCSs) != len(curCallerCSs) {
-		return false
-	}
-	for _, existCS := range existCSs {
-		for _, curCallerCS := range curCallerCSs {
-			if !existCS.equal(curCallerCS) {
-				return false
-			}
-		}
-	}
-	return true
 }
 
 //bz: if exist this callsite + caller for fn?
@@ -422,8 +407,8 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 					fnkcs = a.createKCallSite(caller.callersite, special)
 
 					a.numOrigins++
-				} else { // use parent context, since no go invoke afterwards (currently reachable);
-					//update: we will update the parent ctx (including loopID) later
+				} else { // use parent context, since no go invoke afterwards (no go can be reachable currently at this point);
+					//update: we will update the parent ctx (including loopID) after solving
 					a.closureWOGo[obj] = obj //record
 					fnkcs = caller.callersite
 				}

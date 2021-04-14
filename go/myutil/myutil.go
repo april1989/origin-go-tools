@@ -208,18 +208,18 @@ func DoSeq(mains []*ssa.Package) {
 		level = flags.DoLevel //bz: reset the analysis scope
 	}
 
-	var logfile *os.File
-	if flags.DoLog && len(mains) == 1 { //bz: debug purpose
-		logfile, _ = os.Create("/Users/bozhen/Documents/GO2/origin-go-tools/_logs/my_log_0")
-	} else {
-		logfile = nil
-	}
+	//var logfile *os.File
+	//if flags.DoLog && len(mains) == 1 { //bz: debug purpose
+	//	logfile, _ = os.Create("/Users/bozhen/Documents/GO2/origin-go-tools/_logs/my_log_0")
+	//} else {
+	//	logfile = nil
+	//}
 
 	ptaConfig := &pointer.Config{
 		Mains:          mains,
 		Reflection:     false,
 		BuildCallGraph: true,
-		Log:            logfile,
+		Log:            nil,//logfile,
 		//CallSiteSensitive: true, //kcfa
 		Origin: true, //origin
 		//shared config
