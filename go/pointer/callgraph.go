@@ -253,6 +253,22 @@ func (c *callsite) relaxEqual(o *callsite) bool {
 	}
 }
 
+//bz: equal if goInstr equal
+func (c *callsite) goEqual(o *callsite) bool {
+	if o == nil || c == nil {
+		return false
+	}
+	cGo := c.goInstr
+	oGo := o.goInstr
+	if cGo == nil && oGo == nil {
+		return false
+	} else if cGo == nil || cGo == nil {
+		return false //one has go, another does not
+	} else { // most cases, comparing between goInstr
+		return cGo == oGo
+	}
+}
+
 func (c *callsite) String() string {
 	if c.instr != nil {
 		//return c.instr.Common().Description() //bz: original code

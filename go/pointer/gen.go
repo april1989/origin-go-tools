@@ -274,10 +274,10 @@ func (a *analysis) makeFunctionObjectWithContext(caller *cgnode, fn *ssa.Functio
 	//}
 
 	if a.config.Origin && callersite == nil && closure != nil {
-		//origin: case 2: fn is make closure -> we checked before calling this, now needs to create it
+		//origin: case 2: fn is wrapped by make closure -> we checked before calling this, now needs to create it
 		// and will update the a.closures[] outside
 		// !! for origin, this is the only place triggering context switch !!
-		obj, _ := a.makeCGNodeAndRelated(fn, caller, nil, closure, loopID)
+		obj, _ := a.makeCGNodeAndRelated(fn, caller, nil, closure, loopID) //create new one
 		return obj, true
 	}
 
@@ -405,8 +405,8 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 						special = &callsite{targets: obj, loopID: loopID, goInstr: goInstr}
 					}
 					fnkcs = a.createKCallSite(caller.callersite, special)
-
 					a.numOrigins++
+
 				} else { // use parent context, since no go invoke afterwards (no go can be reachable currently at this point);
 					//update: we will update the parent ctx (including loopID) after solving
 					a.closureWOGo[obj] = obj //record
@@ -421,7 +421,6 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 				}
 				fnkcs := a.createKCallSite(caller.callersite, special)
 				cgn = &cgnode{fn: fn, obj: obj, callersite: fnkcs}
-
 				a.numOrigins++
 			} else { //use caller context
 				cgn = &cgnode{fn: fn, obj: obj, callersite: caller.callersite}
@@ -1891,14 +1890,25 @@ func (a *analysis) valueNodeClosureInternal(cgn *cgnode, closure *ssa.MakeClosur
 }
 
 //bz: if exist nodeid for *cgnode of fn with callersite as callsite, return nodeids of *cgnode
+//Update: avoid recursive goroutine (and its make closure) spawn, these are redundant,
+//    e.g.,  (*github.com/pingcap/tidb/store/tikv.tikvStore).splitBatchRegionsReq$1
+//solution: check the existence, if all its callersite (caller.callersite[0] for k = 1) has the same go instruction (), skip -> return true
 func (a *analysis) existClosure(fn *ssa.Function, callersite *callsite) ([]nodeid, bool, map[*callsite][]nodeid) {
 	_map, ok := a.closures[fn]
 	if ok { //check if exist
 		c2id := _map.ctx2nodeid
+		size := 0 //the number of make closure
+		var goIDs []nodeid //for duplicate go and make closure
 		for site, ids := range c2id { //currently only match 1 callsite
 			if callersite == site || callersite.loopEqual(site) {
 				return ids, true, c2id //exist
+			}else if callersite.goEqual(site) { //check if go is the same
+				size++
+				goIDs = ids
 			}
+		}
+		if size >= 2 { //duplicate go calls on the same make closure TODO: this number can be changed ... i feel 2 is reasonable -> 2-level of recursive calls
+			return goIDs, true, c2id
 		}
 		return nil, false, c2id
 	}
@@ -2652,10 +2662,10 @@ func (a *analysis) preSolve() {
 		fmt.Fprintln(a.log, "\n\n\n==== Presolving constraints")
 	}
 
-	cIdx := -1//for this iteration, what are the start point of constraints (cIdx) to presolve
-	cNextIdx := 0 //for next iteration
+	cIdx := -1                                               //for this iteration, what are the start point of constraints (cIdx) to presolve
+	cNextIdx := 0                                            //for next iteration
 	iface2invoke := make(map[types.Type][]*invokeConstraint) //implicitly supplied to the concrete method implementation <-> [] of its invoked constraints
-	updated := true //whether this iteration has solved any invokes
+	updated := true                                          //whether this iteration has solved any invokes
 
 	for cIdx < cNextIdx && updated {
 		//update idx: traverse from cidx to len(a.xxx) for this iteration
@@ -2670,7 +2680,7 @@ func (a *analysis) preSolve() {
 		//a.recvConstraints = nil
 
 		//organize invoke constraints
-		for i:= cIdx; i<cNextIdx; i++ {
+		for i := cIdx; i < cNextIdx; i++ {
 			c := a.constraints[i]
 			if invoke, ok := c.(*invokeConstraint); ok {
 				typ := a.nodes[invoke.iface].typ //this is an interface
@@ -2695,7 +2705,7 @@ func (a *analysis) preSolve() {
 				continue //not-tagged obj and not indirect tagged object -> cannot be used during a.solve(), will panic
 			}
 
-			tDyn := node.typ //the type of this obj: real struct type
+			tDyn := node.typ                                               //the type of this obj: real struct type
 			if _, ok := tDyn.(*types.Signature); ok || isInterface(tDyn) { //func body or interface
 				continue
 			}
@@ -2727,7 +2737,7 @@ func (a *analysis) preSolve() {
 						}
 
 						fnObj := a.globalobj[fn] // dynamic calls use shared contour  ---> bz: fnObj is nodeid
-						if fnObj == 0 { //a.objectNode(fn) was not called during gen phase -> call genInstr() here to create its constraints and everything
+						if fnObj == 0 {          //a.objectNode(fn) was not called during gen phase -> call genInstr() here to create its constraints and everything
 							a.genMissingFn(fn, c.caller, c.site, "presolve")
 						}
 					}
@@ -2756,7 +2766,6 @@ func (a *analysis) preSolve() {
 			//	}
 			//}
 
-
 			if a.log != nil {
 				fmt.Fprintf(a.log, "\nAnalyze cgns from genCallBack(). \n")
 			}
@@ -2773,11 +2782,10 @@ func (a *analysis) preSolve() {
 	stop("Presolving")
 }
 
-
 //bz: generate constraints and everything for fn, since they are not created during generate()@go/pointer/gen.go:2630
 func (a *analysis) genMissingFn(fn *ssa.Function, caller *cgnode, site *callsite, where string) nodeid {
 	if a.log != nil { //debug
-		fmt.Fprintln(a.log, "\n------------- GENERATING INVOKE FUNC HERE: (", where,") "+fn.String()+" ------------------------------ ")
+		fmt.Fprintln(a.log, "\n------------- GENERATING INVOKE FUNC HERE: (", where, ") "+fn.String()+" ------------------------------ ")
 	}
 
 	var fnObj nodeid
@@ -2799,7 +2807,7 @@ func (a *analysis) genMissingFn(fn *ssa.Function, caller *cgnode, site *callsite
 				fmt.Println("Level excluded: " + fn.String())
 			}
 			if a.log != nil { //debug
-				fmt.Fprintf(a.log, "Level excluded: " + fn.String() + "\n")
+				fmt.Fprintf(a.log, "Level excluded: "+fn.String()+"\n")
 			}
 			if a.config.DoCallback && fn.IsMySynthetic { //bz: this is the callback
 				instr := site.instr.(ssa.CallInstruction)
@@ -2818,7 +2826,7 @@ func (a *analysis) genMissingFn(fn *ssa.Function, caller *cgnode, site *callsite
 
 	// bz: we continue our Online process
 	if a.log != nil { //debug
-		fmt.Fprintf(a.log, "\n----------- GENERATING CONSTRAINTS HERE (", where,") -------------------------- -----------------------\n")
+		fmt.Fprintf(a.log, "\n----------- GENERATING CONSTRAINTS HERE (", where, ") -------------------------- -----------------------\n")
 	}
 
 	a.genConstraintsOnline()
