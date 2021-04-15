@@ -322,9 +322,22 @@ type Function struct {
 	lblocks      map[*ast.Object]*lblock // labelled blocks
 
 	//bz: the following will not be used in default
-	IsFromApp bool // bz: whether this fn is invoked by main method from the analyzed app
-	               // !! this is the only change in this file, all others are my comments
-	IsMySynthetic bool // bz: this is synthetic by me for callback fn
+	// !! these are the only change in this file, all others are my comments
+	IsFromApp     bool           // bz: whether this fn is reachable by main method within the analyzed app scope
+	IsMySynthetic bool           // bz: this is a synthetic fn by me for callback
+	SyntInfo      *SyntheticInfo // bz: used when IsMySynthetic == true
+}
+
+//bz: use to record all info helping to avoid redundant genInstr() that have been done in previous preSolve() loops
+type SyntheticInfo struct {
+	MyIter      int //bz: my record of the ith iteration of preSolve() loops when i was updated
+	CurBlockIdx int //bz: the idx of which basic block i should put synthetic instructions in and be traversed by genInstr()
+}
+
+//bz: update for the current iteration
+func (si *SyntheticInfo) Update(curIter int) {
+	si.MyIter = curIter
+	si.CurBlockIdx++
 }
 
 // BasicBlock represents an SSA basic block.

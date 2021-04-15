@@ -25,6 +25,9 @@ var (
 	tEface     = types.NewInterfaceType(nil, nil).Complete()
 	tInvalid   = types.Typ[types.Invalid]
 	tUnsafePtr = types.Typ[types.UnsafePointer]
+
+	//bz: the ith iteration of the loop in preSolve() TODO: maybe move to analysis as a field
+	curIter = 0
 )
 
 // ---------- Node creation ----------
@@ -1173,6 +1176,8 @@ func (a *analysis) hasFuncParam(call *ssa.CallCommon) (ssa.Value, ssa.Value, boo
 //    Further: the same fn might be invoked from different context ...
 //Update: ASSUME the parameter together of the caller (of callback) with callback func also is the parameter to callback func
 //     if callback needs any input
+//Update: avoid redundant genInstr() that have been done in previous preSolve() loops
+//     -> put all instructions in a preSolve loop in one basic block
 //TODO: 1. why this change mess up the renumber phase?
 func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ssa.Function, site *callsite, call *ssa.CallCommon) []nodeid {
 	//relation: caller -(invoke)-> fn -(invoke)-> callback/targetFn
@@ -1208,7 +1213,12 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 		ids, okCS, c2ids = a.existCallback(fakeFn, caller.callersite[0]) //TODO: bz: only works for k=1
 	}
 
-	//we need to create a whole set (fakefn, fakecgn), since callsite is different, basicblock/instruction is different
+	//if strings.Contains(key, "sort.Search") && //bz: debug
+	//	strings.Contains(key, "go (*innerWorker).run(t29, t16, t31)@(*github.com/pingcap/tidb/executor.IndexLookUpJoin).startWorkers;") {
+	//	fmt.Println(curIter)
+	//}
+
+	//we need to create a whole set (fakefn, fakecgn), since callsite/ctx/origin is different, basicblock/instruction is different
 	if !okFn || !okCS {
 		if a.log != nil {
 			if caller.callersite[0] == nil {
@@ -1225,11 +1235,15 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 		fakeFn.Pkg = fn.Pkg
 		fakeFn.Params = fn.Params
 		fakeFn.IsMySynthetic = true
+		fakeFn.SyntInfo = &ssa.SyntheticInfo{ //initialize
+			MyIter: curIter,
+			CurBlockIdx: 0,
+		}
 
-		id := a.addNodes(fakeFn.Type(), fakeFn.String()) //fn id
+		id := a.addNodes(fakeFn.Type(), fakeFn.String()) //fn id n621979
 
 		//create a cgnode
-		obj := a.nextNode()
+		obj := a.nextNode()                       //282879
 		fakeCgn := a.makeCGNode(fakeFn, obj, nil) //bz: should not consider the context here
 		sig := fakeFn.Signature
 		a.addOneNode(sig, "func.cgnode", nil) // (scalar with Signature type)
@@ -1263,18 +1277,28 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 		//update
 		a.globalcb[key] = fakeFn
 	} else { //reuse
+		requeue := false
+		if fakeFn.SyntInfo.MyIter != curIter { //going to the next iteration, need to update here
+			fakeFn.SyntInfo.Update(curIter)
+			requeue = true
+		}
+
 		fakeCgns = make([]*cgnode, len(ids))
 		for i, id := range ids {
 			obj := id + 1
 			fakeCgn := a.nodes[obj].obj.cgn //retrieve it
 			fakeCgns[i] = fakeCgn
+			if requeue {
+				a.gencb = append(a.gencb, fakeCgn)  //re-queue it due to newly added instructions
+			}
 		}
 	}
 
 	//create ssa.Call instruction for this fakeFn
 	a.genFakeConstraints(fakeFn, v, call, fakeCgns)
 
-	//create a basic block to hold the invoke callback fn instruction
+	//create/add to a basic block to hold the invoke callback fn instruction
+	//TODO: will this have duplicate targetFn added to ir?
 	fakeFn.Pkg.CreateSyntheticCallForCallBack(fakeFn, targetFn, spawn)
 
 	//TODO: why virtual calls (also be added in AnalyzeWCtx()) has duplicate edges?
@@ -1547,10 +1571,6 @@ func (a *analysis) genStaticCallForGoCall(caller *cgnode, instr ssa.CallInstruct
 func (a *analysis) genStaticCallCommon(caller *cgnode, obj nodeid, site *callsite, call *ssa.CallCommon, result nodeid) {
 	a.callEdge(caller, site, obj)
 	sig := call.Signature()
-
-	if strings.Contains(site.String(), "(*ScalarFunction).EvalReal") {
-		fmt.Print()
-	}
 
 	// Copy receiver, if any.
 	params := a.funcParams(obj)
@@ -1897,12 +1917,12 @@ func (a *analysis) existClosure(fn *ssa.Function, callersite *callsite) ([]nodei
 	_map, ok := a.closures[fn]
 	if ok { //check if exist
 		c2id := _map.ctx2nodeid
-		size := 0 //the number of make closure
-		var goIDs []nodeid //for duplicate go and make closure
+		size := 0                     //the number of make closure
+		var goIDs []nodeid            //for duplicate go and make closure
 		for site, ids := range c2id { //currently only match 1 callsite
 			if callersite == site || callersite.loopEqual(site) {
 				return ids, true, c2id //exist
-			}else if callersite.goEqual(site) { //check if go is the same
+			} else if callersite.goEqual(site) { //check if go is the same
 				size++
 				goIDs = ids
 			}
@@ -2415,6 +2435,7 @@ func (a *analysis) genRootCalls() *cgnode {
 }
 
 // genFunc generates constraints for function fn.
+//bz: update to avoid duplicate handling of my synthetic fn/cgn
 func (a *analysis) genFunc(cgn *cgnode) {
 	fn := cgn.fn
 
@@ -2450,12 +2471,63 @@ func (a *analysis) genFunc(cgn *cgnode) {
 	}
 
 	//bz: we do replace a.localval and a.localobj by cgn's
-	cgn.initLocalMaps()
+	reuse := cgn.initLocalMaps()
 	a.localval = cgn.localval
 	a.localobj = cgn.localobj
 	////bz: default code below
 	//a.localval = make(map[ssa.Value]nodeid)
 	//a.localobj = make(map[ssa.Value]nodeid)
+
+	//if strings.Contains(cgn.fn.String(), "sort.Search") && //bz: debug
+	//	strings.Contains(cgn.contourkFull(), "go (*innerWorker).run(t29, t16, t31)@(*github.com/pingcap/tidb/executor.IndexLookUpJoin).startWorkers;") {
+	//	fmt.Println(curIter)
+	//}
+
+	if reuse { //bz: from my synthetic fn, and solved in last loop of preSolve() already -> now handle the diff
+		// Create value nodes for all value instructions
+		// since SSA may contain forward references.
+		var space [10]*ssa.Value
+		idx := fn.SyntInfo.CurBlockIdx
+		for _, instr := range fn.Blocks[idx].Instrs {
+			switch instr := instr.(type) {
+			case *ssa.Range:
+				// do nothing: it has a funky type,
+				// and *ssa.Next does all the work.
+
+			case ssa.Value:
+				var comment string
+				if a.log != nil {
+					comment = instr.Name()
+				}
+				id := a.addNodes(instr.Type(), comment)
+				a.setValueNode(instr, id, cgn) //bz: my synthetic should only update a.localval for instr
+			}
+
+			// Record all address-taken functions (for presolver).
+			rands := instr.Operands(space[:0])
+			if call, ok := instr.(ssa.CallInstruction); ok && !call.Common().IsInvoke() {
+				// Skip CallCommon.Value in "call" mode.
+				// TODO(adonovan): fix: relies on unspecified ordering.  Specify it.
+				rands = rands[1:]
+			}
+			for _, rand := range rands { //bz: my synthetic should not update this
+				if atf, ok := (*rand).(*ssa.Function); ok {
+					a.atFuncs[atf] = true // bz: what is this ??
+				}
+			}
+		}
+
+		//bz: we only want to track global values used in the app methods
+		a.isWithinScope = a.considerMyContext(fn.String()) //global bool
+		// Generate constraints for instructions.
+		for _, instr := range fn.Blocks[idx].Instrs {
+			a.genInstr(cgn, instr)
+		}
+
+		a.localval = nil
+		a.localobj = nil
+		return
+	}
 
 	// The value nodes for the params are in the func object block.
 	params := a.funcParams(cgn.obj)
@@ -2474,7 +2546,7 @@ func (a *analysis) genFunc(cgn *cgnode) {
 	// since SSA may contain forward references.
 	var space [10]*ssa.Value
 	for _, b := range fn.Blocks {
-		for _, instr := range b.Instrs { //
+		for _, instr := range b.Instrs {
 			switch instr := instr.(type) {
 			case *ssa.Range:
 				// do nothing: it has a funky type,
@@ -2486,7 +2558,7 @@ func (a *analysis) genFunc(cgn *cgnode) {
 					comment = instr.Name()
 				}
 				id := a.addNodes(instr.Type(), comment)
-				a.setValueNode(instr, id, cgn)
+				a.setValueNode(instr, id, cgn) //bz: my synthetic should only update a.localval for instr
 			}
 
 			// Record all address-taken functions (for presolver).
@@ -2496,7 +2568,7 @@ func (a *analysis) genFunc(cgn *cgnode) {
 				// TODO(adonovan): fix: relies on unspecified ordering.  Specify it.
 				rands = rands[1:]
 			}
-			for _, rand := range rands {
+			for _, rand := range rands { //bz: my synthetic should not update this
 				if atf, ok := (*rand).(*ssa.Function); ok {
 					a.atFuncs[atf] = true // bz: what is this ??
 				}
@@ -2646,16 +2718,15 @@ func (a *analysis) generate() {
 	a.localval = nil
 	a.localobj = nil
 
-	//bz: the scalability problem now is: there is repeated pts update for the same pointer everytime when there is new obj discovered during genConstraintsOnline()
-	// this leads to so bad performance
-	// try -> we create a list of type-tagged obj, match the type of obj with the receiver type of each invokeConstraint, if matched, we do genInstr() with the given obj and callersite
-	//        because probably this obj will be propagated to the receiver later during solve(); we do the renumbering and HVN afterwards, which probably will not mess up the two opts like before
 	a.preSolve()
 
 	stop("Constraint generation")
 }
 
-//bz: see info from its caller
+//bz: the scalability problem now is: there is repeated pts update for the same pointer everytime when there is new obj discovered during genConstraintsOnline()
+// this leads to so bad performance
+// try -> we create a list of type-tagged obj, match the type of obj with the receiver type of each invokeConstraint, if matched, we do genInstr() with the given obj and callersite
+//        because probably this obj will be propagated to the receiver later during solve(); we do the renumbering and HVN afterwards, which probably will not mess up the two opts like before
 func (a *analysis) preSolve() {
 	start("Presolving")
 	if a.log != nil {
@@ -2673,7 +2744,7 @@ func (a *analysis) preSolve() {
 		cNextIdx = len(a.constraints)
 		updated = false
 		if a.log != nil {
-			fmt.Fprintln(a.log, "Iteration From", cIdx, " to ", cNextIdx)
+			fmt.Fprintln(a.log, "Iteration ", curIter, ": From", cIdx, " to ", cNextIdx)
 		}
 		////clear and use for next iteration
 		//recvConstraints := a.recvConstraints
@@ -2696,7 +2767,7 @@ func (a *analysis) preSolve() {
 		}
 
 		//check if obj can be receiver: traverse all is necessary
-		for id, node := range a.nodes {
+		for _, node := range a.nodes {
 			if node.obj == nil {
 				continue //not an obj
 			}
@@ -2709,16 +2780,9 @@ func (a *analysis) preSolve() {
 			if _, ok := tDyn.(*types.Signature); ok || isInterface(tDyn) { //func body or interface
 				continue
 			}
-			if id == 191172 {
-				fmt.Print()
-			}
 
 			//from genInvoke: do not remove solved iface from iface2invoke -> lead to missing unsolved constraints
 			for typ, invokes := range iface2invoke {
-				if strings.Contains(typ.String(), "github.com/pingcap/tidb/expression.functionClass") {
-					//strings.Contains(tDyn.String(), "github.com/pingcap/tidb/expression.castAsIntFunctionClass")
-					fmt.Print()
-				}
 				ityp, ok := typ.Underlying().(*types.Interface)
 				if ok && types.Implements(tDyn, ityp) {
 					if a.log != nil {
@@ -2765,19 +2829,23 @@ func (a *analysis) preSolve() {
 			//		}
 			//	}
 			//}
-
-			if a.log != nil {
-				fmt.Fprintf(a.log, "\nAnalyze cgns from genCallBack(). \n")
-			}
-
-			//bz: from genCallBack, we solve these at the end, since preSolve() may also add new calls to the following cgns
-			for len(a.gencb) > 0 {
-				cgn := a.gencb[0]
-				a.gencb = a.gencb[1:]
-				a.genFunc(cgn)
-				updated = true
-			}
 		}
+
+		if a.log != nil {
+			fmt.Fprintf(a.log, "\nAnalyze cgns from genCallBack(). \n")
+		}
+
+		//bz: from genCallBack, we solve these at the end, since preSolve() may also add new calls (multiple time in the above loop)
+		//    to the following cgns
+		for len(a.gencb) > 0 {
+			cgn := a.gencb[0]
+			a.gencb = a.gencb[1:]
+			a.genFunc(cgn)
+			updated = true
+		}
+
+		curIter++ //update here -> all before preSolve and 0 iteration of perSolve have the same basic block
+		fmt.Println("end of iteration ", curIter - 1, " -------------")
 	}
 	stop("Presolving")
 }

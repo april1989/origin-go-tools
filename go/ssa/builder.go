@@ -36,6 +36,7 @@ import (
 	"go/token"
 	"go/types"
 	"os"
+	"strconv"
 	"sync"
 )
 
@@ -2263,13 +2264,21 @@ func (prog *Program) Build() {
 func (p *Package) Build() { p.buildOnce.Do(p.build) }
 
 //bz: create a basic block to hold the invoke callback fn instruction -> one and only one basic block
+// !!! this is not a fn with basicblocks that follows all rules in the creating rules, since we remove
+//     fakeFn.finishBody() at the end to maintain the order of basicblocks
 // will not be triggered by default
 func (p *Package) CreateSyntheticCallForCallBack(fakeFn *Function, targetFn Value, spawn bool)  {
 	if len(fakeFn.Blocks) == 0 { //first time
-		bb := fakeFn.newBasicBlock("synthetic.invoke")
+		bb := fakeFn.newBasicBlock("synthetic.invoke0")
 		fakeFn.currentBlock = bb
 	}else{ //exist
-		fakeFn.currentBlock = fakeFn.Blocks[0]
+		idx := fakeFn.SyntInfo.CurBlockIdx
+		bbs := fakeFn.Blocks
+		if idx >= len(bbs) {
+			//going to next iteration, create a new bblock
+			fakeFn.newBasicBlock("synthetic.invoke" + strconv.Itoa(idx))
+		}
+		fakeFn.currentBlock = fakeFn.Blocks[idx]
 	}
 
 	if spawn { //bz: we fake a go call,
@@ -2282,7 +2291,7 @@ func (p *Package) CreateSyntheticCallForCallBack(fakeFn *Function, targetFn Valu
 		v.setType(types.NewTuple())
 		fakeFn.emit(&v)
 	}
-	fakeFn.finishBody()
+	//fakeFn.finishBody() //TODO: bz: do we really need this? this removes my later added blocks ... remove it now
 }
 
 func (p *Package) build() {

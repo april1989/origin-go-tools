@@ -71,10 +71,16 @@ func (n *cgnode) updateActualCallerSite(cs []*callsite) {
 }
 
 //bz: going to replace and store (borrow them a pointer) a.localval and a.localobj here when calling genFunc() (gen.go)
+//only initialize when they are nil, reuse if exist (happens only if IsMySynthetic = true)
 //only copy if func is in analysis scope
-func (n *cgnode) initLocalMaps() {
-	n.localval = make(map[ssa.Value]nodeid)
-	n.localobj = make(map[ssa.Value]nodeid)
+//return true if reuse
+func (n *cgnode) initLocalMaps() bool {
+	if n.localval == nil && n.localobj == nil { //bz: they should both be nil/exist
+		n.localval = make(map[ssa.Value]nodeid)
+		n.localobj = make(map[ssa.Value]nodeid)
+		return false
+	}
+	return true
 }
 
 //bz: if not use queries, do this renumbering
