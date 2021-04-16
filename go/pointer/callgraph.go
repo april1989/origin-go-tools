@@ -59,7 +59,7 @@ func (n *cgnode) IsSharedContour() bool {
 func (n *cgnode) updateActualCallerSite(cs []*callsite) {
 	exist := false
 	for _, actual := range n.actualCallerSite {
-		if equalContext(actual, cs) {
+		if equalCallSite(actual, cs) {
 			exist = true
 			break
 		}
@@ -526,7 +526,7 @@ func (g *GraphWCtx) GetNodesForFn(fn *ssa.Function) []*Node {
 
 
 //bz: if two []*callsite, csa and csb, are the same
-func equalContext(csa []*callsite, csb []*callsite) bool {
+func equalCallSite(csa []*callsite, csb []*callsite) bool {
 	if len(csa) != len(csb) {
 		return false
 	}

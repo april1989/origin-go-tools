@@ -25,9 +25,6 @@ var (
 	tEface     = types.NewInterfaceType(nil, nil).Complete()
 	tInvalid   = types.Typ[types.Invalid]
 	tUnsafePtr = types.Typ[types.UnsafePointer]
-
-	//bz: the ith iteration of the loop in preSolve() TODO: maybe move to analysis as a field
-	curIter = 0
 )
 
 // ---------- Node creation ----------
@@ -332,16 +329,16 @@ func (a *analysis) existContextFor(fn *ssa.Function, caller *cgnode) ([]int, boo
 	existFnIdx, multiFn := a.fn2cgnodeIdx[fn]
 	if multiFn { //check if we already have the caller + callsite ?? recursive/duplicate call
 		for i, existIdx := range existFnIdx { // idx -> index of fn cgnode in a.cgnodes[]
-			_fnCGNode := a.cgnodes[existIdx]
-			if equalContext(_fnCGNode.callersite, caller.callersite) { //check all callsites
+			existCGNode := a.cgnodes[existIdx]
+			if equalCallSite(existCGNode.callersite, caller.callersite) { //check all callsites
 				//duplicate combination, return this
 				if a.log != nil { //debug
-					fmt.Fprintf(a.log, "    EXIST**: "+strconv.Itoa(i+1)+"th: K-CALLSITE -- "+_fnCGNode.contourkFull()+"\n")
+					fmt.Fprintf(a.log, "    EXIST**: "+strconv.Itoa(i+1)+"th: K-CALLSITE -- "+existCGNode.contourkFull()+"\n")
 				}
 				if a.config.DEBUG {
-					fmt.Printf("    EXIST**: " + strconv.Itoa(i+1) + "th: K-CALLSITE -- " + _fnCGNode.contourkFull() + "\n")
+					fmt.Printf("    EXIST**: " + strconv.Itoa(i+1) + "th: K-CALLSITE -- " + existCGNode.contourkFull() + "\n")
 				}
-				return existFnIdx, multiFn, _fnCGNode.obj, false
+				return existFnIdx, multiFn, existCGNode.obj, false
 			}
 		}
 	}
@@ -390,6 +387,12 @@ func (a *analysis) equalContextForComb(existCSs []*callsite, cur *callsite, curC
 func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, callersite *callsite, closure *ssa.MakeClosure, loopID int) (nodeid, int) {
 	// obj is the function object (identity, params, results).
 	obj := a.nextNode()
+
+	//if strings.Contains(fn.String(), "(*github.com/pingcap/tidb/util/stmtsummary.stmtSummaryByDigestMap).GetMoreThanOnceBindableStmt$1") { //@[0:synthetic function call@n216; ]
+	//	//&& strings.Contains(caller.contourkFull(), "[0:synthetic function call@n229683; ]")
+	//	fmt.Print(" ! ", caller.contourkFull())
+	//}
+
 	//doing task of makeCGNode()
 	var cgn *cgnode
 	//TODO: this ifelse is a bit huge ....
@@ -408,11 +411,11 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 						special = &callsite{targets: obj, loopID: loopID, goInstr: goInstr}
 					}
 					fnkcs = a.createKCallSite(caller.callersite, special)
-					a.numOrigins++
-
 				} else { // use parent context, since no go invoke afterwards (no go can be reachable currently at this point);
 					//update: we will update the parent ctx (including loopID) after solving
-					a.closureWOGo[obj] = obj //record
+					if a.consumeMakeClosureNext(closure) { //do not record if next instr is defer/call -> just a regular call
+						a.closureWOGo[obj] = obj //record
+					}
 					fnkcs = caller.callersite
 				}
 				cgn = &cgnode{fn: fn, obj: obj, callersite: fnkcs}
@@ -424,7 +427,7 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 				}
 				fnkcs := a.createKCallSite(caller.callersite, special)
 				cgn = &cgnode{fn: fn, obj: obj, callersite: fnkcs}
-				a.numOrigins++
+				a.numOrigins++ //only here really trigger the go
 			} else { //use caller context
 				cgn = &cgnode{fn: fn, obj: obj, callersite: caller.callersite}
 			}
@@ -1203,14 +1206,28 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 	spawn := HasGoSpawn(fn)
 
 	//check if fake function already exists
-	fakeFn, okFn := a.globalcb[key]
+	fakeFn, okFn := a.globalcb[key] //check if fakeFn exist for this caller (fn) and context (caller's ctx)
 	var fakeCgns []*cgnode //to handle loop
 
 	var ids []nodeid
 	var okCS bool
 	var c2ids map[*callsite][]nodeid
-	if okFn { //check if call site is the same
+	if okFn { //retrieve the record of ids and c2ids
 		ids, okCS, c2ids = a.existCallback(fakeFn, caller.callersite[0]) //TODO: bz: only works for k=1
+	}
+
+	//may have duplicate targetFn added to ir -> move it in the front to check if is duplicate under the same context; if so, return
+	if okFn && okCS && a.existTargetFn(fakeFn, targetFn) { //everything is the same, return
+		if a.online {
+			objs := make([]nodeid, len(ids))
+			for i, id := range ids {
+				obj := id + 1
+				objs[i] = obj
+			}
+			return objs
+		} else {
+			return ids
+		}
 	}
 
 	//if strings.Contains(key, "sort.Search") && //bz: debug
@@ -1236,7 +1253,7 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 		fakeFn.Params = fn.Params
 		fakeFn.IsMySynthetic = true
 		fakeFn.SyntInfo = &ssa.SyntheticInfo{ //initialize
-			MyIter: curIter,
+			MyIter:      a.curIter,
 			CurBlockIdx: 0,
 		}
 
@@ -1278,8 +1295,8 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 		a.globalcb[key] = fakeFn
 	} else { //reuse
 		requeue := false
-		if fakeFn.SyntInfo.MyIter != curIter { //going to the next iteration, need to update here
-			fakeFn.SyntInfo.Update(curIter)
+		if fakeFn.SyntInfo.MyIter != a.curIter { //going to the next iteration, need to update here
+			fakeFn.SyntInfo.Update(a.curIter)
 			requeue = true
 		}
 
@@ -1289,16 +1306,15 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 			fakeCgn := a.nodes[obj].obj.cgn //retrieve it
 			fakeCgns[i] = fakeCgn
 			if requeue {
-				a.gencb = append(a.gencb, fakeCgn)  //re-queue it due to newly added instructions
+				a.gencb = append(a.gencb, fakeCgn) //re-queue it due to newly added instructions
 			}
 		}
 	}
 
-	//create ssa.Call instruction for this fakeFn
+	//create fake callsite and constraint for this fakeFn
 	a.genFakeConstraints(fakeFn, v, call, fakeCgns)
 
 	//create/add to a basic block to hold the invoke callback fn instruction
-	//TODO: will this have duplicate targetFn added to ir?
 	fakeFn.Pkg.CreateSyntheticCallForCallBack(fakeFn, targetFn, spawn)
 
 	//TODO: why virtual calls (also be added in AnalyzeWCtx()) has duplicate edges?
@@ -1324,6 +1340,24 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 	} else {
 		return ids
 	}
+}
+
+//bz: check existence of calls to targetFn in the ir of fakeFn
+func (a *analysis) existTargetFn(fakeFn *ssa.Function, targetFn ssa.Value) bool {
+	for _, bb := range fakeFn.Blocks {
+		for _, inst := range bb.Instrs {
+			if call, ok := inst.(*ssa.Call); ok {
+				if call.Call.Value == targetFn {
+					return true
+				}
+			}else if goo, ok := inst.(*ssa.Go); ok {
+				if goo.Call.Value == targetFn {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 //bz: used by a.recursiveCallback(): record the relations among: callback fn, caller lib fn and its context to avoid recursive calls
@@ -1400,7 +1434,7 @@ func (a *analysis) genFakeConstraints(targetFn ssa.Value, v ssa.Value, call *ssa
 	a.copy(targets, a.valueNode(v), 1) //bz: same as above, no context -> cb must exist a obj already before this point
 }
 
-//bz: if exist nodeid for *cgnode of fn with callersite as callsite, return nodeids of *cgnode
+//bz: if exist nodeid for *cgnode of fn with callersite as callsite and targetFn as call instr, return nodeids of *cgnode
 func (a *analysis) existCallback(fn *ssa.Function, callersite *callsite) ([]nodeid, bool, map[*callsite][]nodeid) {
 	_map, ok := a.callbacks[fn]
 	if ok { //check if exist
@@ -1487,15 +1521,20 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 			if a.config.DEBUG {
 				fmt.Println("CAUGHT APP METHOD -- " + fn.String()) //debug
 			}
-			_, ok := site.instr.(*ssa.Go)
-			if ok { //bz: invoke a go routine --> detail check for different context-sensitivities
+
+			//handle possible cases that consumes makeclosure
+			_, okGo := instr.(*ssa.Go)
+			_, okDefer := instr.(*ssa.Defer)
+			_, okCall := instr.Common().Value.(*ssa.MakeClosure) //otherwise if inst like the e.g. in isCallNext(): a direct call to makeclosure, not used as params
+			if okGo || okDefer || okCall { //bz: invoke a go routine --> detail check for different context-sensitivities; defer/call is similar
 				if a.config.DEBUG { //debug
-					fmt.Println("        BUT ssa.GO -- " + site.instr.String() + "   LET'S SEE.")
+					fmt.Println("        BUT ssa.GO/ssa.Defer/ssa.Call -- " + site.instr.String() + "   LET'S SEE.")
 				}
-				a.genStaticCallForGoCall(caller, instr, site, call, result) //bz: direct the handling outside and return
+				a.genStaticCallAfterMakeClosure(caller, instr, site, call, result) //bz: direct the handling outside and return
 				return
 			}
 
+			//handle other cases
 			if caller.fn.IsMySynthetic {
 				//bz: synthetic fn and its callback fn need to match here using a.closure not a.fn2cgnodeIdx
 				objs, ok, _ := a.existClosure(fn, caller.callersite[0])
@@ -1540,14 +1579,15 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 	}
 }
 
-//bz: we take these special cases for *ssa.Go outside normal workflow; both kcfa and origin
-func (a *analysis) genStaticCallForGoCall(caller *cgnode, instr ssa.CallInstruction, site *callsite, call *ssa.CallCommon, result nodeid) {
+//bz: we take these special cases for all cases that consumes a makeclosure (*ssa.Go, *ssa.Defer, *ssa.Call) outside normal workflow;
+//both kcfa and origin
+func (a *analysis) genStaticCallAfterMakeClosure(caller *cgnode, instr ssa.CallInstruction, site *callsite, call *ssa.CallCommon, result nodeid) {
 	fn := call.StaticCallee()
 	objs, ok, c2id := a.existClosure(fn, caller.callersite[0])
-	if ok { //exist closure, add its new context, but no constraints
-	} else if c2id != nil {
-		fmt.Println("TODO .... @genStaticCallForGoCall")
-	} else { //bz: case 1 and 3: we need a new contour and a new context for origin
+	if ok { //exist closure add its new context, but no constraints
+	} else if c2id != nil { //has fn as key, but does not have the caller context as value
+		fmt.Println("TODO .... @genStaticCallAfterMakeClosure")
+	} else { //bz: case 1 and 3: we need a new cgn and a new context for origin
 		if a.config.Origin && a.isInLoop(fn, instr) {
 			objs = make([]nodeid, 2)
 			//bz: loop problem -> two origin contexts here
@@ -1869,11 +1909,16 @@ func (a *analysis) valueNodeClosure(cgn *cgnode, closure *ssa.MakeClosure, v ssa
 			return ids
 		}
 
-		if a.config.Origin && a.isInLoop(cgn.fn, closure) { // handle loop only in origin-sensitive
+		//if strings.Contains(fn.String(), "(*github.com/pingcap/tidb/util/stmtsummary.stmtSummaryByDigestMap).GetMoreThanOnceBindableStmt$1") {
+		//	//&& strings.Contains(caller.contourkFull(), "[0:synthetic function call@n229683; ]")
+		//	fmt.Print(" ! ", cgn.contourkFull())
+		//}
+
+		if a.config.Origin && a.isInLoop(cgn.fn, closure) && !a.consumeMakeClosureNext(closure) { // handle loop only in origin-sensitive
 			ids = make([]nodeid, 2)
 			objs = make([]nodeid, 2)
-			loopID := 1 //cannot find a better iterator ...
-			for loopID < 3 {
+			loopID := 1
+			for loopID < 3 {//loopID = 1 and 2
 				id, obj := a.valueNodeClosureInternal(cgn, closure, v, loopID, comment)
 				//udpate
 				ids[loopID-1] = id
@@ -2352,9 +2397,9 @@ func (a *analysis) genInstr(cgn *cgnode, instr ssa.Instruction) {
 //	return false
 //}
 
-// bz: check whether the stmt after make closure is go: they must be in the same basic block
+// bz: check whether there exist go stmt after make closure and using this make closure: they must be in the same basic block
 // Update: this is too strict, things happens in Kubernetes88331: (*command-line-arguments.PriorityQueue).Run
-// now update to if there exists a go that refers instr, but they still must be in the same basic block
+//         now update to if there exists a go that refers instr, but they still must be in the same basic block
 func (a *analysis) isGoNext(instr *ssa.MakeClosure) *ssa.Go {
 	stmts := instr.Block().Instrs
 	for i, stmt := range stmts {
@@ -2378,6 +2423,80 @@ func (a *analysis) isGoNext(instr *ssa.MakeClosure) *ssa.Go {
 			}
 			if a.config.DEBUG {
 				fmt.Println(">>> NO GO FOR MAKECLOSURE: " + instr.String())
+			}
+			return nil //no go instr until end of basic block
+		}
+	}
+	return nil
+}
+
+//bz: there are three ways that a makeclosure will be consumed/invoked:
+//(1) go (2) defer (3) call. Here, only (1) will create a new origin/context, the other two are only regular calls
+//return true if make closure is consumed by (2) and (3)
+func (a *analysis) consumeMakeClosureNext(instr *ssa.MakeClosure) bool {
+	return a.isDeferNext(instr) != nil || a.isCallNext(instr) != nil
+}
+
+// bz: check whether the stmt after make closure is defer: they must be in the same basic block
+func (a *analysis) isDeferNext(instr *ssa.MakeClosure) *ssa.Defer {
+	stmts := instr.Block().Instrs
+	for i, stmt := range stmts {
+		if stmt == instr { //start check from here
+			for j := i + 1; j < len(stmts); j++ {
+				deferInstr, ok := stmts[j].(*ssa.Defer) //if the go if available
+				if ok {
+					val := deferInstr.Call.Value
+					if closure, ok := val.(*ssa.MakeClosure); ok {
+						if instr == closure { //these two values should be the same
+							return deferInstr
+						}
+					} else if _, ok := val.(*ssa.Function); ok {
+						args := deferInstr.Call.Args
+						for _, arg := range args { // one should be closure
+							if instr == arg { //these two values should be the same
+								return deferInstr
+							}
+						}
+					}
+				}
+			}
+			if a.config.DEBUG {
+				fmt.Println(">>> NO DEFER FOR MAKECLOSURE: " + instr.String())
+			}
+			return nil //no go instr until end of basic block
+		}
+	}
+	return nil
+}
+
+// bz: check whether the stmt after make closure is a call: they must be in the same basic block
+//e.g., in /tidb/cmd/benchdb, (*github.com/pingcap/tidb/util/stmtsummary.stmtSummaryByDigestMap).GetMoreThanOnceBindableStmt:
+//t18 = make closure (*stmtSummaryByDigestMap).GetMoreThanOnceBindableStmt$1 [t16, t7] func()
+//t19 = t18()
+func (a *analysis) isCallNext(instr *ssa.MakeClosure) *ssa.Call {
+	stmts := instr.Block().Instrs
+	for i, stmt := range stmts {
+		if stmt == instr { //start check from here
+			for j := i + 1; j < len(stmts); j++ {
+				callInstr, ok := stmts[j].(*ssa.Call) //if the go if available
+				if ok {
+					val := callInstr.Call.Value
+					if closure, ok := val.(*ssa.MakeClosure); ok {
+						if instr == closure { //these two values should be the same
+							return callInstr
+						}
+					} else if _, ok := val.(*ssa.Function); ok {
+						args := callInstr.Call.Args
+						for _, arg := range args { // one should be closure
+							if instr == arg { //these two values should be the same
+								return callInstr
+							}
+						}
+					}
+				}
+			}
+			if a.config.DEBUG {
+				fmt.Println(">>> NO DEFER FOR MAKECLOSURE: " + instr.String())
 			}
 			return nil //no go instr until end of basic block
 		}
@@ -2482,6 +2601,8 @@ func (a *analysis) genFunc(cgn *cgnode) {
 	//	strings.Contains(cgn.contourkFull(), "go (*innerWorker).run(t29, t16, t31)@(*github.com/pingcap/tidb/executor.IndexLookUpJoin).startWorkers;") {
 	//	fmt.Println(curIter)
 	//}
+
+	//fmt.Println("-> ", reuse, " ", cgn)
 
 	if reuse { //bz: from my synthetic fn, and solved in last loop of preSolve() already -> now handle the diff
 		// Create value nodes for all value instructions
@@ -2744,7 +2865,7 @@ func (a *analysis) preSolve() {
 		cNextIdx = len(a.constraints)
 		updated = false
 		if a.log != nil {
-			fmt.Fprintln(a.log, "Iteration ", curIter, ": From", cIdx, " to ", cNextIdx)
+			fmt.Fprintln(a.log, "Iteration ", a.curIter, ": From", cIdx, " to ", cNextIdx)
 		}
 		////clear and use for next iteration
 		//recvConstraints := a.recvConstraints
@@ -2844,8 +2965,8 @@ func (a *analysis) preSolve() {
 			updated = true
 		}
 
-		curIter++ //update here -> all before preSolve and 0 iteration of perSolve have the same basic block
-		fmt.Println("end of iteration ", curIter - 1, " -------------")
+		a.curIter++ //update here -> all before preSolve and 0 iteration of perSolve have the same basic block
+		fmt.Println("end of iteration ", a.curIter-1, " -------------")
 	}
 	stop("Presolving")
 }

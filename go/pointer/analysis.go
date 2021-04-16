@@ -182,8 +182,8 @@ type analysis struct {
 	callbacks       map[*ssa.Function]*Ctx2nodeid     //bz: fakeFn invoked by different context/call sites
 	gencb           []*cgnode                         //bz: queue of functions to generate constraints from genCallBack, we solve these at the end
 	cb2Callers      map[*ssa.Function]*callbackRecord //bz: record the relations among: callback fn, caller lib fn and its context to avoid recursive calls
-	//recvConstraints []*recvConstraint                 //bz: record of recvConstraint from genStaticCallCommon and genDynamicCall
-
+	//recvConstraints []*recvConstraint               //bz: record of recvConstraint from genStaticCallCommon and genDynamicCall
+	curIter         int                               //bz: the ith iteration of the loop in preSolve() TODO: maybe move to analysis as a field
 	/** bz:
 	    we do have panics when turn on hvn optimization. panics are due to that hvn wrongly computes sccs.
 	    wrong sccs is because some pointers are not marked as indirect (but marked in default).
@@ -392,6 +392,11 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 
 	fmt.Println(" *** Multiple Mains **************** ")
 	for i, main := range config.Mains {
+		//if strings.Contains(main.String(), "tidb/cmd/explaintest") ||
+		//	strings.Contains(main.String(), "/tidb/cmd/benchdb") ||
+		//	strings.Contains(main.String(), "/tidb/tidb-server") {
+		//	continue
+		//}
 		//create a config
 		var _mains []*ssa.Package
 		_mains = append(_mains, main)
@@ -524,6 +529,7 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool) (result *ResultWCtx, err er
 		callbacks:    make(map[*ssa.Function]*Ctx2nodeid),
 		globalcb:     make(map[string]*ssa.Function),
 		cb2Callers:   make(map[*ssa.Function]*callbackRecord),
+		curIter: 0,
 	}
 
 	if false {
@@ -839,7 +845,7 @@ func (a *analysis) callEdge(caller *cgnode, site *callsite, calleeid nodeid) {
 
 	//bz: solution@field actualCallerSite []*callsite of cgnode type
 	if a.closureWOGo[calleeid] != 0 {
-		if !equalContext(caller.callersite, callee.callersite) {
+		if !equalCallSite(caller.callersite, callee.callersite) {
 			if a.log != nil {
 				fmt.Fprintf(a.log, "Update actualCallerSite for ----> \n%s -> [%s] \n", callee, caller.contourkFull())
 			}
