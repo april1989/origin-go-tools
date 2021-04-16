@@ -13,6 +13,7 @@ package pointer
 import (
 	"fmt"
 	"github.com/april1989/origin-go-tools/container/intsets"
+	"github.com/april1989/origin-go-tools/go/myutil/flags"
 	"github.com/april1989/origin-go-tools/go/ssa"
 	"go/token"
 	"go/types"
@@ -26,6 +27,19 @@ var (
 	tInvalid   = types.Typ[types.Invalid]
 	tUnsafePtr = types.Typ[types.UnsafePointer]
 )
+
+//bz: used when DoCollapse = true: collapse the context of these functions, because they are used too much in a program
+// the following order is the descendent order of usage frequency of the function
+var collapseFns = [...]string{
+	//from tidb
+	"sort.Slice",
+	"sort.Search",
+	"sort.SliceStable",
+	"(*sync.Once).Do",
+	"github.com/pingcap/parser/terror.Call",
+	"(*golang.org/x/sync/singleflight.Group).Do",
+	"strings.TrimLeftFunc",
+}
 
 // ---------- Node creation ----------
 
@@ -1193,6 +1207,13 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 		panic("No callback fn in *ssa.MakeClosure @" + call.String() + ". DEBUG or Adjust your callback.yml.")
 	}
 
+	if flags.DoCollapse {
+		id := a.genCallBackCollapse(caller, instr, fn, site, call, targetFn, v)
+		result := make([]nodeid, 1)
+		result[0] = id
+		return result
+	}
+
 	//the key of a.globalcb -> different callsite has different ir in fakeFn
 	//for virtual function, we need to change the key to include receiver type
 	key := fn.String() + "@" + caller.contourkFull()
@@ -1207,7 +1228,7 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 
 	//check if fake function already exists
 	fakeFn, okFn := a.globalcb[key] //check if fakeFn exist for this caller (fn) and context (caller's ctx)
-	var fakeCgns []*cgnode //to handle loop
+	var fakeCgns []*cgnode          //to handle loop
 
 	var ids []nodeid
 	var okCS bool
@@ -1257,11 +1278,12 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 			CurBlockIdx: 0,
 		}
 
-		id := a.addNodes(fakeFn.Type(), fakeFn.String()) //fn id n621979
+		id := a.addNodes(fakeFn.Type(), fakeFn.String()) //fn id
 
 		//create a cgnode
-		obj := a.nextNode()                       //282879
-		fakeCgn := a.makeCGNode(fakeFn, obj, nil) //bz: should not consider the context here
+		obj := a.nextNode()
+		fakeCgn := a.makeCGNode(fakeFn, obj, nil)
+		fakeCgn.callersite = caller.callersite //same ctx as caller
 		sig := fakeFn.Signature
 		a.addOneNode(sig, "func.cgnode", nil) // (scalar with Signature type)
 		if recv := sig.Recv(); recv != nil {
@@ -1275,9 +1297,7 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 			fmt.Fprintf(a.log, "\t---- \n")
 		}
 
-		//udpate with fake callsite for fakefn
-		fakeCgn.callersite = caller.callersite //same ctx as caller
-		a.gencb = append(a.gencb, fakeCgn)     //manually queue it
+		a.gencb = append(a.gencb, fakeCgn) //manually queue it
 
 		//udpate maps
 		fakeCgns = make([]*cgnode, 1)
@@ -1342,6 +1362,113 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 	}
 }
 
+//bz: when DoCollapse = true, ignore context
+func (a *analysis) genCallBackCollapse(caller *cgnode, instr ssa.CallInstruction, fn *ssa.Function, site *callsite, call *ssa.CallCommon,
+	targetFn ssa.Value, v ssa.Value) nodeid {
+
+	key := fn.String() //the key of a.globalcb
+	spawn := HasGoSpawn(fn) //check if fake function has spawned its own go routine
+
+	//check if fake function already exists
+	fakeFn, okFn := a.globalcb[key] //check if fakeFn exist for this caller (fn)
+	var fakeCgn *cgnode
+	var id nodeid
+	//may have duplicate targetFn added to ir -> move it in the front to check if is duplicate; if so, return
+	if okFn && a.existTargetFn(fakeFn, targetFn) { //everything is the same, return
+		id = a.globalval[fakeFn]
+		if a.online {
+			return id + 1
+		} else {
+			return id
+		}
+	}
+
+	//we need to create a whole set (fakefn, fakecgn), since callsite/ctx/origin is different, basicblock/instruction is different
+	if !okFn {
+		if a.log != nil {
+			fmt.Fprintf(a.log, "\t---- \n\tCreate fake function and cgnode (collapsed) for: %s@nil\n", fn.String())
+		}
+
+		//create a fake function
+		//we use fn's signature/params below to match the params and return val
+		fnName := fn.Name()
+		fakeFn = a.prog.NewFunction(fnName, fn.Signature, "synthetic of "+fn.Name())
+		fakeFn.Pkg = fn.Pkg
+		fakeFn.Params = fn.Params
+		fakeFn.IsMySynthetic = true
+		fakeFn.SyntInfo = &ssa.SyntheticInfo{ //initialize
+			MyIter:      a.curIter,
+			CurBlockIdx: 0,
+		}
+
+		id = a.addNodes(fakeFn.Type(), fakeFn.String()) //fn id
+		a.setValueNode(fakeFn, id, nil)                  //record
+
+		//create a cgnode
+		obj := a.nextNode()
+		fakeCgn = a.makeCGNode(fakeFn, obj, nil) //bz: should not consider the context here
+		sig := fakeFn.Signature
+		a.addOneNode(sig, "func.cgnode", nil) // (scalar with Signature type)
+		if recv := sig.Recv(); recv != nil {
+			a.addNodes(recv.Type(), "func.recv")
+		}
+		a.addNodes(sig.Params(), "func.params")
+		a.addNodes(sig.Results(), "func.results")
+		a.endObject(obj, fakeCgn, fakeFn).flags |= otFunction
+
+		if a.log != nil {
+			fmt.Fprintf(a.log, "\t---- \n")
+		}
+
+		//udpate with fake callsite for fakefn
+		a.gencb = append(a.gencb, fakeCgn) //manually queue it
+
+		//update
+		a.globalcb[key] = fakeFn
+	} else { //reuse
+		requeue := false
+		if fakeFn.SyntInfo.MyIter != a.curIter { //going to the next iteration, need to update here
+			fakeFn.SyntInfo.Update(a.curIter)
+			requeue = true
+		}
+
+		id = a.globalval[fakeFn]
+		obj := id + 1
+		fakeCgn = a.nodes[obj].obj.cgn //retrieve it
+		if requeue {
+			a.gencb = append(a.gencb, fakeCgn) //re-queue it due to newly added instructions
+		}
+	}
+
+	//create fake callsite and constraint for this fakeFn
+	fakeCgns := make([]*cgnode, 1)
+	fakeCgns[0] = fakeCgn
+	a.genFakeConstraints(fakeFn, v, call, fakeCgns)
+
+	//create/add to a basic block to hold the invoke callback fn instruction
+	fakeFn.Pkg.CreateSyntheticCallForCallBack(fakeFn, targetFn, spawn)
+
+	//TODO: why virtual calls (also be added in AnalyzeWCtx()) has duplicate edges?
+	obj := id + 1
+	//add call edge
+	a.callEdge(caller, site, obj)
+
+	//other receive/param constraints
+	var result nodeid
+	if v := instr.Value(); v != nil {
+		result = a.valueNode(v)
+	}
+	a.genStaticCallCommon(caller, obj, site, call, result)
+
+	fmt.Println("---> caught (collapsed): ", key, "\t ", targetFn) //bz: key is lib func call; targetFn is app make closure
+
+	if a.online {
+		return obj
+	} else {
+		return id
+	}
+}
+
 //bz: check existence of calls to targetFn in the ir of fakeFn
 func (a *analysis) existTargetFn(fakeFn *ssa.Function, targetFn ssa.Value) bool {
 	for _, bb := range fakeFn.Blocks {
@@ -1350,7 +1477,7 @@ func (a *analysis) existTargetFn(fakeFn *ssa.Function, targetFn ssa.Value) bool 
 				if call.Call.Value == targetFn {
 					return true
 				}
-			}else if goo, ok := inst.(*ssa.Go); ok {
+			} else if goo, ok := inst.(*ssa.Go); ok {
 				if goo.Call.Value == targetFn {
 					return true
 				}
@@ -1526,7 +1653,7 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 			_, okGo := instr.(*ssa.Go)
 			_, okDefer := instr.(*ssa.Defer)
 			_, okCall := instr.Common().Value.(*ssa.MakeClosure) //otherwise if inst like the e.g. in isCallNext(): a direct call to makeclosure, not used as params
-			if okGo || okDefer || okCall { //bz: invoke a go routine --> detail check for different context-sensitivities; defer/call is similar
+			if okGo || okDefer || okCall {                       //bz: invoke a go routine --> detail check for different context-sensitivities; defer/call is similar
 				if a.config.DEBUG { //debug
 					fmt.Println("        BUT ssa.GO/ssa.Defer/ssa.Call -- " + site.instr.String() + "   LET'S SEE.")
 				}
@@ -1918,7 +2045,7 @@ func (a *analysis) valueNodeClosure(cgn *cgnode, closure *ssa.MakeClosure, v ssa
 			ids = make([]nodeid, 2)
 			objs = make([]nodeid, 2)
 			loopID := 1
-			for loopID < 3 {//loopID = 1 and 2
+			for loopID < 3 { //loopID = 1 and 2
 				id, obj := a.valueNodeClosureInternal(cgn, closure, v, loopID, comment)
 				//udpate
 				ids[loopID-1] = id

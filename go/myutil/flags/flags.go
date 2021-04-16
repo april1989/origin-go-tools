@@ -15,6 +15,7 @@ var DoCompare = false //bz: this has a super long time
 var TimeLimit time.Duration //bz: time limit, unit: ?h?m?s
 var DoLevel = 0 //bz: set the analysis scope to level ? default = 0
 var DoCallback = true //bz: simplify callback fn
+var DoCollapse = false //bz: collapse the lib function with its callback, no matter what are the context of caller of lib func
 
 //my use
 var PrintCGNodes = false //bz: print #cgnodes (before solve())
@@ -37,6 +38,7 @@ func ParseFlags() {
 	_doComp := flag.Bool("doCompare", false, "Do compare with default pta. ")
 	_time := flag.String("timeLimit", "", "Set time limit to ?h?m?s or ?m?s or ?s, e.g. 1h15m30.918273645s. ")
 	_doLevel := flag.Int("doLevel", -1, "Set the analysis scope to level = ? .")
+	_doCollapse := flag.Bool("doCollapse", false, "Collapse the context of lib function which has callbacks. ")
 	//my use
 	_printCGNodes := flag.Bool("printCGNodes", false, "Print #cgnodes (before solve()).")
 	_doSameRoot := flag.Bool("doSameRoot", false, "Do all main together from the same root in one pkg, linked by the root node.")
@@ -63,6 +65,9 @@ func ParseFlags() {
 	}
 	if *_doLevel != -1 {
 		DoLevel = *_doLevel
+	}
+	if *_doCollapse {
+		DoCollapse = true
 	}
 
 	//my use
