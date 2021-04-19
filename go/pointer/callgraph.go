@@ -309,12 +309,12 @@ type Ctx2nodeid struct {
 
 //bz: renumbering func for opt
 func (r *Ctx2nodeid) renumber(renumbering []nodeid) {
-	for cs, oldIDs := range r.ctx2nodeid {
+	for site, oldIDs := range r.ctx2nodeid {
 		newIDs := make([]nodeid, len(oldIDs))
 		for idx, oldID := range oldIDs {
 			newIDs[idx] = renumbering[oldID]
 		}
-		r.ctx2nodeid[cs] = newIDs
+		r.ctx2nodeid[site] = newIDs
 	}
 }
 
@@ -333,7 +333,7 @@ func (r *Ctx2nodeid) renumberHVN(mapping []nodeid) {
 	}
 }
 
-//////////////////////////////// call graph to users ////////////////////////////////
+//////////////////////////////// call graph for end users ////////////////////////////////
 
 //bz: for user
 type GraphWCtx struct {
@@ -341,7 +341,7 @@ type GraphWCtx struct {
 	Nodes     map[*cgnode]*Node           // all nodes by cgnode
 	Fn2CGNode map[*ssa.Function][]*cgnode // a map
 
-	numEdges  int                         //bz: perforamnce, number of edges
+	numEdges int //bz: perforamnce, number of edges
 }
 
 func (g *GraphWCtx) GetNumEdges() int {
@@ -523,7 +523,6 @@ func (g *GraphWCtx) GetNodesForFn(fn *ssa.Function) []*Node {
 	}
 	return result
 }
-
 
 //bz: if two []*callsite, csa and csb, are the same
 func equalCallSite(csa []*callsite, csb []*callsite) bool {

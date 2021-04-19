@@ -392,11 +392,6 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 
 	fmt.Println(" *** Multiple Mains **************** ")
 	for i, main := range config.Mains {
-		//if strings.Contains(main.String(), "tidb/cmd/explaintest") ||
-		//	strings.Contains(main.String(), "/tidb/cmd/benchdb") ||
-		//	strings.Contains(main.String(), "/tidb/tidb-server") {
-		//	continue
-		//}
 		//create a config
 		var _mains []*ssa.Package
 		_mains = append(_mains, main)

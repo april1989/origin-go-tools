@@ -1342,8 +1342,6 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 	for i, id := range ids {
 		obj := id + 1
 		objs[i] = obj
-		//add call edge
-		a.callEdge(caller, site, obj)
 
 		//other receive/param constraints
 		var result nodeid
@@ -1353,7 +1351,7 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 		a.genStaticCallCommon(caller, obj, site, call, result)
 	}
 
-	fmt.Println("---> caught: ", key, "\t ", targetFn) //bz: key is lib func call + ctx; targetFn is app make closure
+	//fmt.Println("---> caught: ", key, "\t ", targetFn) //bz: key is lib func call + ctx; targetFn is app make closure
 
 	if a.online {
 		return objs
@@ -1450,8 +1448,6 @@ func (a *analysis) genCallBackCollapse(caller *cgnode, instr ssa.CallInstruction
 
 	//TODO: why virtual calls (also be added in AnalyzeWCtx()) has duplicate edges?
 	obj := id + 1
-	//add call edge
-	a.callEdge(caller, site, obj)
 
 	//other receive/param constraints
 	var result nodeid
@@ -3093,7 +3089,7 @@ func (a *analysis) preSolve() {
 		}
 
 		a.curIter++ //update here -> all before preSolve and 0 iteration of perSolve have the same basic block
-		fmt.Println("end of iteration ", a.curIter-1, " -------------")
+		//fmt.Println("end of iteration ", a.curIter-1, " -------------")
 	}
 	stop("Presolving")
 }

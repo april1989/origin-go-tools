@@ -96,7 +96,7 @@ func (a *analysis) renumber() {
 	// It is critical that all reachable nodeids are accounted for!
 
 	// Renumber nodeids in global objects.
-	// TODO: check if a.panicNode is still ok?
+	// TODO: bz: check if a.panicNode is still ok?
 	for v, id := range a.globalobj {
 		a.globalobj[v] = renumbering[id]
 	}
@@ -116,10 +116,20 @@ func (a *analysis) renumber() {
 			// should be only one callsite, which is the fake one from root
 			UpdateMainID(cgn.callersite[0].targets)
 		}
+		//if cgn.fn.Name() == "<root>" {
+		//	fmt.Print()
+		//}
 		//start to renumber
 		cgn.obj = renumbering[cgn.obj]
 		for _, site := range cgn.sites {
 			site.targets = renumbering[site.targets]
+		}
+		if cgn.actualCallerSite != nil {
+			for _, sites := range cgn.actualCallerSite {
+				for _, site := range sites {
+					site.targets = renumbering[site.targets]
+				}
+			}
 		}
 		//bz: also update its local mapping
 		cgn.renumber(renumbering)
@@ -136,32 +146,22 @@ func (a *analysis) renumber() {
 		val.renumber(renumbering)
 	}
 
-	// Renumber nodeid in node.callsite
-	for _, n := range newNodes {
-		if n.callsite == nil || n.callsite[0] == nil {
-			continue
-		}
-		for _, site := range n.callsite {
-			site.targets = renumbering[site.targets]
-		}
-	}
-
 	// Renumber callback-related
 	if a.config.DoCallback {
 		for _, val := range a.callbacks {
 			val.renumber(renumbering)
 		}
 
-		for _, record := range a.cb2Callers {
-			for _, ctx := range record.caller2ctx {
-				for _, c := range ctx {
-					if c == nil {
-						continue
-					}
-					c.targets = renumbering[c.targets]
-				}
-			}
-		}
+		//for _, record := range a.cb2Callers {
+		//	for _, ctx := range record.caller2ctx {
+		//		for _, site := range ctx {
+		//			if site == nil {
+		//				continue
+		//			}
+		//			site.targets = renumbering[site.targets]
+		//		}
+		//	}
+		//}
 	}
 
 	////bz: special options -> discarded

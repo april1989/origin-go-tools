@@ -7,6 +7,19 @@ import (
 	"time"
 )
 
+/*
+non-stop mains:
+/tidb/cmd/explaintest
+/tidb/cmd/benchdb
+/tidb/tidb-server
+
+/go-ethereum/cmd/geth
+
+cockroach: go mod vendor
+hugo: "package io/fs is not in GOROOT" on Go 1.15
+
+ */
+
 func main() {
 	mains := myutil.InitialMain()
 	if mains == nil {
