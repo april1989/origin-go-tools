@@ -60,7 +60,7 @@ func DecodeYaml(path string)  {
 
 	if debugCB {
 		fmt.Println("------------------------------\nDump callback.yml: (lib calls spawn new goroutines)\n",
-			cbs.String(), "------------------------------")
+			cbs.String(), "\n------------------------------")
 	}
 
 	//assemble to the string format we used in pointer pkgs

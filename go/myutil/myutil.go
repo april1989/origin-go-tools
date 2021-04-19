@@ -96,7 +96,13 @@ func initial(args []string, cfg *packages.Config) []*ssa.Package {
 	if err != nil {
 		panic(fmt.Sprintln(err))
 	}
-	if packages.PrintErrors(initial) > 0 {
+	if len(initial) == 0 {
+		fmt.Println("Package list empty")
+		return nil
+	} else if initial[0] == nil {
+		fmt.Println("Nil package in list")
+		return nil
+	} else if packages.PrintErrors(initial) > 0 {
 		errSize, errPkgs := packages.PrintErrorsAndMore(initial) //bz: errPkg will be nil in initial
 		if errSize > 0 {
 			fmt.Println("Excluded the following packages contain errors, due to the above errors. ")
@@ -105,12 +111,10 @@ func initial(args []string, cfg *packages.Config) []*ssa.Package {
 			}
 			fmt.Println("Continue   -- ")
 		}
-	} else if len(initial) == 0 {
-		fmt.Println("Package list empty")
-		return nil
-	} else if initial[0] == nil {
-		fmt.Println("Nil package in list")
-		return nil
+		if len(initial) == 0 || initial[0] == nil {
+			fmt.Println("All Error Pkgs, Cannot Analyze. Return. ")
+			return nil
+		}
 	}
 	fmt.Println("Done  -- " + strconv.Itoa(len(initial)) + " packages loaded")
 
@@ -167,8 +171,8 @@ func initial(args []string, cfg *packages.Config) []*ssa.Package {
 		parts := strings.Split(mod, " ")
 		scope = append(scope, parts[1])
 	}else {  //else: default input .go file with default scope
-		scope = append(scope, "google.golang.org/grpc") //bz: debug purpose
-		//scope = append(scope, "github.com/pingcap/tidb") //bz: debug purpose
+		//scope = append(scope, "google.golang.org/grpc") //bz: debug purpose
+		scope = append(scope, "github.com/pingcap/tidb") //bz: debug purpose
 	}
 
 	//initial set

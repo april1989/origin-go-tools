@@ -220,7 +220,7 @@ func (c *callsite) equal(o *callsite) bool {
 	}
 }
 
-//bz: equal without when one c.loopID == 0 and o.loopID is 1 or 2
+//bz: equal without when one c.loopID == 0 and o.loopID is 1 or 2 or 0
 // !! only used by existClosure()
 func (c *callsite) loopEqual(o *callsite) bool {
 	if o == nil && c == nil {

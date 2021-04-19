@@ -303,12 +303,12 @@ func (a *analysis) makeFunctionObjectWithContext(caller *cgnode, fn *ssa.Functio
 	if a.config.Origin { //bz: origin -> we only create new callsite[] for specific instr, not everyone
 		assert(callersite != nil, "Unexpected nil callersite.instr @ makeFunctionObjectWithContext().")
 
-		existFnIdx, multiFn, existNodeID, isNew = a.existContext(fn, callersite, caller)
+		existFnIdx, multiFn, existNodeID, isNew = a.existContext(fn, callersite, caller, loopID)
 		if !isNew {
 			return existNodeID, isNew
 		}
 	} else if a.config.CallSiteSensitive { //bz: for kcfa
-		existFnIdx, multiFn, existNodeID, isNew = a.existContextForComb(fn, callersite, caller)
+		existFnIdx, multiFn, existNodeID, isNew = a.existContextForComb(fn, callersite, caller, -1)
 		if !isNew {
 			return existNodeID, isNew
 		}
@@ -329,10 +329,10 @@ func (a *analysis) makeFunctionObjectWithContext(caller *cgnode, fn *ssa.Functio
 	return obj, true
 }
 
-//bz: a summary of existContextXXX()
-func (a *analysis) existContext(fn *ssa.Function, callersite *callsite, caller *cgnode) ([]int, bool, nodeid, bool) {
+//bz: a summary of existContextXXX(); if loopID = -1 -> loopID is not needed
+func (a *analysis) existContext(fn *ssa.Function, callersite *callsite, caller *cgnode, loopID int) ([]int, bool, nodeid, bool) {
 	if _, ok := callersite.instr.(*ssa.Go); callersite == nil || ok {
-		return a.existContextForComb(fn, callersite, caller)
+		return a.existContextForComb(fn, callersite, caller, loopID)
 	} else {
 		return a.existContextFor(fn, caller)
 	}
@@ -359,13 +359,13 @@ func (a *analysis) existContextFor(fn *ssa.Function, caller *cgnode) ([]int, boo
 	return existFnIdx, multiFn, 0, true
 }
 
-//bz: if exist this callsite + caller for fn?
-func (a *analysis) existContextForComb(fn *ssa.Function, callersite *callsite, caller *cgnode) ([]int, bool, nodeid, bool) {
+//bz: if exist this callersite (with loopID) + caller for fn?
+func (a *analysis) existContextForComb(fn *ssa.Function, callersite *callsite, caller *cgnode, loopID int) ([]int, bool, nodeid, bool) {
 	existFnIdx, multiFn := a.fn2cgnodeIdx[fn]
 	if multiFn { //check if we already have the caller + callsite ?? recursive/duplicate call
 		for i, existIdx := range existFnIdx { // idx -> index of fn cgnode in a.cgnodes[]
 			_fnCGNode := a.cgnodes[existIdx]
-			if a.equalContextForComb(_fnCGNode.callersite, callersite, caller.callersite) { //check all callsites
+			if a.equalContextForComb(_fnCGNode.callersite, callersite, caller.callersite, loopID) { //check all callsites
 				//duplicate combination, return this
 				if a.log != nil { //debug
 					fmt.Fprintf(a.log, "    EXIST**: "+strconv.Itoa(i+1)+"th: K-CALLSITE -- "+_fnCGNode.contourkFull()+"\n")
@@ -380,13 +380,15 @@ func (a *analysis) existContextForComb(fn *ssa.Function, callersite *callsite, c
 	return existFnIdx, multiFn, 0, true
 }
 
-//bz: if two (existCSs == cur + curCallerCSs) are the same
-func (a *analysis) equalContextForComb(existCSs []*callsite, cur *callsite, curCallerCSs []*callsite) bool {
+//bz: if two contexts are the same: existCSs == cur (with loopID) + curCallerCSs
+func (a *analysis) equalContextForComb(existCSs []*callsite, cur *callsite, curCallerCSs []*callsite, loopID int) bool {
 	for i, existCS := range existCSs {
 		switch i {
-		case 0: //[0] is the most recent
-			if !existCS.equal(cur) {
-				return false
+		case 0: //[0] is the most recent; work for k = 1 only
+		    if loopID <= 0 {
+		    	return existCS.equal(cur)
+			}else{
+				return cur.loopEqual(existCS) && existCS.loopID == loopID
 			}
 		default:
 			if !existCS.equal(curCallerCSs[i-1]) {
@@ -442,6 +444,7 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 				fnkcs := a.createKCallSite(caller.callersite, special)
 				cgn = &cgnode{fn: fn, obj: obj, callersite: fnkcs}
 				a.numOrigins++ //only here really trigger the go
+				fmt.Println(cgn.String())
 			} else { //use caller context
 				cgn = &cgnode{fn: fn, obj: obj, callersite: caller.callersite}
 			}
@@ -1456,7 +1459,7 @@ func (a *analysis) genCallBackCollapse(caller *cgnode, instr ssa.CallInstruction
 	}
 	a.genStaticCallCommon(caller, obj, site, call, result)
 
-	fmt.Println("---> caught (collapsed): ", key, "\t ", targetFn) //bz: key is lib func call; targetFn is app make closure
+	//fmt.Println("---> caught (collapsed): ", key, "\t ", targetFn) //bz: key is lib func call; targetFn is app make closure
 
 	if a.online {
 		return obj
@@ -1710,17 +1713,27 @@ func (a *analysis) genStaticCallAfterMakeClosure(caller *cgnode, instr ssa.CallI
 	if ok { //exist closure add its new context, but no constraints
 	} else if c2id != nil { //has fn as key, but does not have the caller context as value
 		fmt.Println("TODO .... @genStaticCallAfterMakeClosure")
-	} else { //bz: case 1 and 3: we need a new cgn and a new context for origin
+	} else { //bz: case 1 and 3: we need a new cgn and a new context for origin -> this record is stored at a.fn2cgnodeIdx
 		if a.config.Origin && a.isInLoop(fn, instr) {
 			objs = make([]nodeid, 2)
 			//bz: loop problem -> two origin contexts here
-			obj1, _ := a.makeFunctionObjectWithContext(caller, fn, site, nil, 1)
+			_, _, obj1, isNew1 := a.existContext(fn, site, caller, 1)
+			if isNew1 {
+				obj1, _ = a.makeFunctionObjectWithContext(caller, fn, site, nil, 1)
+			}
 			objs[0] = obj1
-			obj2, _ := a.makeFunctionObjectWithContext(caller, fn, site, nil, 2)
+
+			_, _, obj2, isNew2 := a.existContext(fn, site, caller, 2)
+			if isNew2 {
+				obj2, _ = a.makeFunctionObjectWithContext(caller, fn, site, nil, 2)
+			}
 			objs[1] = obj2
 		} else { //kcfa (no loop handling); and origin with no loop
 			objs = make([]nodeid, 1)
-			obj, _ := a.makeFunctionObjectWithContext(caller, fn, site, nil, -1)
+			_, _, obj, isNew := a.existContext(fn, site, caller, 1)
+			if isNew {
+				obj, _ = a.makeFunctionObjectWithContext(caller, fn, site, nil, -1)
+			}
 			objs[0] = obj
 		}
 	}
@@ -1834,7 +1847,7 @@ func (a *analysis) valueNodeInvoke(caller *cgnode, site *callsite, fn *ssa.Funct
 	}
 
 	//similar with valueNode(), created on demand. Instead of a.globalval[], we use a.fn2cgnodeid[] due to contexts
-	_, _, obj, isNew := a.existContext(fn, site, caller) //existContextForComb
+	_, _, obj, isNew := a.existContext(fn, site, caller, -1) //existContextForComb
 	if isNew {
 		var comment string
 		if a.log != nil {
@@ -2535,12 +2548,6 @@ func (a *analysis) isGoNext(instr *ssa.MakeClosure) *ssa.Go {
 						if instr == closure { //these two values should be the same
 							return goInstr
 						}
-					} else if _, ok := val.(*ssa.Function); ok {
-						args := goInstr.Call.Args
-						closure := args[0]    // this should be closure
-						if instr == closure { //these two values should be the same
-							return goInstr
-						}
 					}
 				}
 			}
@@ -3089,7 +3096,7 @@ func (a *analysis) preSolve() {
 		}
 
 		a.curIter++ //update here -> all before preSolve and 0 iteration of perSolve have the same basic block
-		//fmt.Println("end of iteration ", a.curIter-1, " -------------")
+		fmt.Println("end of iteration ", a.curIter-1, " ------------- #origins: ", a.numOrigins)
 	}
 	stop("Presolving")
 }

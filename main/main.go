@@ -15,8 +15,8 @@ non-stop mains:
 
 /go-ethereum/cmd/geth
 
-cockroach: go mod vendor
-hugo: "package io/fs is not in GOROOT" on Go 1.15
+cockroach: 'go mod vendor' problem -> remove dir /cockroach/vendor
+hugo: "package io/fs is not in GOROOT" on Go 1.15 -> need go 1.16
 
  */
 
