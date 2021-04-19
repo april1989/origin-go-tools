@@ -147,17 +147,24 @@ func initial(args []string, cfg *packages.Config) []*ssa.Package {
 		defer gomodFile.Close()
 
 		scanner := bufio.NewScanner(gomodFile)
-		var s string
+		var mod string
 		for scanner.Scan() {
-			s = scanner.Text()
-			break
+			s := scanner.Text()
+			if strings.HasPrefix(s, "module ") {
+				mod = s
+				break //this is the line "module xxx.xxx.xx/xxx"
+			}
+		}
+		if mod == "" {
+			fmt.Println("Cannot find go.mod in default location: ", gomodFile)
+			return nil
 		}
 
 		if err := scanner.Err(); err != nil {
 			panic("Error while scanning go.mod: " + err.Error())
 		}
 
-		parts := strings.Split(s, " ")
+		parts := strings.Split(mod, " ")
 		scope = append(scope, parts[1])
 	}else {  //else: default input .go file with default scope
 		scope = append(scope, "google.golang.org/grpc") //bz: debug purpose
