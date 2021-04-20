@@ -55,8 +55,11 @@ var (
 	total   int64
 
 	//bz: for user uses
-	main2Result map[*ssa.Package]*Result //bz: return value of AnalyzeMultiMains(), skip redo everytime calls Analyze()
+	main2Result     map[*ssa.Package]*Result     //bz: return value of AnalyzeMultiMains(), skip redo everytime calls Analyze()
 	main2ResultWCtx map[*ssa.Package]*ResultWCtx //bz: return value of AnalyzeMultiMains(), skip redo everytime calls Analyze()
+
+	//bz: for my use
+	allFns          map[string]string //bz: when DoCoverage = true: store all funcs within the scope/app, use map instead of array for an easier existence check
 )
 
 // An object represents a contiguous block of memory to which some
@@ -183,6 +186,8 @@ type analysis struct {
 	gencb           []*cgnode                         //bz: queue of functions to generate constraints from genCallBack, we solve these at the end
 	cb2Callers      map[*ssa.Function]*callbackRecord //bz: record the relations among: callback fn, caller lib fn and its context to avoid recursive calls
 	//recvConstraints []*recvConstraint               //bz: record of recvConstraint from genStaticCallCommon and genDynamicCall
+
+	//bz: preSolve-related
 	curIter         int                               //bz: the ith iteration of the loop in preSolve() TODO: maybe move to analysis as a field
 	/** bz:
 	    we do have panics when turn on hvn optimization. panics are due to that hvn wrongly computes sccs.
@@ -412,6 +417,7 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 			DoCallback:    config.DoCallback,  //bz: do callback
 			Level:         config.Level,      //bz: see pointer.Config
 			DoPerformance: config.DoPerformance,
+			DoCoverage:    config.DoCoverage,    //bz: compute (#analyzed fn/#total fn) in a program
 		}
 
 		fmt.Println("\n\n", i, ": "+main.String(), " ... ")
@@ -443,6 +449,10 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 	fmt.Println("Max: ", maxTime.String()+".")
 	fmt.Println("Min: ", minTime.String()+".")
 	fmt.Println("Avg: ", float32(total)/float32(len(config.Mains))/float32(1000), "s.")
+
+	if config.DoCoverage { //bz: total coverage
+		computeTotalCoverage()
+	}
 
 	results = main2Result
 	return results, nil
@@ -547,6 +557,10 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool) (result *ResultWCtx, err er
 
 	if doPrintConfig {
 		printConfig(a.config)
+	}
+
+	if a.config.DoCoverage && allFns == nil {
+		a.collectFnsWScope()
 	}
 
 	if a.log != nil {
@@ -713,10 +727,19 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool) (result *ResultWCtx, err er
 		//}
 		//fmt.Println("#tracked types (totol num): ", numTyp)
 		fmt.Println("#tracked types (totol num): trackAll") //bz: updated a.track = trackAll, skip this number
-		fmt.Println("#origins (totol num): ", a.numOrigins+1) //bz: main is not included here
+		fmt.Println("#origins (totol num): ", a.numOrigins + 1) //bz: main is not included here
 		fmt.Println("#objs (totol num): ", a.numObjs)
 		fmt.Println("\nCall Graph: (cgnode based: function + context) \n#Nodes: ", len(a.result.CallGraph.Nodes))
 		fmt.Println("#Edges: ", a.result.CallGraph.GetNumEdges())
+
+		if a.config.DoCallback {
+			fmt.Println("\nCallback: \n#Synthetic Fn: ", len(a.callbacks))
+			fmt.Println("#Callback Fn: ", len(a.cb2Callers))
+		}
+
+		if a.config.DoCoverage {
+			a.computeCoverage()
+		}
 	}
 
 	return a.result, nil
@@ -931,6 +954,49 @@ func (a *analysis) showCounts() {
 		}
 		fmt.Fprintf(a.log, "# ptsets:\t%d\n", len(m))
 	}
+}
+
+//bz: when DoCoverage = true: collect all functions in the scope, stored in allFns
+func (a *analysis) collectFnsWScope() {
+	allFns = make(map[string]string)
+	for _, T := range a.prog.RuntimeTypes() {
+		_type := T.String()
+		if a.withinScope(_type) {
+			mset := a.prog.MethodSets.MethodSet(T)
+			for i, n := 0, mset.Len(); i < n; i++ {
+				m := a.prog.MethodValue(mset.At(i))
+				s := m.String()
+				allFns[s] = s
+			}
+		}
+	}
+}
+
+//bz: when DoCoverage = true: compute (#analyzed fn/#total fn) in a program for this main
+func (a *analysis) computeCoverage() {
+	covered := 0
+	for fn, _ := range a.result.CallGraph.Fn2CGNode {
+		if _, ok := allFns[fn.String()]; ok {
+			covered++
+		}
+	}
+	fmt.Println("\n#Coverage: ", (float64(covered)/float64(len(allFns)))*100, "%\t (#total: ", len(allFns), ", #analyzed: ", covered, ")")
+}
+
+//bz: when DoCoverage = true: compute (#analyzed fn/#total fn) in a program for ALL mains
+func computeTotalCoverage() {
+	covered := make(map[string]string)
+	for _, result := range main2ResultWCtx {
+		for fn, _ := range result.CallGraph.Fn2CGNode {
+			s := fn.String()
+			if _, ok := allFns[fn.String()]; ok {
+				if _, ok := covered[s]; !ok {
+					covered[s] = s
+				}
+			}
+		}
+	}
+	fmt.Println("Coverage: ", (float64(len(covered))/float64(len(allFns)))*100, "%\t (#total: ", len(allFns), ", #analyzed: ", len(covered), ")")
 }
 
 //bz: stay here as a reference

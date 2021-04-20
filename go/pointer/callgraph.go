@@ -529,11 +529,10 @@ func equalCallSite(csa []*callsite, csb []*callsite) bool {
 	if len(csa) != len(csb) {
 		return false
 	}
-	for _, cs1 := range csa {
-		for _, cs2 := range csb {
-			if !cs1.equal(cs2) {
-				return false
-			}
+	size := len(csa)
+	for i:= 0; i<size; i++ {
+		if !csa[i].equal(csb[i]) {
+			return false
 		}
 	}
 	return true

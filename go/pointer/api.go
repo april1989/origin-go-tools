@@ -87,6 +87,7 @@ type Config struct {
 	imports       []string //bz: internal use: store all import pkgs in a main
 	Level         int      //bz: level == 0: traverse all app and lib, but with different ctx; level == 1: traverse 1 level lib call; level == 2: traverse 2 leve lib calls; no other option now
 	DoPerformance bool     //bz: if we output performance related info
+	DoCoverage    bool     //bz: compute (#analyzed fn/#total fn) in a program
 }
 
 //bz: user API: race checker, added when ptaconfig.Level == 2

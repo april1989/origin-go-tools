@@ -28,7 +28,8 @@ var (
 	tUnsafePtr = types.Typ[types.UnsafePointer]
 )
 
-//bz: used when DoCollapse = true: collapse the context of these functions, because they are used too much in a program
+//bz: NOT USED NOW.
+// used when DoCollapse = true: collapse the context of these functions, because they are used too much in a program
 // the following order is the descendent order of usage frequency of the function
 var collapseFns = [...]string{
 	//from tidb
@@ -40,6 +41,8 @@ var collapseFns = [...]string{
 	"(*golang.org/x/sync/singleflight.Group).Do",
 	"strings.TrimLeftFunc",
 }
+
+var origins []string //bz: debug: record the origin cgnode
 
 // ---------- Node creation ----------
 
@@ -331,7 +334,7 @@ func (a *analysis) makeFunctionObjectWithContext(caller *cgnode, fn *ssa.Functio
 
 //bz: a summary of existContextXXX(); if loopID = -1 -> loopID is not needed
 func (a *analysis) existContext(fn *ssa.Function, callersite *callsite, caller *cgnode, loopID int) ([]int, bool, nodeid, bool) {
-	if _, ok := callersite.instr.(*ssa.Go); callersite == nil || ok {
+	if _, ok := callersite.instr.(*ssa.Go); callersite != nil && ok {
 		return a.existContextForComb(fn, callersite, caller, loopID)
 	} else {
 		return a.existContextFor(fn, caller)
@@ -385,9 +388,9 @@ func (a *analysis) equalContextForComb(existCSs []*callsite, cur *callsite, curC
 	for i, existCS := range existCSs {
 		switch i {
 		case 0: //[0] is the most recent; work for k = 1 only
-		    if loopID <= 0 {
-		    	return existCS.equal(cur)
-			}else{
+			if loopID == 0 { //no loop
+				return existCS.equal(cur)
+			} else { //from a loop
 				return cur.loopEqual(existCS) && existCS.loopID == loopID
 			}
 		default:
@@ -438,13 +441,15 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 			} else if goInstr, ok := callersite.instr.(*ssa.Go); ok { //case 1 and 3: this is a *ssa.GO without closure
 				special := callersite
 				special.goInstr = goInstr //update
-				if loopID != -1 {         //handle loop TODO: will this affect exist checking?
+				if loopID > 0 {         //handle loop TODO: will this affect exist checking?
 					special = &callsite{targets: callersite.targets, instr: callersite.instr, loopID: loopID, goInstr: goInstr}
 				}
 				fnkcs := a.createKCallSite(caller.callersite, special)
 				cgn = &cgnode{fn: fn, obj: obj, callersite: fnkcs}
 				a.numOrigins++ //only here really trigger the go
-				fmt.Println(cgn.String())
+
+				origins = append(origins, cgn.String())
+				fmt.Println(cgn.String()) //bz: debug
 			} else { //use caller context
 				cgn = &cgnode{fn: fn, obj: obj, callersite: caller.callersite}
 			}
@@ -1367,7 +1372,7 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 func (a *analysis) genCallBackCollapse(caller *cgnode, instr ssa.CallInstruction, fn *ssa.Function, site *callsite, call *ssa.CallCommon,
 	targetFn ssa.Value, v ssa.Value) nodeid {
 
-	key := fn.String() //the key of a.globalcb
+	key := fn.String()      //the key of a.globalcb
 	spawn := HasGoSpawn(fn) //check if fake function has spawned its own go routine
 
 	//check if fake function already exists
@@ -1403,7 +1408,7 @@ func (a *analysis) genCallBackCollapse(caller *cgnode, instr ssa.CallInstruction
 		}
 
 		id = a.addNodes(fakeFn.Type(), fakeFn.String()) //fn id
-		a.setValueNode(fakeFn, id, nil)                  //record
+		a.setValueNode(fakeFn, id, nil)                 //record
 
 		//create a cgnode
 		obj := a.nextNode()
@@ -1682,7 +1687,7 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 			} else {
 				//for kcfa: we need a new contour
 				//for origin: whatever left, we use caller context
-				obj, _ = a.makeFunctionObjectWithContext(caller, fn, site, nil, -1)
+				obj, _ = a.makeFunctionObjectWithContext(caller, fn, site, nil, 0)
 			}
 		} else {
 			obj = a.objectNode(nil, fn) // shared contour
@@ -1730,9 +1735,9 @@ func (a *analysis) genStaticCallAfterMakeClosure(caller *cgnode, instr ssa.CallI
 			objs[1] = obj2
 		} else { //kcfa (no loop handling); and origin with no loop
 			objs = make([]nodeid, 1)
-			_, _, obj, isNew := a.existContext(fn, site, caller, 1)
+			_, _, obj, isNew := a.existContext(fn, site, caller, 0)
 			if isNew {
-				obj, _ = a.makeFunctionObjectWithContext(caller, fn, site, nil, -1)
+				obj, _ = a.makeFunctionObjectWithContext(caller, fn, site, nil, 0)
 			}
 			objs[0] = obj
 		}
@@ -1847,14 +1852,14 @@ func (a *analysis) valueNodeInvoke(caller *cgnode, site *callsite, fn *ssa.Funct
 	}
 
 	//similar with valueNode(), created on demand. Instead of a.globalval[], we use a.fn2cgnodeid[] due to contexts
-	_, _, obj, isNew := a.existContext(fn, site, caller, -1) //existContextForComb
+	_, _, obj, isNew := a.existContext(fn, site, caller, 0) //existContextForComb
 	if isNew {
 		var comment string
 		if a.log != nil {
 			comment = fn.String()
 		}
 		var id = a.addNodes(fn.Type(), comment) //bz: id + 1 = obj
-		if obj = a.objectNodeSpecial(caller, nil, site, fn, -1); obj != 0 {
+		if obj = a.objectNodeSpecial(caller, nil, site, fn, 0); obj != 0 {
 			a.addressOf(fn.Type(), id, obj)
 		}
 		a.setValueNode(fn, id, nil) //bz: do we need this?? for now, no since we will not use it
@@ -2064,7 +2069,7 @@ func (a *analysis) valueNodeClosure(cgn *cgnode, closure *ssa.MakeClosure, v ssa
 		} else { // create a single cgnode
 			ids = make([]nodeid, 1)
 			objs = make([]nodeid, 1)
-			id, obj := a.valueNodeClosureInternal(cgn, closure, v, -1, comment)
+			id, obj := a.valueNodeClosureInternal(cgn, closure, v, 0, comment)
 			//udpate
 			ids[0] = id
 			objs[0] = obj
@@ -2978,53 +2983,51 @@ func (a *analysis) generate() {
 // this leads to so bad performance
 // try -> we create a list of type-tagged obj, match the type of obj with the receiver type of each invokeConstraint, if matched, we do genInstr() with the given obj and callersite
 //        because probably this obj will be propagated to the receiver later during solve(); we do the renumbering and HVN afterwards, which probably will not mess up the two opts like before
+// This generates an over-approximate result than on-the-fly
 func (a *analysis) preSolve() {
-	start("Presolving")
+	start("My PreSolving")
 	if a.log != nil {
-		fmt.Fprintln(a.log, "\n\n\n==== Presolving constraints")
+		fmt.Fprintln(a.log, "\n\n\n==== PreSolving Constraints")
 	}
 
 	cIdx := -1                                               //for this iteration, what are the start point of constraints (cIdx) to presolve
 	cNextIdx := 0                                            //for next iteration
+	nIdx := 0                                                //for next iteration, a.nodes traversal
 	iface2invoke := make(map[types.Type][]*invokeConstraint) //implicitly supplied to the concrete method implementation <-> [] of its invoked constraints
-	updated := true                                          //whether this iteration has solved any invokes
+	newCons := true                                          //whether this iteration has new invoke constraints
+	newNodes := true                                         //whether this iteration has new nodes created
+	newCB := true                                            //whether this iteration has new callback functions created
+	newFn := true                                            //whether this iteration has new missing functions created
 
-	for cIdx < cNextIdx && updated {
+	for cIdx < cNextIdx || newCons || newNodes || newCB || newFn {
 		//update idx: traverse from cidx to len(a.xxx) for this iteration
 		cIdx = cNextIdx
 		cNextIdx = len(a.constraints)
-		updated = false
+		newCons = false
+		newNodes = false
+		newCB = false
+		newFn = false
 		if a.log != nil {
 			fmt.Fprintln(a.log, "Iteration ", a.curIter, ": From", cIdx, " to ", cNextIdx)
 		}
-		////clear and use for next iteration
-		//recvConstraints := a.recvConstraints
-		//a.recvConstraints = nil
 
 		//organize invoke constraints
-		for i := cIdx; i < cNextIdx; i++ {
-			c := a.constraints[i]
-			if invoke, ok := c.(*invokeConstraint); ok {
-				typ := a.nodes[invoke.iface].typ //this is an interface
-				invokes := iface2invoke[typ]
-				if invokes != nil { //exist mapping
-					invokes = append(invokes, invoke)
-				} else { //new iface
-					invokes = make([]*invokeConstraint, 1)
-					invokes[0] = invoke
-				}
-				iface2invoke[typ] = invokes
-			}
-		}
+		newCons = a.organizeInvokeConstraints(cIdx, cNextIdx, iface2invoke)
 
 		//check if obj can be receiver: traverse all is necessary
-		for _, node := range a.nodes {
+		start := 0
+		if !newCons { //bz: if there is no new invoke constraints, we just traverse diff nodes on all existing invokes
+			start = nIdx
+		}
+		numNodes := len(a.nodes)
+		for i := start; i < numNodes; i++ {
+			node := a.nodes[i]
 			if node.obj == nil {
 				continue //not an obj
 			}
 			flags := node.obj.flags
-			if flags&otTagged == 0 && flags&otIndirect != 0 {
-				continue //not-tagged obj and not indirect tagged object -> cannot be used during a.solve(), will panic
+			if flags&otTagged == 0 || flags&otIndirect != 0 {
+				continue //not-tagged obj or indirect tagged object -> cannot be used during a.solve(), will panic
 			}
 
 			tDyn := node.typ                                               //the type of this obj: real struct type
@@ -3040,8 +3043,6 @@ func (a *analysis) preSolve() {
 						fmt.Fprintln(a.log, "Handle invokes for tDyn: ", tDyn, " \n\tiface: ", ityp)
 					}
 
-					//updated
-					updated = true
 					for _, c := range invokes { //similar to func (c *invokeConstraint) solve()
 						fn := a.prog.LookupMethod(tDyn, c.method.Pkg(), c.method.Name())
 						if fn == nil {
@@ -3051,35 +3052,21 @@ func (a *analysis) preSolve() {
 							continue
 						}
 
-						fnObj := a.globalobj[fn] // dynamic calls use shared contour  ---> bz: fnObj is nodeid
-						if fnObj == 0 {          //a.objectNode(fn) was not called during gen phase -> call genInstr() here to create its constraints and everything
-							a.genMissingFn(fn, c.caller, c.site, "presolve")
+						var fnObj nodeid
+						if c.site != nil && c.caller != nil {
+							_, _, fnObj, _ = a.existContext(fn, c.site, c.caller, 0) //check existence
+						} else {
+							fnObj = a.globalobj[fn] // dynamic calls use shared contour  ---> bz: fnObj is nodeid
+						}
+						if fnObj == 0 { //a.objectNode(fn) was not called during gen phase -> call genInstr() here to create its constraints and everything
+							fnObj = a.genMissingFn(fn, c.caller, c.site, "presolve")
+							if fnObj != 0 { //return 0 for out of scope functions
+								newFn = true
+							}
 						}
 					}
-
 				}
 			}
-
-			////from genStaticCallCommon and genDynamicCall
-			//for _, recvC := range recvConstraints {
-			//	typ := recvC.iface
-			//	if tDyn == typ {
-			//		method := recvC.method
-			//		fn := a.prog.LookupMethod(tDyn, method.Pkg.Pkg, method.Name())
-			//		if fn == nil {
-			//			if a.log != nil {
-			//				fmt.Fprintf(a.log, "\t -> n%d: no ssa.Function for %s\n", typ, method)
-			//			}
-			//			continue
-			//		}
-			//		fmt.Println(fn)
-			//
-			//		fnObj := a.globalobj[fn] // dynamic calls use shared contour  ---> bz: fnObj is nodeid
-			//		if fnObj == 0 {          //a.objectNode(fn) was not called during gen phase -> call genInstr() here to create its constraints and everything
-			//			a.genMissingFn(fn, recvC.caller, recvC.site)
-			//		}
-			//	}
-			//}
 		}
 
 		if a.log != nil {
@@ -3088,20 +3075,53 @@ func (a *analysis) preSolve() {
 
 		//bz: from genCallBack, we solve these at the end, since preSolve() may also add new calls (multiple time in the above loop)
 		//    to the following cgns
-		for len(a.gencb) > 0 {
-			cgn := a.gencb[0]
-			a.gencb = a.gencb[1:]
-			a.genFunc(cgn)
-			updated = true
+		if len(a.gencb) > 0 {
+			newCB = true
+			for len(a.gencb) > 0 {
+				cgn := a.gencb[0]
+				a.gencb = a.gencb[1:]
+				a.genFunc(cgn)
+			}
+		}
+
+		if numNodes < len(a.nodes) { //bz: might have new obj created
+			newNodes = true
+			nIdx = numNodes
 		}
 
 		a.curIter++ //update here -> all before preSolve and 0 iteration of perSolve have the same basic block
-		fmt.Println("end of iteration ", a.curIter-1, " ------------- #origins: ", a.numOrigins)
+		fmt.Println("end of iteration ", a.curIter-1, " ------------- #origins: ", a.numOrigins, " ------------- #constraints: ", len(a.constraints),
+			" ------------- #face2invokes: ", len(iface2invoke), " ------------- #nodes: ", len(a.nodes))
 	}
-	stop("Presolving")
+	stop("My PreSolving")
+}
+
+func (a *analysis) organizeInvokeConstraints(cIdx, cNextIdx int, iface2invoke map[types.Type][]*invokeConstraint) bool {
+	if cIdx == cNextIdx {
+		return false //nothing new
+	}
+
+	updated := false
+	for i := cIdx; i < cNextIdx; i++ {
+		c := a.constraints[i]
+		if invoke, ok := c.(*invokeConstraint); ok {
+			typ := a.nodes[invoke.iface].typ //this is an interface
+			invokes := iface2invoke[typ]
+			if invokes != nil { //exist mapping
+				invokes = append(invokes, invoke)
+			} else { //new iface
+				invokes = make([]*invokeConstraint, 1)
+				invokes[0] = invoke
+			}
+			iface2invoke[typ] = invokes
+			updated = true
+		}
+	}
+	return updated
 }
 
 //bz: generate constraints and everything for fn, since they are not created during generate()@go/pointer/gen.go:2630
+// return 0 for out of scope functions
 func (a *analysis) genMissingFn(fn *ssa.Function, caller *cgnode, site *callsite, where string) nodeid {
 	if a.log != nil { //debug
 		fmt.Fprintln(a.log, "\n------------- GENERATING INVOKE FUNC HERE: (", where, ") "+fn.String()+" ------------------------------ ")
@@ -3134,7 +3154,7 @@ func (a *analysis) genMissingFn(fn *ssa.Function, caller *cgnode, site *callsite
 				fnObjs := a.genCallBack(caller, instr, fn, site, call)
 				fmt.Println(fnObjs)
 			}
-			return 0 //not consider
+			return 0 //not consider here
 		}
 
 		fnObj = a.genInvokeOnline(nil, nil, fn) //bz: if reaches here, fn can only be lib from import

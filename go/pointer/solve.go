@@ -372,7 +372,7 @@ func (c *invokeConstraint) solve(a *analysis, delta *nodeset) {
 		if fnObj == 0 { //bz: because a.objectNode(fn) was not called during gen phase or fn is stored at other fields
 			//bz: this should not create new constraints anymore; just retrieve the existing nodeid for fn
 			fnObj = a.genMissingFn(fn, c.caller, c.site, "online")
-			if fnObj == 0 {
+			if fnObj == 0 { //return 0 for out of scope functions
 				continue
 			}
 		} else {
@@ -380,7 +380,7 @@ func (c *invokeConstraint) solve(a *analysis, delta *nodeset) {
 				fmt.Fprintf(a.log, "!! ALREADY EXIST INVOKE FUNC: "+fn.String()+"\n")
 			}
 		}
-		// bz: back to normal workflow -> context-insensitive
+		// bz: back to normal workflow
 		c.eachSolve(a, fnObj, sig, v)
 	}
 }

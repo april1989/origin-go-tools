@@ -172,7 +172,8 @@ func initial(args []string, cfg *packages.Config) []*ssa.Package {
 		scope = append(scope, parts[1])
 	}else {  //else: default input .go file with default scope
 		//scope = append(scope, "google.golang.org/grpc") //bz: debug purpose
-		scope = append(scope, "github.com/pingcap/tidb") //bz: debug purpose
+		//scope = append(scope, "github.com/pingcap/tidb") //bz: debug purpose
+		scope = append(scope, "k8s.io/kubernetes") //bz: debug purpose
 	}
 
 	//initial set
@@ -235,14 +236,15 @@ func DoSeq(mains []*ssa.Package) {
 		Origin: true, //origin
 		//shared config
 		K:             1,
-		LimitScope:    true,                              //bz: only consider app methods now -> no import will be considered
-		DEBUG:         false,                             //bz: rm all printed out info in console
-		Scope:         scope,                             //bz: analyze scope + input path
-		Exclusion:     excludedPkgs,                      //bz: copied from race_checker if any
-		TrackMore:     true,                              //bz: track pointers with all types
-		Level:         level,                             //bz: see pointer.Config
-		DoCallback:    flags.DoCallback, //bz: sythesize callback
-		DoPerformance: flags.DoPerforamnce,               //bz: i want to see this performance
+		LimitScope:    true,                //bz: only consider app methods now -> no import will be considered
+		DEBUG:         false,               //bz: rm all printed out info in console
+		Scope:         scope,               //bz: analyze scope + input path
+		Exclusion:     excludedPkgs,        //bz: copied from race_checker if any
+		TrackMore:     true,                //bz: track pointers with all types
+		Level:         level,               //bz: see pointer.Config
+		DoCallback:    flags.DoCallback,    //bz: sythesize callback
+		DoPerformance: flags.DoPerforamnce, //bz: i want to see this performance
+		DoCoverage:    flags.DoCoverage,    //bz: compute (#analyzed fn/#total fn) in a program
 	}
 
 	start := time.Now()                                    //performance
@@ -458,15 +460,16 @@ func DoEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 		//CallSiteSensitive: true, //kcfa
 		Origin: true, //origin
 		//shared config
-		K:             1,                                 //bz: how many level of origins? default = 1
-		LimitScope:    true,                              //bz: only consider app methods now -> no import will be considered
-		DEBUG:         false,                             //bz: rm all printed out info in console
-		Scope:         scope,                             //bz: analyze scope + input path
-		Exclusion:     excludedPkgs,                      //bz: copied from race_checker if any
-		TrackMore:     true,                              //bz: track pointers with types declared in Analyze Scope
-		Level:         flags.DoLevel,                     //bz: see pointer.Config
-		DoCallback:    flags.DoCallback, //bz: sythesize callback
-		DoPerformance: flags.DoPerforamnce,               //bz: if we output performance related info
+		K:             1,                   //bz: how many level of origins? default = 1
+		LimitScope:    true,                //bz: only consider app methods now -> no import will be considered
+		DEBUG:         false,               //bz: rm all printed out info in console
+		Scope:         scope,               //bz: analyze scope + input path
+		Exclusion:     excludedPkgs,        //bz: copied from race_checker if any
+		TrackMore:     true,                //bz: track pointers with types declared in Analyze Scope
+		Level:         flags.DoLevel,       //bz: see pointer.Config
+		DoCallback:    flags.DoCallback,    //bz: sythesize callback
+		DoPerformance: flags.DoPerforamnce, //bz: if we output performance related info
+		DoCoverage:    flags.DoCoverage,    //bz: compute (#analyzed fn/#total fn) in a program
 	}
 
 	//*** compute pta here
@@ -616,7 +619,7 @@ func doEachMainDefault(i int, main *ssa.Package) *default_algo.Result {
 	return result
 }
 
-//bz: for default
+//bz: for default algo
 //    exclude root, init and main has root as caller
 func countReachUnreachFunctions(result *default_algo.Result) (map[*ssa.Function]*ssa.Function, map[*ssa.Function]*ssa.Function) {
 	r := result
