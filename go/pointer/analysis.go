@@ -60,6 +60,7 @@ var (
 
 	//bz: for my use
 	allFns          map[string]string //bz: when DoCoverage = true: store all funcs within the scope/app, use map instead of array for an easier existence check
+	showUnCoveredFn = true            //bz: whether print out those functions that we did not analyze
 )
 
 // An object represents a contiguous block of memory to which some
@@ -342,6 +343,11 @@ func printConfig(config *Config) {
 	} else {
 		fmt.Println(" *** Default Type Tracking (skip basic types) *** ")
 	}
+	if config.DoCallback {
+		fmt.Println(" *** Do Callback & Synthetic Lib Fn *** ")
+	} else {
+		fmt.Println(" *** No Callback *** ")
+	}
 
 	if config.DoPerformance { //bz: this is from my main, i want them to print out
 		if optRenumber {
@@ -561,6 +567,10 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool) (result *ResultWCtx, err er
 
 	if a.config.DoCoverage && allFns == nil {
 		a.collectFnsWScope()
+		//for fn, _ := range allFns { //bz: debug
+		//	fmt.Println(fn)
+		//}
+		//return nil, fmt.Errorf("done")
 	}
 
 	if a.log != nil {
@@ -726,6 +736,7 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool) (result *ResultWCtx, err er
 		//	}
 		//}
 		//fmt.Println("#tracked types (totol num): ", numTyp)
+		fmt.Println("#fns (totol num): ", len(a.result.CallGraph.Fn2CGNode))
 		fmt.Println("#tracked types (totol num): trackAll") //bz: updated a.track = trackAll, skip this number
 		fmt.Println("#origins (totol num): ", a.numOrigins + 1) //bz: main is not included here
 		fmt.Println("#objs (totol num): ", a.numObjs)
@@ -740,6 +751,15 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool) (result *ResultWCtx, err er
 		if a.config.DoCoverage {
 			a.computeCoverage()
 		}
+
+		//fmt.Println("\n\n=================================== #", len(a.result.CallGraph.Fn2CGNode)) //bz: debug
+		//for fn, _ := range a.result.CallGraph.Fn2CGNode {
+		//	s := fn.String()
+		//	if strings.HasPrefix(s, "(*reflect.rtype)") {
+		//		continue
+		//	}
+		//	fmt.Println(s)
+		//}
 	}
 
 	return a.result, nil
@@ -970,33 +990,88 @@ func (a *analysis) collectFnsWScope() {
 			}
 		}
 	}
+	for _, pkg := range a.prog.AllPackages() {
+		for _, mem := range pkg.Members {
+			if fn, ok := mem.(*ssa.Function); ok {
+				if a.withinScope(fn.Pkg.String()) {
+					s := fn.String()
+					allFns[s] = s
+				}
+			}
+		}
+	}
 }
 
 //bz: when DoCoverage = true: compute (#analyzed fn/#total fn) in a program for this main
 func (a *analysis) computeCoverage() {
 	covered := 0
+	closure := 0
+	other := 0
 	for fn, _ := range a.result.CallGraph.Fn2CGNode {
-		if _, ok := allFns[fn.String()]; ok {
+		s := fn.String()
+		if _, ok := allFns[s]; ok {
 			covered++
+		} else {
+			//fmt.Println(fn.String())
+			subs := strings.Split(s, "$")
+			if len(subs) == 1 {
+				other++
+			}else {
+				sub := subs[0]
+				if _, ok := allFns[sub]; ok {
+					closure++
+				}
+			}
 		}
+		//s := fn.String() //bz: debug
+		//if strings.HasPrefix(s, "(*reflect.rtype)") {
+		//	continue
+		//}
+		//fmt.Println(s)
 	}
-	fmt.Println("\n#Coverage: ", (float64(covered)/float64(len(allFns)))*100, "%\t (#total: ", len(allFns), ", #analyzed: ", covered, ")")
+	fmt.Println("\n#Coverage: ", (float64(covered)/float64(len(allFns)))*100, "%\t (#total: ",
+		len(allFns), ", #analyzed: ", covered, ", #analyzed$: ", closure, ", #others: ", other, ")") //others can be lib, reflect, <root>
 }
 
 //bz: when DoCoverage = true: compute (#analyzed fn/#total fn) in a program for ALL mains
 func computeTotalCoverage() {
 	covered := make(map[string]string)
+	closure := make(map[string]string)
+	other := make(map[string]string)
 	for _, result := range main2ResultWCtx {
 		for fn, _ := range result.CallGraph.Fn2CGNode {
 			s := fn.String()
-			if _, ok := allFns[fn.String()]; ok {
+			if _, ok := allFns[s]; ok {
 				if _, ok := covered[s]; !ok {
 					covered[s] = s
+				}else {
+					subs := strings.Split(s, "$")
+					if len(subs) == 1 {
+						other[s] = s
+					}else {
+						sub := subs[0]
+						if _, ok := allFns[sub]; ok {
+							closure[s] = s
+						}
+					}
 				}
 			}
 		}
 	}
-	fmt.Println("Coverage: ", (float64(len(covered))/float64(len(allFns)))*100, "%\t (#total: ", len(allFns), ", #analyzed: ", len(covered), ")")
+	fmt.Println("Coverage: ", (float64(len(covered))/float64(len(allFns)))*100, "%\t (#total: ", len(allFns),
+		", #analyzed: ", len(covered), ", #analyzed$: ", len(closure), ", #others: ", len(other), ")") //others can be lib, reflect, <root>
+
+	if showUnCoveredFn {
+		fmt.Println("====================================================================")
+		fmt.Println("DUMP UNCOVERED FUNCTIONS: (#", len(allFns) - len(covered), ")")
+		for _, fn := range allFns {
+			if _, ok := covered[fn]; ok {
+				continue
+			}
+			fmt.Println(fn)
+		}
+		fmt.Println("====================================================================")
+	}
 }
 
 //bz: stay here as a reference

@@ -42,7 +42,7 @@ var collapseFns = [...]string{
 	"strings.TrimLeftFunc",
 }
 
-var origins []string //bz: debug: record the origin cgnode
+//var origins []string //bz: debug: record the origin cgnode
 
 // ---------- Node creation ----------
 
@@ -448,8 +448,8 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 				cgn = &cgnode{fn: fn, obj: obj, callersite: fnkcs}
 				a.numOrigins++ //only here really trigger the go
 
-				origins = append(origins, cgn.String())
-				fmt.Println(cgn.String()) //bz: debug
+				//origins = append(origins, cgn.String())
+				//fmt.Println(cgn.String()) //bz: debug
 			} else { //use caller context
 				cgn = &cgnode{fn: fn, obj: obj, callersite: caller.callersite}
 			}
@@ -996,9 +996,9 @@ func (a *analysis) withinScope(method string) bool {
 			}
 			if len(a.config.Scope) > 0 { //project scope
 				for _, pkg := range a.config.Scope {
-					if strings.Contains(method, pkg) && !strings.Contains(method, "google.golang.org/grpc/grpclog") {
+					if strings.Contains(method, pkg) {
 						return true
-					}
+					} // && !strings.Contains(method, "google.golang.org/grpc/grpclog")
 				}
 			}
 			//if len(a.config.imports) > 0 { //user assigned scope
@@ -2974,7 +2974,7 @@ func (a *analysis) generate() {
 	a.localval = nil
 	a.localobj = nil
 
-	a.preSolve()
+	//a.preSolve()
 
 	stop("Constraint generation")
 }
@@ -3003,10 +3003,12 @@ func (a *analysis) preSolve() {
 		//update idx: traverse from cidx to len(a.xxx) for this iteration
 		cIdx = cNextIdx
 		cNextIdx = len(a.constraints)
+		//reset all bools
 		newCons = false
 		newNodes = false
 		newCB = false
 		newFn = false
+
 		if a.log != nil {
 			fmt.Fprintln(a.log, "Iteration ", a.curIter, ": From", cIdx, " to ", cNextIdx)
 		}
@@ -3073,8 +3075,7 @@ func (a *analysis) preSolve() {
 			fmt.Fprintf(a.log, "\nAnalyze cgns from genCallBack(). \n")
 		}
 
-		//bz: from genCallBack, we solve these at the end, since preSolve() may also add new calls (multiple time in the above loop)
-		//    to the following cgns
+		//bz: from genCallBack, we solve these at the end, since preSolve() may also add new calls (multiple time in the above loop) to the following cgns
 		if len(a.gencb) > 0 {
 			newCB = true
 			for len(a.gencb) > 0 {
@@ -3096,6 +3097,7 @@ func (a *analysis) preSolve() {
 	stop("My PreSolving")
 }
 
+//bz: organize invoke constraints
 func (a *analysis) organizeInvokeConstraints(cIdx, cNextIdx int, iface2invoke map[types.Type][]*invokeConstraint) bool {
 	if cIdx == cNextIdx {
 		return false //nothing new
@@ -3107,7 +3109,7 @@ func (a *analysis) organizeInvokeConstraints(cIdx, cNextIdx int, iface2invoke ma
 		if invoke, ok := c.(*invokeConstraint); ok {
 			typ := a.nodes[invoke.iface].typ //this is an interface
 			invokes := iface2invoke[typ]
-			if invokes != nil { //exist mapping
+			if invokes != nil { //exist mapping -> we are always checking new constraints, there should be no duplicate invokes appended here
 				invokes = append(invokes, invoke)
 			} else { //new iface
 				invokes = make([]*invokeConstraint, 1)

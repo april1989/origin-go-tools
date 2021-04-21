@@ -14,7 +14,7 @@ var DoDefault = false //bz: only Do default
 var DoCompare = false //bz: this has a super long time
 var TimeLimit time.Duration //bz: time limit, unit: ?h?m?s
 var DoLevel = 0 //bz: set the analysis scope to level ? default = 0
-var DoCallback = true //bz: simplify callback fn
+var DoCallback = false //bz: simplify callback fn
 var DoCollapse = false //bz: collapse the lib function with its callback, no matter what are the context of caller of lib func
 
 //my use
