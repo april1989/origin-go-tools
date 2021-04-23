@@ -260,8 +260,7 @@ extractQueries:
 }
 
 //bz: when run under proj dir, find all mains
-func handleDriverUnderDir(restPatterns []string, patterns []string, response *responseDeduper, cfg *Config,
-	ctx context.Context) {
+func handleDriverUnderDir(restPatterns []string, patterns []string, response *responseDeduper, cfg *Config, ctx context.Context) {
 	skip := false
 	//bz: EXCPETION: we will not traverse under proj dir if input is a specific go file
 	if len(restPatterns) == 1 && len(patterns) == 1 {
@@ -294,7 +293,7 @@ func handleDriverUnderDir(restPatterns []string, patterns []string, response *re
 
 			if len(subdirs) > 0 {
 				//goListDriverRecursive(subdirs, size, response, cfg, ctx, restPatterns)
-				goListDriverRecursiveSeq(subdirs, len(subdirs) , response, cfg, ctx, restPatterns)
+				goListDriverRecursiveSeq(subdirs, response, cfg, ctx, restPatterns)
 			}
 		} else { //default: Unix (MacOS + Ubuntu)
 			cmd := exec.Command("find", ".", "-type", "d")
@@ -312,14 +311,14 @@ func handleDriverUnderDir(restPatterns []string, patterns []string, response *re
 
 			if len(subdirs) - 2 > 0 {
 				//goListDriverRecursive(subdirs, size, response, cfg, ctx, restPatterns)
-				goListDriverRecursiveSeq(subdirs, len(subdirs) - 2, response, cfg, ctx, restPatterns)
+				goListDriverRecursiveSeq(subdirs, response, cfg, ctx, restPatterns)
 			}
 		}
 	}
 }
 
 //bz: let's do this sequentially ....
-func goListDriverRecursiveSeq(subdirs []string, size int, response *responseDeduper, cfg *Config,
+func goListDriverRecursiveSeq(subdirs []string, response *responseDeduper, cfg *Config,
 	ctx context.Context, restPatterns []string) {
 	subdirs = removeDuplicateValues(subdirs)
 	for i := 1; i < len(subdirs)-1; i++ {    //bz: 1st element is ".", the last element is "", skip them
@@ -337,7 +336,7 @@ func goListDriverRecursiveSeq(subdirs []string, size int, response *responseDedu
 			Logf:    cfg.Logf,
 			Dir:     realDir,
 			Env:     cfg.Env,
-			Tests:   false,
+			Tests:   cfg.Tests,
 		}
 		_state := &golistState{
 			cfg:        _cfg,
@@ -375,7 +374,7 @@ func goListDriverRecursive(subdirs []string, size int, response *responseDeduper
 			Logf:    cfg.Logf,
 			Dir:     realDir,
 			Env:     cfg.Env,
-			Tests:   false,
+			Tests:   cfg.Tests,
 		}
 		_state := &golistState{
 			cfg:        _cfg,
@@ -608,7 +607,7 @@ func (state *golistState) createDriverResponse(words ...string) (*driverResponse
 		}
 
 		if p.Name == "" && p.ImportPath == "." {
-			continue //bz: this is the top dir when we run race_checker under a dir, ignore this.
+			continue //bz: this is the root dir when we run race_checker under this dir, ignore this.
 		}
 
 		if p.ImportPath == "" {

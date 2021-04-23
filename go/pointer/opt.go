@@ -111,7 +111,7 @@ func (a *analysis) renumber() {
 
 	// Renumber nodeids in the call graph.
 	for _, cgn := range a.cgnodes {
-		if a.config.DEBUG && a.config.Mains[0].Func("main") == cgn.fn {
+		if a.config.DEBUG && a.config.Mains != nil && a.config.Mains[0].Func("main") == cgn.fn {
 			// bz: it renumbered main cgn, we need to update mainID in pointer/callgraph.go
 			// should be only one callsite, which is the fake one from root
 			UpdateMainID(cgn.callersite[0].targets)

@@ -21,14 +21,14 @@ hugo: "package io/fs is not in GOROOT" on Go 1.15 -> need go 1.16
  */
 
 func main() {
-	mains := myutil.InitialMain()
+	mains, tests := myutil.InitialMain()
 	if mains == nil {
 		return
 	}
 
 	//officially start
 	if flags.DoSeq { //AnalyzeMultiMains
-		myutil.DoSeq(mains)
+		myutil.DoSeq(mains, tests)
 		return
 	}else{
 		//DoSameRoot and DoParallel cannot both be true

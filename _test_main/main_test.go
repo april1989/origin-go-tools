@@ -10,14 +10,14 @@ import (
 
 
 func TestProfileMain(t *testing.T) {
-	mains := myutil.InitialMain()
+	mains, tests := myutil.InitialMain()
 	if mains == nil {
 		return
 	}
 
 	//officially start
 	if flags.DoSeq { //AnalyzeMultiMains
-		myutil.DoSeq(mains)
+		myutil.DoSeq(mains, tests)
 		return
 	}else{
 		//DoSameRoot and DoParallel cannot both be true

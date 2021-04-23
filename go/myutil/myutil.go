@@ -37,7 +37,7 @@ var DefaultMinTime time.Duration
 var DefaultElapsed int64
 
 //do preparation job
-func InitialMain() []*ssa.Package {
+func InitialMain() ([]*ssa.Package, []*ssa.Package) {
 	flags.ParseFlags()
 	if flags.DoCallback {
 		doCallback("")
@@ -47,7 +47,7 @@ func InitialMain() []*ssa.Package {
 	cfg := &packages.Config{
 		Mode:  packages.LoadAllSyntax, // the level of information returned for each package
 		Dir:   "",                     // directory in which to run the build system's query tool
-		Tests: false,                  // setting Tests will include related test packages
+		Tests: flags.DoTests,          // setting Tests will include related test packages
 	}
 	return initial(args, cfg)
 }
@@ -90,7 +90,7 @@ func doCallback(filepath string) {
 }
 
 //do preparation job: commom
-func initial(args []string, cfg *packages.Config) []*ssa.Package {
+func initial(args []string, cfg *packages.Config) ([]*ssa.Package, []*ssa.Package) {
 	fmt.Println("Loading input packages...")
 	initial, err := packages.Load(cfg, args...)
 	if err != nil {
@@ -98,10 +98,10 @@ func initial(args []string, cfg *packages.Config) []*ssa.Package {
 	}
 	if len(initial) == 0 {
 		fmt.Println("Package list empty")
-		return nil
+		return nil, nil
 	} else if initial[0] == nil {
 		fmt.Println("Nil package in list")
-		return nil
+		return nil, nil
 	} else if packages.PrintErrors(initial) > 0 {
 		errSize, errPkgs := packages.PrintErrorsAndMore(initial) //bz: errPkg will be nil in initial
 		if errSize > 0 {
@@ -113,7 +113,7 @@ func initial(args []string, cfg *packages.Config) []*ssa.Package {
 		}
 		if len(initial) == 0 || initial[0] == nil {
 			fmt.Println("All Error Pkgs, Cannot Analyze. Return. ")
-			return nil
+			return nil, nil
 		}
 	}
 	fmt.Println("Done  -- " + strconv.Itoa(len(initial)) + " packages loaded")
@@ -125,19 +125,24 @@ func initial(args []string, cfg *packages.Config) []*ssa.Package {
 	prog.Build()
 	fmt.Println("Done  -- SSA code built")
 
-	mains, err := findMainPackages(pkgs)
+	mains, tests, err := findMainPackages(pkgs)
 	if err != nil {
 		fmt.Println(err)
-		return nil
+		return nil, nil
 	}
 
-	fmt.Println("#TOTAL MAIN: " + strconv.Itoa(len(mains)) + "\n")
+	if flags.DoTests {
+		fmt.Println("#TOTAL MAIN: " + strconv.Itoa(len(mains) - len(tests)) + "\n")
+		fmt.Println("#TOTAL TESTS: " + strconv.Itoa(len(tests)) + "\n")
+	}else{
+		fmt.Println("#TOTAL MAIN: " + strconv.Itoa(len(mains)) + "\n")
+	}
 	if flags.Main != "" {
 		fmt.Println("Capture -- ", flags.Main, "\n")
 	}
 
 	//extract scope from pkgs
-	if len(pkgs) > 1 { //run under proj dir
+	if !flags.DoTests && len(pkgs) > 1 { //TODO: bz: this only works when running under proj root dir
 		//bz: compute the scope info == the root pkg: should follow the pattern xxx.xxx.xx/xxx
 		path, err := os.Getwd() //current working directory == project path
 		if err != nil {
@@ -161,7 +166,7 @@ func initial(args []string, cfg *packages.Config) []*ssa.Package {
 		}
 		if mod == "" {
 			fmt.Println("Cannot find go.mod in default location: ", gomodFile)
-			return nil
+			return nil, nil
 		}
 
 		if err := scanner.Err(); err != nil {
@@ -171,9 +176,9 @@ func initial(args []string, cfg *packages.Config) []*ssa.Package {
 		parts := strings.Split(mod, " ")
 		scope = append(scope, parts[1])
 	}else {  //else: default input .go file with default scope
-		//scope = append(scope, "google.golang.org/grpc") //bz: debug purpose
+		scope = append(scope, "google.golang.org/grpc") //bz: debug purpose
 		//scope = append(scope, "github.com/pingcap/tidb") //bz: debug purpose
-		scope = append(scope, "k8s.io/kubernetes") //bz: debug purpose
+		//scope = append(scope, "k8s.io/kubernetes") //bz: debug purpose
 	}
 
 	//initial set
@@ -182,22 +187,28 @@ func initial(args []string, cfg *packages.Config) []*ssa.Package {
 	MyMinTime = 10000000000000
 	DefaultMinTime = 10000000000000
 
-	return mains
+	return mains, tests
 }
 
-// mainPackages returns the main packages to analyze.
+// mainPackages returns the main/test packages to analyze.
 // Each resulting package is named "main" and has a main function.
-func findMainPackages(pkgs []*ssa.Package) ([]*ssa.Package, error) {
+func findMainPackages(pkgs []*ssa.Package) ([]*ssa.Package, []*ssa.Package, error) {
 	var mains []*ssa.Package
+	var tests []*ssa.Package
 	for _, p := range pkgs {
-		if p != nil && p.Pkg.Name() == "main" && p.Func("main") != nil {
-			mains = append(mains, p)
+		if p != nil {
+			if p.Pkg.Name() == "main" && p.Func("main") != nil {
+				mains = append(mains, p)
+				if flags.DoTests && strings.HasSuffix(p.Pkg.String(), ".test") { //this is a test-assembled main
+					tests = append(tests, p)
+				}
+			}
 		}
 	}
-	if len(mains) == 0 {
-		return nil, fmt.Errorf("no main packages")
+	if len(mains) == 0 { //bz: main as the first priority
+		return nil, nil, fmt.Errorf("no main packages")
 	}
-	return mains, nil
+	return mains, tests, nil
 }
 
 //baseline: all main together
@@ -213,8 +224,10 @@ func DoSameRoot(mains []*ssa.Package) {
 	doSameRootMy(mains)
 }
 
-//bz: test usesage in race checker
-func DoSeq(mains []*ssa.Package) {
+
+
+//bz: test usesage in race checker -> this is the major usage now
+func DoSeq(mains []*ssa.Package, tests []*ssa.Package) {
 	level := 0
 	if flags.DoLevel != -1 {
 		level = flags.DoLevel //bz: reset the analysis scope
@@ -229,6 +242,7 @@ func DoSeq(mains []*ssa.Package) {
 
 	ptaConfig := &pointer.Config{
 		Mains:          mains,
+		Tests:          tests,              //bz: a set of tests pkgs to analyze, can be nil
 		Reflection:     false,
 		BuildCallGraph: true,
 		Log:            nil,//logfile,

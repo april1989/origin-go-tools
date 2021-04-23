@@ -414,12 +414,27 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 
 	//doing task of makeCGNode()
 	var cgn *cgnode
-	//TODO: this ifelse is a bit huge ....
-	if a.config.Mains[0].Func("main") == fn { //bz: give the main method a context, instead of using shared contour
-		single := a.createSingleCallSite(callersite)
-		cgn = &cgnode{fn: fn, obj: obj, callersite: single}
+	//TODO: bz: this ifelse is a bit huge ....
+	if a.config.Mains != nil { //bz: give the main method a context, instead of using shared contour
+		if a.config.Mains[0].Func("main") == fn { //bz: give the main method a context, instead of using shared contour
+			single := a.createSingleCallSite(callersite)
+			cgn = &cgnode{fn: fn, obj: obj, callersite: single}
+		}
+	}else{//bz: give all test methods a context (TODO: the same ?), instead of using shared contour
+		remove := -1
+		for i, test := range a.tests {
+			if test == fn { //bz: give the test method a context, instead of using shared contour
+				single := a.createSingleCallSite(callersite)
+				cgn = &cgnode{fn: fn, obj: obj, callersite: single}
+				remove = i
+			}
+		}
+		if remove >= 0 {//remove this element to save time for future checks
+			a.tests = append(a.tests[:remove], a.tests[remove+1:]...)
+		}
+	}
 
-	} else {                 // other functions
+	if cgn == nil {  // other functions
 		if a.config.Origin { //bz: for origin-sensitive
 			if callersite == nil { //we only create new context for make closure and go instruction
 				var fnkcs []*callsite
@@ -2334,6 +2349,9 @@ func (a *analysis) genInstr(cgn *cgnode, instr ssa.Instruction) {
 			prefix = val.Name() + " = "
 		}
 		fmt.Fprintf(a.log, "; %s%s\n", prefix, instr)
+		if strings.Contains(prefix + instr.String(), "t40 = next t34") && strings.Contains(cgn.fn.String(), "(*google.golang.org/grpc/xds/internal/balancer/edsbalancer.balancerGroup).close") {
+			fmt.Println()
+		}
 	}
 
 	switch instr := instr.(type) {
@@ -2483,11 +2501,31 @@ func (a *analysis) genInstr(cgn *cgnode, instr ssa.Instruction) {
 			odst := uint32(1) // offset within tuple (initially just after 'ok bool')
 			sz := uint32(0)   // amount to copy
 
+			//TODO: maybe report to go?
+			// !!!! bz: panic@grpc commit e38032e9 at ir stmt (; t40 = next t34) in function (*google.golang.org/grpc/xds/internal/balancer/edsbalancer.balancerGroup).close
+			// REASON -> load base is wrong due to wrong computed odst: it maps to other localval
+			//   This has nothing to do with my code, so i guess it's some wrong logic in default algorithm?
+			// from what I see there are two types of tTuple:
+			// (1) (ok bool, k invalid type, v *subBalancerWithConfig) -> key is invalid type (but actually the type is valid, maybe because the range only iterates over map values, not keys)
+			// (2) (ok bool, k string, v invalid type) -> no invalid type of key
+			// and the receiver/base of the load is created like this:
+			//  	create n678886 bool for t40#0 (--> ok)
+			//  	create n678887 invalid type for t40#1 (--> key)
+			//  	create n678888 *google.golang.org/grpc/xds/internal/balancer/edsbalancer.subBalancerWithConfig for t40#2 (--> value)
+			//  	val[t40] = n678886  (*ssa.Next)
+			// or:
+			// 		create n117162 bool for t67#0
+			// 		create n117163 string for t67#1 (--> valid key type)
+			// 		create n117164 []byte for t67#2
+			// 		val[t67] = n117162  (*ssa.Next)
+			// we need the key (n678887) and value (n678888) to be the receiver/base of the load, the algorithm will not do flatten copy for key or value pointer...
+			// so, why needs the flattened size of key, i.e., ksize, when key is invalid type ??
+
 			// Is key valid?
 			if tTuple.At(1).Type() != tInvalid {
 				sz += ksize
 			} else {
-				odst += ksize
+				odst += 1 //ksize //bz: original code
 				osrc += ksize
 			}
 
@@ -2663,29 +2701,72 @@ func (a *analysis) genRootCalls() *cgnode {
 	// root function so we don't need to special-case site-less
 	// call edges.
 
-	// For each main package, call main.init(), main.main().
-	for _, mainPkg := range a.config.Mains {
-		main := mainPkg.Func("main")
-		if main == nil {
-			panic(fmt.Sprintf("%s has no main function", mainPkg))
-		}
+	if a.config.Mains != nil { // For each main package, call main.init(), main.main().
+		for _, mainPkg := range a.config.Mains {
+			main := mainPkg.Func("main")
+			if main == nil {
+				panic(fmt.Sprintf("%s has no main function", mainPkg))
+			}
 
-		targets := a.addOneNode(main.Signature, "root.targets", nil)
-		site := &callsite{targets: targets}
-		root.sites = append(root.sites, site)
-		for _, fn := range [2]*ssa.Function{mainPkg.Func("init"), main} {
-			if a.log != nil {
-				fmt.Fprintf(a.log, "\troot call to %s:\n", fn)
+			targets := a.addOneNode(main.Signature, "root.targets", nil)
+			site := &callsite{targets: targets}
+			root.sites = append(root.sites, site)
+			for _, fn := range [2]*ssa.Function{mainPkg.Func("init"), main} {
+				if a.log != nil {
+					fmt.Fprintf(a.log, "\troot call to %s:\n", fn)
+				}
+				if a.considerMyContext(fn.String()) { //bz: give the init/main method a context, instead of using shared contour
+					a.copy(targets, a.valueNodeInvoke(root, site, fn), 1)
+				} else {
+					a.copy(targets, a.valueNode(fn), 1)
+				}
 			}
-			if a.considerMyContext(fn.String()) { //bz: give the init/main method a context, instead of using shared contour
-				a.copy(targets, a.valueNodeInvoke(root, site, fn), 1)
-			} else {
-				a.copy(targets, a.valueNode(fn), 1)
+		}
+	}else{ //bz: we are analyzing tests
+		for _, testPkg := range a.config.Tests {
+			var sig *types.Signature
+			a.tests = append(a.tests, testPkg.Func("init"))
+			for _, mem := range testPkg.Members {
+				if test, ok := mem.(*ssa.Function); ok && a.isGoTestForm(mem.Name()){
+					a.tests = append(a.tests, test)
+					if sig == nil {
+						sig = test.Signature //all the signatures in this testPkg are the same, take one
+					}
+				}
 			}
+			if len(a.tests) <= 1 {
+				panic(fmt.Sprintf("%s has no test function", testPkg))
+			}
+
+			//do all together
+			targets := a.addOneNode(sig, "root.targets", nil)
+			site := &callsite{targets: targets}
+			root.sites = append(root.sites, site)
+			for _, fn := range a.tests { //TODO: bz: give each test a new context?
+				if a.log != nil {
+					fmt.Fprintf(a.log, "\troot call to %s:\n", fn)
+				}
+				if a.considerMyContext(fn.String()) { //bz: give the init/test method a context, instead of using shared contour -> all tests share the same context!
+					a.copy(targets, a.valueNodeInvoke(root, site, fn), 1)
+				} else {
+					a.copy(targets, a.valueNode(fn), 1)
+				}
+			}
+
+			////update: remove init from tests
+			//a.tests = a.tests[1:]
 		}
 	}
 
 	return root
+}
+
+//bz: whether the function name follows the go test form: https://golang.org/pkg/testing/
+func (a *analysis) isGoTestForm(name string) bool {
+	if strings.HasPrefix(name, "Test") || strings.HasPrefix(name, "Benchmark") || strings.HasPrefix(name, "Example") {
+		return true
+	}
+	return false
 }
 
 // genFunc generates constraints for function fn.
@@ -2974,7 +3055,9 @@ func (a *analysis) generate() {
 	a.localval = nil
 	a.localobj = nil
 
-	//a.preSolve()
+	if a.config.DoCallback {
+		a.preSolve()
+	}
 
 	stop("Constraint generation")
 }

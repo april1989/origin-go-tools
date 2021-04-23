@@ -190,6 +190,10 @@ type analysis struct {
 
 	//bz: preSolve-related
 	curIter         int                               //bz: the ith iteration of the loop in preSolve() TODO: maybe move to analysis as a field
+
+	//bz: analyzing tests related
+	tests           []*ssa.Function                   //bz: the tests in current analyzed test pkg TODO: currently one pkg one analysis, update to map?
+
 	/** bz:
 	    we do have panics when turn on hvn optimization. panics are due to that hvn wrongly computes sccs.
 	    wrong sccs is because some pointers are not marked as indirect (but marked in default).
@@ -402,7 +406,7 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 	printConfig(config)
 
 	fmt.Println(" *** Multiple Mains **************** ")
-	for i, main := range config.Mains {
+	for i, main := range config.Mains { //analyze mains
 		//create a config
 		var _mains []*ssa.Package
 		_mains = append(_mains, main)
@@ -420,17 +424,17 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 			Scope:         config.Scope,      //bz: analyze scope + input path
 			Exclusion:     config.Exclusion,  //bz: copied from race_checker if any
 			TrackMore:     config.TrackMore,  //bz: track pointers with all types
-			DoCallback:    config.DoCallback,  //bz: do callback
+			DoCallback:    config.DoCallback, //bz: do callback
 			Level:         config.Level,      //bz: see pointer.Config
 			DoPerformance: config.DoPerformance,
-			DoCoverage:    config.DoCoverage,    //bz: compute (#analyzed fn/#total fn) in a program
+			DoCoverage:    config.DoCoverage, //bz: compute (#analyzed fn/#total fn) in a program
 		}
 
 		fmt.Println("\n\n", i, ": "+main.String(), " ... ")
 
 		//we initially run the analysis
 		start := time.Now()
-		_result, err := AnalyzeWCtx(_config, false)
+		_result, err := AnalyzeWCtx(_config, false, true)
 		if err != nil {
 			return nil, err
 		}
@@ -450,6 +454,57 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 	}
 	fmt.Println(" *********************************** ")
 
+	//if config.Tests != nil { //analyze tests
+	//	fmt.Println(" *** Multiple Tests **************** ")
+	//	for i, test := range config.Tests { //analyze mains
+	//		//create a config
+	//		var _tests []*ssa.Package
+	//		_tests = append(_tests, test)
+	//		_config := &Config{
+	//			Tests:          _tests,
+	//			Reflection:     config.Reflection,
+	//			BuildCallGraph: config.BuildCallGraph,
+	//			Log:            config.Log,
+	//			//CallSiteSensitive: true, //kcfa
+	//			Origin: config.Origin, //origin
+	//			//shared config
+	//			K:             config.K,
+	//			LimitScope:    config.LimitScope, //bz: only consider app methods now -> no import will be considered
+	//			DEBUG:         config.DEBUG,      //bz: rm all printed out info in console
+	//			Scope:         config.Scope,      //bz: analyze scope + input path
+	//			Exclusion:     config.Exclusion,  //bz: copied from race_checker if any
+	//			TrackMore:     config.TrackMore,  //bz: track pointers with all types
+	//			DoCallback:    config.DoCallback, //bz: do callback
+	//			Level:         config.Level,      //bz: see pointer.Config
+	//			DoPerformance: config.DoPerformance,
+	//			DoCoverage:    config.DoCoverage, //bz: compute (#analyzed fn/#total fn) in a program
+	//		}
+	//
+	//		fmt.Println("\n\n", i, ": " + test.String(), " ... ")
+	//
+	//		//we initially run the analysis
+	//		start := time.Now()
+	//		_result, err := AnalyzeWCtx(_config, false, false)
+	//		if err != nil {
+	//			return nil, err
+	//		}
+	//
+	//		translateResult(_result, test)
+	//		elapse := time.Now().Sub(start)
+	//		if maxTime < elapse {
+	//			maxTime = elapse
+	//		}
+	//		if minTime > elapse {
+	//			minTime = elapse
+	//		}
+	//		total = total + elapse.Milliseconds()
+	//
+	//		//performance
+	//		fmt.Println(i, ": " + test.String(), " (use "+elapse.String()+")")
+	//	}
+	//	fmt.Println(" *********************************** ")
+	//}
+
 	//bz: i want this...
 	fmt.Println("Total: ", (time.Duration(total)*time.Millisecond).String()+".")
 	fmt.Println("Max: ", maxTime.String()+".")
@@ -464,7 +519,7 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 	return results, nil
 }
 
-//bz: change to default api
+//bz: change to default api; only analyze mains here
 //but result does not include call graph (a.result.CallGraph),
 //since the type does not match and race checker also does not use this
 func Analyze(config *Config) (result *Result, err error) {
@@ -486,7 +541,7 @@ func Analyze(config *Config) (result *Result, err error) {
 	}
 
 	//we initially run the analysis
-	_result, err := AnalyzeWCtx(config, true)
+	_result, err := AnalyzeWCtx(config, true, true)
 	if err != nil {
 		return nil, err
 	}
@@ -501,8 +556,8 @@ func Analyze(config *Config) (result *Result, err error) {
 // Pointer analysis of a transitively closed well-typed program should
 // always succeed.  An error can occur only due to an internal bug.
 //
-func AnalyzeWCtx(config *Config, doPrintConfig bool) (result *ResultWCtx, err error) { //Result
-	if config.Mains == nil {
+func AnalyzeWCtx(config *Config, doPrintConfig bool, isMain bool) (result *ResultWCtx, err error) { //Result
+	if config.Mains == nil && config.Tests == nil {
 		return nil, fmt.Errorf("no main/test packages to analyze (check $GOROOT/$GOPATH)")
 	}
 	defer func() {
@@ -554,7 +609,12 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool) (result *ResultWCtx, err er
 	UpdateDEBUG(a.config.DEBUG) //in pointer/callgraph, print out info changes
 
 	//update analysis import
-	imports := a.config.Mains[0].Pkg.Imports()
+	var imports []*types.Package
+	if isMain {
+		imports = a.config.Mains[0].Pkg.Imports()
+	}else{ //is test
+		imports = a.config.Tests[0].Pkg.Imports()
+	}
 	if len(imports) > 0 {
 		for _, _import := range imports {
 			a.config.imports = append(a.config.imports, _import.Name())
@@ -693,12 +753,15 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool) (result *ResultWCtx, err er
 	a.updateActualCallSites()
 
 	//bz: just assign for the main method; not a good solution, will resolve later
-	for _, cgn := range a.cgnodes {
-		if cgn.fn == a.config.Mains[0].Func("main") {
-			//this is the main methid in app
-			a.result.main = cgn
+	if isMain {
+		for _, cgn := range a.cgnodes {
+			if cgn.fn == a.config.Mains[0].Func("main") {
+				//this is the main methid in app
+				a.result.main = cgn
+			}
 		}
-	}
+	} //will not do the same for tests, since we put all tests (under the same test pkg) in to one root.
+
 
 	if a.log != nil { // dump call graph
 		fmt.Fprintf(a.log, "\n\n\nCall Graph -----> \n")
@@ -1009,10 +1072,11 @@ func (a *analysis) computeCoverage() {
 	other := 0
 	for fn, _ := range a.result.CallGraph.Fn2CGNode {
 		s := fn.String()
+		//fmt.Println(fn.String())
 		if _, ok := allFns[s]; ok {
 			covered++
-		} else {
 			//fmt.Println(fn.String())
+		} else {
 			subs := strings.Split(s, "$")
 			if len(subs) == 1 {
 				other++
@@ -1023,8 +1087,7 @@ func (a *analysis) computeCoverage() {
 				}
 			}
 		}
-		//s := fn.String() //bz: debug
-		//if strings.HasPrefix(s, "(*reflect.rtype)") {
+		//if strings.HasPrefix(s, "(*reflect.rtype)") {//bz: debug
 		//	continue
 		//}
 		//fmt.Println(s)
@@ -1037,7 +1100,7 @@ func (a *analysis) computeCoverage() {
 func computeTotalCoverage() {
 	covered := make(map[string]string)
 	closure := make(map[string]string)
-	other := make(map[string]string)
+	other := make(map[string]string)//others can be lib, reflect, <root>
 	for _, result := range main2ResultWCtx {
 		for fn, _ := range result.CallGraph.Fn2CGNode {
 			s := fn.String()
@@ -1059,7 +1122,7 @@ func computeTotalCoverage() {
 		}
 	}
 	fmt.Println("Coverage: ", (float64(len(covered))/float64(len(allFns)))*100, "%\t (#total: ", len(allFns),
-		", #analyzed: ", len(covered), ", #analyzed$: ", len(closure), ", #others: ", len(other), ")") //others can be lib, reflect, <root>
+		", #analyzed: ", len(covered), ", #analyzed$: ", len(closure), ", #others: ", len(other), ")")
 
 	if showUnCoveredFn {
 		fmt.Println("====================================================================")
