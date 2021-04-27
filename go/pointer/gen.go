@@ -412,34 +412,13 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 	// obj is the function object (identity, params, results).
 	obj := a.nextNode()
 
-	//if strings.Contains(fn.String(), "(*github.com/pingcap/tidb/util/stmtsummary.stmtSummaryByDigestMap).GetMoreThanOnceBindableStmt$1") { //@[0:synthetic function call@n216; ]
-	//	//&& strings.Contains(caller.contourkFull(), "[0:synthetic function call@n229683; ]")
-	//	fmt.Print(" ! ", caller.contourkFull())
-	//}
-
 	//doing task of makeCGNode()
 	var cgn *cgnode
 	//TODO: bz: this ifelse is a bit huge ....
-	if a.config.Mains != nil { //bz: give the main method a context, instead of using shared contour
-		if a.config.Mains[0].Func("main") == fn { //bz: give the main method a context, instead of using shared contour
-			single := a.createSingleCallSite(callersite)
-			cgn = &cgnode{fn: fn, obj: obj, callersite: single}
-		}
-	}else{//bz: give all test methods a context (TODO: the same ?), instead of using shared contour
-		remove := -1
-		for i, test := range a.tests {
-			if test == fn { //bz: give the test method a context, instead of using shared contour
-				single := a.createSingleCallSite(callersite)
-				cgn = &cgnode{fn: fn, obj: obj, callersite: single}
-				remove = i
-			}
-		}
-		if remove >= 0 {//remove this element to save time for future checks
-			a.tests = append(a.tests[:remove], a.tests[remove+1:]...)
-		}
-	}
-
-	if cgn == nil {  // other functions
+	if a.config.Mains[0].Func("main") == fn { //bz: give the main method a context, instead of using shared contour
+		single := a.createSingleCallSite(callersite)
+		cgn = &cgnode{fn: fn, obj: obj, callersite: single}
+	} else {  // other functions
 		if a.config.Origin { //bz: for origin-sensitive
 			if callersite == nil { //we only create new context for make closure and go instruction
 				var fnkcs []*callsite
@@ -2743,60 +2722,25 @@ func (a *analysis) genRootCalls() *cgnode {
 	// root function so we don't need to special-case site-less
 	// call edges.
 
-	if a.config.Mains != nil { // For each main package, call main.init(), main.main().
-		for _, mainPkg := range a.config.Mains {
-			main := mainPkg.Func("main")
-			if main == nil {
-				panic(fmt.Sprintf("%s has no main function", mainPkg))
-			}
-
-			targets := a.addOneNode(main.Signature, "root.targets", nil)
-			site := &callsite{targets: targets}
-			root.sites = append(root.sites, site)
-			for _, fn := range [2]*ssa.Function{mainPkg.Func("init"), main} {
-				if a.log != nil {
-					fmt.Fprintf(a.log, "\troot call to %s:\n", fn)
-				}
-				if a.considerMyContext(fn.String()) { //bz: give the init/main method a context, instead of using shared contour
-					a.copy(targets, a.valueNodeInvoke(root, site, fn), 1)
-				} else {
-					a.copy(targets, a.valueNode(fn), 1)
-				}
-			}
+	// For each main package, call main.init(), main.main().
+	for _, mainPkg := range a.config.Mains {
+		main := mainPkg.Func("main")
+		if main == nil {
+			panic(fmt.Sprintf("%s has no main function", mainPkg))
 		}
-	}else{ //bz: we are analyzing tests
-		for _, testPkg := range a.config.Tests {
-			var sig *types.Signature
-			a.tests = append(a.tests, testPkg.Func("init"))
-			for _, mem := range testPkg.Members {
-				if test, ok := mem.(*ssa.Function); ok && a.isGoTestForm(mem.Name()){
-					a.tests = append(a.tests, test)
-					if sig == nil {
-						sig = test.Signature //all the signatures in this testPkg are the same, take one
-					}
-				}
-			}
-			if len(a.tests) <= 1 {
-				panic(fmt.Sprintf("%s has no test function", testPkg))
-			}
 
-			//do all together
-			targets := a.addOneNode(sig, "root.targets", nil)
-			site := &callsite{targets: targets}
-			root.sites = append(root.sites, site)
-			for _, fn := range a.tests { //TODO: bz: give each test a new context?
-				if a.log != nil {
-					fmt.Fprintf(a.log, "\troot call to %s:\n", fn)
-				}
-				if a.considerMyContext(fn.String()) { //bz: give the init/test method a context, instead of using shared contour -> all tests share the same context!
-					a.copy(targets, a.valueNodeInvoke(root, site, fn), 1)
-				} else {
-					a.copy(targets, a.valueNode(fn), 1)
-				}
+		targets := a.addOneNode(main.Signature, "root.targets", nil)
+		site := &callsite{targets: targets}
+		root.sites = append(root.sites, site)
+		for _, fn := range [2]*ssa.Function{mainPkg.Func("init"), main} {
+			if a.log != nil {
+				fmt.Fprintf(a.log, "\troot call to %s:\n", fn)
 			}
-
-			////update: remove init from tests
-			//a.tests = a.tests[1:]
+			if a.considerMyContext(fn.String()) { //bz: give the init/main method a context, instead of using shared contour
+				a.copy(targets, a.valueNodeInvoke(root, site, fn), 1)
+			} else {
+				a.copy(targets, a.valueNode(fn), 1)
+			}
 		}
 	}
 

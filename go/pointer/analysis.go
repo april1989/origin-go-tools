@@ -193,9 +193,6 @@ type analysis struct {
 	//bz: preSolve-related
 	curIter int //bz: the ith iteration of the loop in preSolve() TODO: maybe move to analysis as a field
 
-	//bz: analyzing tests related
-	tests []*ssa.Function //bz: the tests in current analyzed test pkg TODO: currently one pkg one analysis, update to map?
-
 	/** bz:
 	    we do have panics when turn on hvn optimization. panics are due to that hvn wrongly computes sccs.
 	    wrong sccs is because some pointers are not marked as indirect (but marked in default).
