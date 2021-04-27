@@ -71,6 +71,8 @@ func (a *analysis) solve() {
 		}
 		n.solve.prevPTS.Copy(&n.solve.pts.Sparse)
 
+		fmt.Println()
+
 		// Apply all resolution rules attached to n.
 		a.solveConstraints(n, &delta)
 
