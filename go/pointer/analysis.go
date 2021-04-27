@@ -441,9 +441,8 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 			DoCoverage:    config.DoCoverage, //bz: compute (#analyzed fn/#total fn) in a program
 		}
 
-		fmt.Println("\n\n", i, ": "+main.String(), " ... ")
-		if doReflect {
-			fmt.Println(" *** Reflection ON ***") //default off
+		if config.DoPerformance {
+			fmt.Println("\n\n", i, ": "+main.String(), " ... ")
 		}
 
 		//we initially run the analysis
@@ -464,60 +463,13 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 		total = total + elapse.Milliseconds()
 
 		//performance
-		fmt.Println(i, ": "+main.String(), " (use "+elapse.String()+")")
+		if doReflect { //default off
+			fmt.Println(i, ": "+main.String(), " (use "+elapse.String()+") *** Reflection ON ***")
+		}else{
+			fmt.Println(i, ": "+main.String(), " (use "+elapse.String()+")")
+		}
 	}
 	fmt.Println(" *********************************** ")
-
-	//if config.Tests != nil { //analyze tests
-	//	fmt.Println(" *** Multiple Tests **************** ")
-	//	for i, test := range config.Tests { //analyze mains
-	//		//create a config
-	//		var _tests []*ssa.Package
-	//		_tests = append(_tests, test)
-	//		_config := &Config{
-	//			Tests:          _tests,
-	//			Reflection:     config.Reflection,
-	//			BuildCallGraph: config.BuildCallGraph,
-	//			Log:            config.Log,
-	//			//CallSiteSensitive: true, //kcfa
-	//			Origin: config.Origin, //origin
-	//			//shared config
-	//			K:             config.K,
-	//			LimitScope:    config.LimitScope, //bz: only consider app methods now -> no import will be considered
-	//			DEBUG:         config.DEBUG,      //bz: rm all printed out info in console
-	//			Scope:         config.Scope,      //bz: analyze scope + input path
-	//			Exclusion:     config.Exclusion,  //bz: copied from race_checker if any
-	//			TrackMore:     config.TrackMore,  //bz: track pointers with all types
-	//			DoCallback:    config.DoCallback, //bz: do callback
-	//			Level:         config.Level,      //bz: see pointer.Config
-	//			DoPerformance: config.DoPerformance,
-	//			DoCoverage:    config.DoCoverage, //bz: compute (#analyzed fn/#total fn) in a program
-	//		}
-	//
-	//		fmt.Println("\n\n", i, ": " + test.String(), " ... ")
-	//
-	//		//we initially run the analysis
-	//		start := time.Now()
-	//		_result, err := AnalyzeWCtx(_config, false, false)
-	//		if err != nil {
-	//			return nil, err
-	//		}
-	//
-	//		translateResult(_result, test)
-	//		elapse := time.Now().Sub(start)
-	//		if maxTime < elapse {
-	//			maxTime = elapse
-	//		}
-	//		if minTime > elapse {
-	//			minTime = elapse
-	//		}
-	//		total = total + elapse.Milliseconds()
-	//
-	//		//performance
-	//		fmt.Println(i, ": " + test.String(), " (use "+elapse.String()+")")
-	//	}
-	//	fmt.Println(" *********************************** ")
-	//}
 
 	//bz: i want this...
 	fmt.Println("Total: ", (time.Duration(total)*time.Millisecond).String()+".")
