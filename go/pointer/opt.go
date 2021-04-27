@@ -116,9 +116,6 @@ func (a *analysis) renumber() {
 			// should be only one callsite, which is the fake one from root
 			UpdateMainID(cgn.callersite[0].targets)
 		}
-		//if cgn.fn.Name() == "<root>" {
-		//	fmt.Print()
-		//}
 		//start to renumber
 		cgn.obj = renumbering[cgn.obj]
 		for _, site := range cgn.sites {
@@ -151,17 +148,6 @@ func (a *analysis) renumber() {
 		for _, val := range a.callbacks {
 			val.renumber(renumbering)
 		}
-
-		//for _, record := range a.cb2Callers {
-		//	for _, ctx := range record.caller2ctx {
-		//		for _, site := range ctx {
-		//			if site == nil {
-		//				continue
-		//			}
-		//			site.targets = renumbering[site.targets]
-		//		}
-		//	}
-		//}
 	}
 
 	////bz: special options -> discarded

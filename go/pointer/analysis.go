@@ -26,11 +26,6 @@ import (
 )
 
 const (
-	// optimization options; enable all when committing
-	// TODO: bz: optHVN mess up my constraints and also make it sloooooow, tmp turn it off ....
-	optRenumber = false // enable renumbering optimization (makes logs hard to read)
-	optHVN      = false // enable pointer equivalence via Hash-Value Numbering
-
 	// debugging options; disable all when committing
 	debugHVN           = false // enable assertions in HVN
 	debugHVNVerbose    = false // enable extra HVN logging
@@ -49,7 +44,13 @@ const (
 	otFunction             // function object
 )
 
+//bz: a set of my config
 var (
+	// optimization options; enable all when committing
+	// bz: only turn on these two opt when flags.DoCallback == true, since its not on-the-fly but presolve
+	optRenumber = false // enable renumbering optimization (makes logs hard to read)
+	optHVN      = false // enable pointer equivalence via Hash-Value Numbering
+
 	//bz: for my performance
 	maxTime time.Duration
 	minTime time.Duration
@@ -62,7 +63,7 @@ var (
 	//bz: for my use: coverage
 	allFns          map[string]string //bz: when DoCoverage = true: store all funcs within the scope/app, use map instead of array for an easier existence check
 	cCmplFns        map[string]string //bz: c/c++ compiled functions, e.g., functions in xxx.pb.go, some of these functions will nolonger be used/invoked in the app
-	showUnCoveredFn = false           //bz: whether print out those functions that we did not analyze
+	showUnCoveredFn = true           //bz: whether print out those functions that we did not analyze
 )
 
 // An object represents a contiguous block of memory to which some
@@ -410,6 +411,11 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 		fmt.Println(" *** Multiple Mains **************** ")
 	}
 
+	if flags.DoCallback {//bz: see comments of optHVN
+		optHVN = true
+		optRenumber = true
+	}
+
 	for i, main := range config.Mains { //analyze mains
 		//create a config
 		var _mains []*ssa.Package
@@ -507,6 +513,10 @@ func Analyze(config *Config) (result *Result, err error) {
 	}
 
 	//we initially run the analysis
+	if flags.DoCallback {//bz: see comments of optHVN
+		optHVN = true
+		optRenumber = true
+	}
 	_result, err := AnalyzeWCtx(config, true, true)
 	if err != nil {
 		return nil, err

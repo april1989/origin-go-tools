@@ -102,20 +102,21 @@ func initial(args []string, cfg *packages.Config) []*ssa.Package {
 	} else if initial[0] == nil {
 		fmt.Println("Nil package in list")
 		return nil
-	} else if packages.PrintErrors(initial) > 0 {
-		errSize, errPkgs := packages.PrintErrorsAndMore(initial) //bz: errPkg will be nil in initial
-		if errSize > 0 {
-			fmt.Println("Excluded the following packages contain errors, due to the above errors. ")
-			for i, errPkg := range errPkgs {
-				fmt.Println(i, " ", errPkg.ID)
-			}
-			fmt.Println("Continue   -- ")
-		}
-		if len(initial) == 0 || initial[0] == nil {
-			fmt.Println("All Error Pkgs, Cannot Analyze. Return. ")
-			return nil
-		}
 	}
+	//else if packages.PrintErrors(initial) > 0 {
+	//	errSize, errPkgs := packages.PrintErrorsAndMore(initial) //bz: errPkg will be nil in initial
+	//	if errSize > 0 {
+	//		fmt.Println("Excluded the following packages contain errors, due to the above errors. ")
+	//		for i, errPkg := range errPkgs {
+	//			fmt.Println(i, " ", errPkg.ID)
+	//		}
+	//		fmt.Println("Continue   -- ")
+	//	}
+	//	if len(initial) == 0 || initial[0] == nil {
+	//		fmt.Println("All Error Pkgs, Cannot Analyze. Return. ")
+	//		return nil
+	//	}
+	//}
 	fmt.Println("Done  -- " + strconv.Itoa(len(initial)) + " packages loaded")
 
 	// Create and build SSA-form program representation.

@@ -985,7 +985,6 @@ func assert(p bool, msg string) {
 
 // bz: this above part sneakily renumbers constraints, if they renumbered constraints
 // they also needs to renumber others things in mapping as opt.go does
-// I AM GOING TO RENUMBER THEM >>>
 func (h *hvn) doMyRenumber(mapping []nodeid) {
 	a := h.a
 	for v, id := range a.globalobj {
@@ -1011,6 +1010,16 @@ func (h *hvn) doMyRenumber(mapping []nodeid) {
 			tid := mapping[site.targets]
 			if tid != 0 && tid != site.targets {
 				site.targets = tid
+			}
+		}
+		if cgn.actualCallerSite != nil {
+			for _, sites := range cgn.actualCallerSite {
+				for _, site := range sites {
+					tid := mapping[site.targets]
+					if tid != 0 && tid != site.targets {
+						site.targets = tid
+					}
+				}
 			}
 		}
 		cgn.renumberHVN(mapping)

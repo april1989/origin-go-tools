@@ -20,6 +20,12 @@ type solverState struct {
 	prevPTS nodeset      // pts(n) in previous iteration (for difference propagation)
 }
 
+//bz: to limit the size of pts
+var (
+	ptsLimit   int
+	skipIDs    map[int]int //these pts reach the ptsLimit, skip their solving if added to worklist
+)
+
 func (a *analysis) solve() {
 	if a.config.DoPerformance { //bz: performance dump info
 		a.num_constraints = 0
@@ -40,6 +46,40 @@ func (a *analysis) solve() {
 		fmt.Fprintf(a.log, "\n\n==== Solving constraints\n\n")
 	}
 
+	// Solver main loop: separate to avoid frequent bool check of whether we do ptslimit
+	if flags.PTSLimit == 0 {
+		a.solveDefault()
+	}else{
+		a.solveLimit()
+	}
+
+	//bz: back to normal workflow
+	if !a.nodes[0].solve.pts.IsEmpty() {
+		panic(fmt.Sprintf("pts(0) is nonempty: %s", &a.nodes[0].solve.pts))
+	}
+
+	// Release working state (but keep final PTS).
+	for _, n := range a.nodes {
+		n.solve.complex = nil
+		n.solve.copyTo.Clear()
+		n.solve.prevPTS.Clear()
+	}
+
+	if a.log != nil {
+		fmt.Fprintf(a.log, "Solver done\n")
+
+		// Dump solution.
+		for i, n := range a.nodes {
+			if !n.solve.pts.IsEmpty() {
+				fmt.Fprintf(a.log, "pts(n%d) = %s : %s\n", i, &n.solve.pts, n.typ)
+			}
+		}
+	}
+	stop("Solving")
+}
+
+//bz: default solve(); use when flags.PTSLimit == 0
+func (a *analysis) solveDefault() {
 	// Solver main loop.
 	var delta nodeset
 	for {
@@ -78,29 +118,61 @@ func (a *analysis) solve() {
 			fmt.Fprintf(a.log, "\t\tpts(n%d) = %s\n", id, &n.solve.pts)
 		}
 	}
+}
 
-	if !a.nodes[0].solve.pts.IsEmpty() {
-		panic(fmt.Sprintf("pts(0) is nonempty: %s", &a.nodes[0].solve.pts))
-	}
+//bz: solve(); use when flags.PTSLimit > 0
+func (a *analysis) solveLimit() {
+	//setting
+	ptsLimit = flags.PTSLimit
+	skipIDs = make(map[int]int)
+	fmt.Println(" *** PTS Limit:", ptsLimit, "*** ")
 
-	// Release working state (but keep final PTS).
-	for _, n := range a.nodes {
-		n.solve.complex = nil
-		n.solve.copyTo.Clear()
-		n.solve.prevPTS.Clear()
-	}
+	// Solver main loop.
+	var delta nodeset
+	for {
+		// Add new constraints to the graph:
+		// static constraints from SSA on round 1,
+		// dynamic constraints from reflection thereafter.
+		a.processNewConstraints()
 
-	if a.log != nil {
-		fmt.Fprintf(a.log, "Solver done\n")
+		var x int
+		if !a.work.TakeMin(&x) {
+			break // empty worklist
+		}
 
-		// Dump solution.
-		for i, n := range a.nodes {
-			if !n.solve.pts.IsEmpty() {
-				fmt.Fprintf(a.log, "pts(n%d) = %s : %s\n", i, &n.solve.pts, n.typ)
-			}
+		if _, ok := skipIDs[x]; ok { //bz: skip its solving for those pts size reach limit
+			continue
+		}
+
+		id := nodeid(x)
+		if a.log != nil {
+			fmt.Fprintf(a.log, "\tnode n%d\n", id)
+		}
+
+		n := a.nodes[id]
+
+		// Difference propagation.
+		delta.Difference(&n.solve.pts.Sparse, &n.solve.prevPTS.Sparse)
+		if delta.IsEmpty() {
+			continue
+		}
+		if a.log != nil {
+			//fmt.Fprintf(a.log, "\t\tpts(n%d : %s) = %s + %s\n", id, n.typ, &delta, &n.solve.prevPTS)  //bz: too verbose
+			fmt.Fprintf(a.log, "\t\tpts(n%d : %s) = %s + ... \n", id, n.typ, &delta)
+		}
+		n.solve.prevPTS.Copy(&n.solve.pts.Sparse)
+
+		if n.solve.pts.Len() >= ptsLimit { //bz: check ptsLimit here
+			skipIDs[x] = x
+		}
+
+		// Apply all resolution rules attached to n.
+		a.solveConstraints(n, &delta)
+
+		if a.log != nil {
+			fmt.Fprintf(a.log, "\t\tpts(n%d) = %s\n", id, &n.solve.pts)
 		}
 	}
-	stop("Solving")
 }
 
 // processNewConstraints takes the new constraints from a.constraints
@@ -332,7 +404,7 @@ func (c *typeFilterConstraint) solve(a *analysis, delta *nodeset) {
 					a.addWork(c.dst)
 				}
 			}
-		}else{
+		} else {
 			if types.AssignableTo(tDyn, c.typ) {
 				if a.addLabel(c.dst, ifaceObj) {
 					a.addWork(c.dst)

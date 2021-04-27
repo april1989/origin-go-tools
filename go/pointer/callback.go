@@ -12,13 +12,12 @@ import (
 bz: input is callback.yml
     analyze yml file -> users specify what is the callback function
            they want us to analyze.
-
  */
 
 var (
-	debugCB = true //debug
+	debugCB    = false             //debug
 	signatures = make([]string, 0) //record of all pkg + method signatures that we have to analyze
-	//TODO: further classify to map: pkg <-> methods[]
+	//TODO: further classify to map: pkg <-> methods[] ??
 )
 
 type CallBack struct {
