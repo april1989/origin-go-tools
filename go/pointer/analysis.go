@@ -465,7 +465,7 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 		//performance
 		if doReflect { //default off
 			fmt.Println(i, ": "+main.String(), " (use "+elapse.String()+") *** Reflection ON ***")
-		}else{
+		} else {
 			fmt.Println(i, ": "+main.String(), " (use "+elapse.String()+")")
 		}
 	}
@@ -877,14 +877,26 @@ func (a *analysis) updateActualCallSites() {
 			for _, outEdge := range node.Out {
 				target := outEdge.Callee.cgn
 				if !total.Has(target.idx) {
-					if a.log != nil {
-						fmt.Fprintf(a.log, "* Update actualCallerSitefor ----> \n%s -> [%s] \n", target, cgn.contourkActualFull())
-					}
-					if a.config.DEBUG {
-						fmt.Printf("* Update actualCallerSite for ----> \n%s -> [%s] \n", target, cgn.contourkActualFull())
-					}
-					for _, actual := range cgn.actualCallerSite {
-						target.updateActualCallerSite(actual) //update
+					//update
+					if cgn.actualCallerSite == nil {
+						if a.log != nil {
+							fmt.Fprintf(a.log, "* Update actualCallerSitefor ----> \n%s -> [%s] \n", target, cgn.contourkFull())
+						}
+						if a.config.DEBUG {
+							fmt.Printf("* Update actualCallerSite for ----> \n%s -> [%s] \n", target, cgn.contourkFull())
+						}
+
+						target.updateActualCallerSite(cgn.callersite)
+					} else {
+						if a.log != nil {
+							fmt.Fprintf(a.log, "* Update actualCallerSitefor ----> \n%s -> [%s] \n", target, cgn.contourkActualFull())
+						}
+						if a.config.DEBUG {
+							fmt.Printf("* Update actualCallerSite for ----> \n%s -> [%s] \n", target, cgn.contourkActualFull())
+						}
+						for _, actual := range cgn.actualCallerSite {
+							target.updateActualCallerSite(actual)
+						}
 					}
 					next[target.obj] = target.obj //next round
 				}
