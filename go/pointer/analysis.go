@@ -878,16 +878,7 @@ func (a *analysis) updateActualCallSites() {
 				target := outEdge.Callee.cgn
 				if !total.Has(target.idx) {
 					//update
-					if cgn.actualCallerSite == nil {
-						if a.log != nil {
-							fmt.Fprintf(a.log, "* Update actualCallerSitefor ----> \n%s -> [%s] \n", target, cgn.contourkFull())
-						}
-						if a.config.DEBUG {
-							fmt.Printf("* Update actualCallerSite for ----> \n%s -> [%s] \n", target, cgn.contourkFull())
-						}
-
-						target.updateActualCallerSite(cgn.callersite)
-					} else {
+					if cgn.actualCallerSite != nil {
 						if a.log != nil {
 							fmt.Fprintf(a.log, "* Update actualCallerSitefor ----> \n%s -> [%s] \n", target, cgn.contourkActualFull())
 						}
@@ -897,8 +888,8 @@ func (a *analysis) updateActualCallSites() {
 						for _, actual := range cgn.actualCallerSite {
 							target.updateActualCallerSite(actual)
 						}
+						next[target.obj] = target.obj //next round
 					}
-					next[target.obj] = target.obj //next round
 				}
 			}
 		}
@@ -919,7 +910,7 @@ func (a *analysis) callEdge(caller *cgnode, site *callsite, calleeid nodeid) {
 	//bz: solution@field actualCallerSite []*callsite of cgnode type
 	if a.closureWOGo[calleeid] != 0 {
 		//bz: only if caller is from app
-		if a.withinScope(caller.fn.String()) && !equalCallSite(caller.callersite, callee.callersite) {
+		if !equalCallSite(caller.callersite, callee.callersite) {
 			if a.log != nil {
 				fmt.Fprintf(a.log, "Update actualCallerSite for ----> \n%s -> [%s] \n", callee, caller.contourkFull())
 			}
