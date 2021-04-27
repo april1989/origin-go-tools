@@ -906,7 +906,8 @@ func (a *analysis) callEdge(caller *cgnode, site *callsite, calleeid nodeid) {
 
 	//bz: solution@field actualCallerSite []*callsite of cgnode type
 	if a.closureWOGo[calleeid] != 0 {
-		if !equalCallSite(caller.callersite, callee.callersite) {
+		//bz: only if caller is from app
+		if a.withinScope(caller.fn.String()) && !equalCallSite(caller.callersite, callee.callersite) {
 			if a.log != nil {
 				fmt.Fprintf(a.log, "Update actualCallerSite for ----> \n%s -> [%s] \n", callee, caller.contourkFull())
 			}
