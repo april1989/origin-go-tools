@@ -37,7 +37,7 @@ var DefaultMinTime time.Duration
 var DefaultElapsed int64
 
 //do preparation job
-func InitialMain() ([]*ssa.Package, []*ssa.Package) {
+func InitialMain() []*ssa.Package {
 	flags.ParseFlags()
 	if flags.DoCallback {
 		doCallback("")
@@ -61,10 +61,10 @@ func InitialTest() { //default scope of tests
 	scope = append(scope, "main")
 }
 
-//bz: for race checker of callback branch use only
-func InitialChecker(filepathh string, config *pointer.Config) {
+//bz: for race checker of callback branch use only, or if want to use callback
+func InitialChecker(filepath string, config *pointer.Config) {
 	if config.DoCallback {
-		doCallback(filepathh)
+		doCallback(filepath)
 	}
 }
 
@@ -76,7 +76,7 @@ func doCallback(filepath string) {
 		switch os {
 		case "darwin":
 			fmt.Println("MAC operating system")
-			path = "/Users/bozhen/Documents/Go2/origin-go-tools/go/pointer/callback.yml"
+			path = "/Users/bozhen/Documents/Go2/origin-go-tools/go/pointer/callback.yml" //bz: my mac mini only
 		case "linux":
 			fmt.Println("Linux")
 			path = "/home/ubuntu/go/origin-go-tools/go/pointer/callback.yml" //bz: aws lightsail
@@ -89,8 +89,8 @@ func doCallback(filepath string) {
 	}
 }
 
-//do preparation job: commom
-func initial(args []string, cfg *packages.Config) ([]*ssa.Package, []*ssa.Package) {
+//do preparation job: commom job
+func initial(args []string, cfg *packages.Config) []*ssa.Package {
 	fmt.Println("Loading input packages...")
 	initial, err := packages.Load(cfg, args...)
 	if err != nil {
@@ -98,10 +98,10 @@ func initial(args []string, cfg *packages.Config) ([]*ssa.Package, []*ssa.Packag
 	}
 	if len(initial) == 0 {
 		fmt.Println("Package list empty")
-		return nil, nil
+		return nil
 	} else if initial[0] == nil {
 		fmt.Println("Nil package in list")
-		return nil, nil
+		return nil
 	} else if packages.PrintErrors(initial) > 0 {
 		errSize, errPkgs := packages.PrintErrorsAndMore(initial) //bz: errPkg will be nil in initial
 		if errSize > 0 {
@@ -113,7 +113,7 @@ func initial(args []string, cfg *packages.Config) ([]*ssa.Package, []*ssa.Packag
 		}
 		if len(initial) == 0 || initial[0] == nil {
 			fmt.Println("All Error Pkgs, Cannot Analyze. Return. ")
-			return nil, nil
+			return nil
 		}
 	}
 	fmt.Println("Done  -- " + strconv.Itoa(len(initial)) + " packages loaded")
@@ -128,7 +128,7 @@ func initial(args []string, cfg *packages.Config) ([]*ssa.Package, []*ssa.Packag
 	mains, tests, err := findMainPackages(pkgs)
 	if err != nil {
 		fmt.Println(err)
-		return nil, nil
+		return nil
 	}
 
 	if flags.DoTests {
@@ -142,7 +142,7 @@ func initial(args []string, cfg *packages.Config) ([]*ssa.Package, []*ssa.Packag
 	}
 
 	//extract scope from pkgs
-	if !flags.DoTests && len(pkgs) > 1 { //TODO: bz: this only works when running under proj root dir
+	if len(pkgs) > 1 { //TODO: bz: this only works when running under proj root dir
 		//bz: compute the scope info == the root pkg: should follow the pattern xxx.xxx.xx/xxx
 		path, err := os.Getwd() //current working directory == project path
 		if err != nil {
@@ -166,7 +166,7 @@ func initial(args []string, cfg *packages.Config) ([]*ssa.Package, []*ssa.Packag
 		}
 		if mod == "" {
 			fmt.Println("Cannot find go.mod in default location: ", gomodFile)
-			return nil, nil
+			return nil
 		}
 
 		if err := scanner.Err(); err != nil {
@@ -187,7 +187,7 @@ func initial(args []string, cfg *packages.Config) ([]*ssa.Package, []*ssa.Packag
 	MyMinTime = 10000000000000
 	DefaultMinTime = 10000000000000
 
-	return mains, tests
+	return mains
 }
 
 // mainPackages returns the main/test packages to analyze.
@@ -199,7 +199,7 @@ func findMainPackages(pkgs []*ssa.Package) ([]*ssa.Package, []*ssa.Package, erro
 		if p != nil {
 			if p.Pkg.Name() == "main" && p.Func("main") != nil {
 				mains = append(mains, p)
-				if flags.DoTests && strings.HasSuffix(p.Pkg.String(), ".test") { //this is a test-assembled main
+				if flags.DoTests && strings.HasSuffix(p.Pkg.String(), ".test") { //this is a test-assembled main, just identify, no other use
 					tests = append(tests, p)
 				}
 			}
@@ -227,7 +227,7 @@ func DoSameRoot(mains []*ssa.Package) {
 
 
 //bz: test usesage in race checker -> this is the major usage now
-func DoSeq(mains []*ssa.Package, tests []*ssa.Package) {
+func DoSeq(mains []*ssa.Package) {
 	level := 0
 	if flags.DoLevel != -1 {
 		level = flags.DoLevel //bz: reset the analysis scope
@@ -242,7 +242,6 @@ func DoSeq(mains []*ssa.Package, tests []*ssa.Package) {
 
 	ptaConfig := &pointer.Config{
 		Mains:          mains,
-		Tests:          tests,              //bz: a set of tests pkgs to analyze, can be nil
 		Reflection:     false,
 		BuildCallGraph: true,
 		Log:            nil, //logfile,

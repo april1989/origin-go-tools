@@ -59,9 +59,10 @@ var (
 	main2Result     map[*ssa.Package]*Result     //bz: return value of AnalyzeMultiMains(), skip redo everytime calls Analyze()
 	main2ResultWCtx map[*ssa.Package]*ResultWCtx //bz: return value of AnalyzeMultiMains(), skip redo everytime calls Analyze()
 
-	//bz: for my use
+	//bz: for my use: coverage
 	allFns          map[string]string //bz: when DoCoverage = true: store all funcs within the scope/app, use map instead of array for an easier existence check
-	showUnCoveredFn = true            //bz: whether print out those functions that we did not analyze
+	cCmplFns        map[string]string //bz: c/c++ compiled functions, e.g., functions in xxx.pb.go, some of these functions will nolonger be used/invoked in the app
+	showUnCoveredFn = false           //bz: whether print out those functions that we did not analyze
 )
 
 // An object represents a contiguous block of memory to which some
@@ -573,7 +574,7 @@ func Analyze(config *Config) (result *Result, err error) {
 // always succeed.  An error can occur only due to an internal bug.
 //
 func AnalyzeWCtx(config *Config, doPrintConfig bool, isMain bool) (result *ResultWCtx, err error) { //Result
-	if config.Mains == nil && config.Tests == nil {
+	if config.Mains == nil {
 		return nil, fmt.Errorf("no main/test packages to analyze (check $GOROOT/$GOPATH)")
 	}
 	defer func() {
@@ -625,12 +626,7 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool, isMain bool) (result *Resul
 	UpdateDEBUG(a.config.DEBUG) //in pointer/callgraph, print out info changes
 
 	//update analysis import
-	var imports []*types.Package
-	if isMain {
-		imports = a.config.Mains[0].Pkg.Imports()
-	} else { //is test
-		imports = a.config.Tests[0].Pkg.Imports()
-	}
+	imports := a.config.Mains[0].Pkg.Imports()
 	if len(imports) > 0 {
 		for _, _import := range imports {
 			a.config.imports = append(a.config.imports, _import.Name())
@@ -1057,58 +1053,78 @@ func (a *analysis) showCounts() {
 //bz: when DoCoverage = true: collect all functions in the scope, stored in allFns
 func (a *analysis) collectFnsWScope() {
 	allFns = make(map[string]string)
+	cCmplFns = make(map[string]string)
+
+	tmp := make(map[*ssa.Function]*ssa.Function)
 	for _, T := range a.prog.RuntimeTypes() {
 		_type := T.String()
 		if a.withinScope(_type) {
+			if isInterface(T) {
+				continue //interface has no concrete function, skip
+			}
+
+			//bz: a.prog.MethodSets.MethodSet(T): this is over-over-over-approximate ... some unimplemented functions can appear here, e.g.,
+			// (google.golang.org/grpc/credentials/google.testCreds).OverrideServerName -> struct @ credentials/google/google_test.go,
+			// but interface function declared @ credentials/credentials.go
+			// however, such function does not exist ... want to replace by switch, but what if we miss functions??
 			mset := a.prog.MethodSets.MethodSet(T)
 			for i, n := 0, mset.Len(); i < n; i++ {
 				m := a.prog.MethodValue(mset.At(i))
-
-				//bz: exclude fns in xxx.pb.go
-				pos := m.Pos()
-				if pos.IsValid(){
-					filename := a.prog.Fset.Position(pos).Filename
-					if strings.HasSuffix(filename, ".pb.go") {
-						continue
-					}
-				}
-
-				s := m.String()
-				allFns[s] = s
+				tmp[m] = m
 			}
+
+			//switch typ := T.(type) {
+			//case *types.Named:
+			//	for i:= 0; i< typ.NumMethods(); i++ {
+			//		m := typ.Method(i)
+			//		fn := a.prog.declaredFunc(m) //bz: this is the declared function in programs
+			//		tmp[fn] = fn
+			//	}
+			//
+			//case *types.Pointer:
+			//
+			//case *types.Struct:
+			//
+			//default:
+			//}
 		}
 	}
 	for _, pkg := range a.prog.AllPackages() {
 		for _, mem := range pkg.Members {
 			if fn, ok := mem.(*ssa.Function); ok {
 				if a.withinScope(fn.Pkg.String()) {
-					//bz: exclude fns in xxx.pb.go
-					pos := fn.Pos()
-					if pos.IsValid(){
-						filename := a.prog.Fset.Position(pos).Filename
-						if strings.HasSuffix(filename, ".pb.go") {
-							continue
-						}
-					}
-					s := fn.String()
-					allFns[s] = s
+					tmp[fn] = fn
 				}
 			}
 		}
+	}
+
+	for _, m := range tmp {
+		s := m.String()
+
+		//bz: identify fns in xxx.pb.go
+		pos := m.Pos()
+		if pos.IsValid() {
+			filename := a.prog.Fset.Position(pos).Filename
+			if strings.HasSuffix(filename, ".pb.go") {
+				cCmplFns[s] = s
+			}
+		}
+
+		allFns[s] = s
 	}
 }
 
 //bz: when DoCoverage = true: compute (#analyzed fn/#total fn) in a program for this main
 func (a *analysis) computeCoverage() {
-	covered := 0
+	covered := make(map[string]string)
 	closure := 0
 	other := 0
+
 	for fn, _ := range a.result.CallGraph.Fn2CGNode {
 		s := fn.String()
-		//fmt.Println(fn.String())
 		if _, ok := allFns[s]; ok {
-			covered++
-			//fmt.Println(fn.String())
+			covered[s] = s
 		} else {
 			subs := strings.Split(s, "$")
 			if len(subs) == 1 {
@@ -1121,32 +1137,27 @@ func (a *analysis) computeCoverage() {
 			}
 		}
 
-		//if a.config.Reflection {
-		//	//bz: this is a test, and we have a mismatch in tests, e.g.,
-		//	// (*google.golang.org/grpc/xds/internal/balancer/priority.s).Teardown in allFns
-		//	//  -> (google.golang.org/grpc/xds/internal/balancer/priority.s).Teardown in our cg
-		//	if strings.HasPrefix(s, "(") && strings.Contains(s, ".s).") {
-		//		s = "(*" + s[1:]
-		//		if _, ok := allFns[s]; ok {
-		//			covered++
-		//		}
-		//	}
-		//}
-
-		if string(s[0]) == "(" && string(s[1]) != "*" { //this is not a pointer type
+		//bz: we have a mismatch here, e.g., in priority test from grpc:
+		// (*google.golang.org/grpc/xds/internal/balancer/priority.s).Teardown in allFns
+		//  -> (google.golang.org/grpc/xds/internal/balancer/priority.s).Teardown in our cg
+		// or vice versa. Actaully, these two should have no diff when we handle their constraints ??
+		// SOLUTION -> convert the mismatch manually
+		if s[0:2] == "(*" { //this is a pointer type
+			s = "(" + s[2:] //remove pointer
+			if _, ok := allFns[s]; ok {
+				covered[s] = s
+			}
+		} else if string(s[0]) == "(" && string(s[1]) != "*" { //this is not a pointer type
 			s = "(*" + s[1:] //make it a pointer type
 			if _, ok := allFns[s]; ok {
-				covered++
+				covered[s] = s
 			}
 		}
-
-		//if strings.HasPrefix(s, "(*reflect.rtype)") {//bz: debug
-		//	continue
-		//}
-		//fmt.Println(s)
 	}
-	fmt.Println("\n#Coverage: ", (float64(covered)/float64(len(allFns)))*100, "%\t (#total: ",
-		len(allFns), ", #analyzed: ", covered, ", #analyzed$: ", closure, ", #others: ", other, ")") //others can be lib, reflect, <root>
+
+	//TODO: bz: how many uncovered are from cCmplGen?
+	fmt.Println("\n#Coverage: ", (float64(len(covered))/float64(len(allFns)))*100, "%\t (#total: ", len(allFns), ", #compiled: ", len(cCmplFns),
+		", #analyzed: ", len(covered), ", #analyzed$: ", closure, ", #others: ", other, ")") //others can be lib, reflect, <root>
 }
 
 //bz: when DoCoverage = true: compute (#analyzed fn/#total fn) in a program for ALL mains
@@ -1173,20 +1184,17 @@ func computeTotalCoverage() {
 				}
 			}
 
-			//if result.a.config.Reflection {
-			//	//bz: this is a test, and we have only mismatches function but no pointer in tests, e.g.,
-			//	// (*google.golang.org/grpc/xds/internal/balancer/priority.s).Teardown in allFns
-			//	//  -> (google.golang.org/grpc/xds/internal/balancer/priority.s).Teardown in our cg
-			//	// actually, there is no diff
-			//	if strings.HasPrefix(s, "(") && strings.Contains(s, ".s).") {
-			//		s = "(*" + s[1:]
-			//		if _, ok := allFns[s]; ok {
-			//			covered[s] = s
-			//		}
-			//	}
-			//}
-
-			if string(s[0]) == "(" && string(s[1]) != "*" { //this is not a pointer type
+			//bz: we have a mismatch here, e.g.,
+			// (*google.golang.org/grpc/xds/internal/balancer/priority.s).Teardown in allFns
+			//  -> (google.golang.org/grpc/xds/internal/balancer/priority.s).Teardown in our cg
+			// or vice versa. Actaully, these two fn should have no diff when we handle their constraints.
+			// SOLUTION -> convert the mismatch manually
+			if s[0:1] == "(*" { //this is a pointer type
+				s = "(" + s[:2] //remove pointer
+				if _, ok := allFns[s]; ok {
+					covered[s] = s
+				}
+			} else if string(s[0]) == "(" && string(s[1]) != "*" { //this is not a pointer type
 				s = "(*" + s[1:] //make it a pointer type
 				if _, ok := allFns[s]; ok {
 					covered[s] = s
@@ -1194,10 +1202,11 @@ func computeTotalCoverage() {
 			}
 		}
 	}
-	fmt.Println("Coverage: ", (float64(len(covered))/float64(len(allFns)))*100, "%\t (#total: ", len(allFns),
+
+	fmt.Println("Coverage: ", (float64(len(covered))/float64(len(allFns)))*100, "%\t (#total: ", len(allFns), ", #compiled: ", len(cCmplFns),
 		", #analyzed: ", len(covered), ", #analyzed$: ", len(closure), ", #others: ", len(other), ")")
 
-	if showUnCoveredFn {
+	if showUnCoveredFn { //bz: not exposed to user yet
 		fmt.Println("====================================================================")
 		fmt.Println("DUMP UNCOVERED FUNCTIONS: (#", len(allFns)-len(covered), ")")
 		for _, fn := range allFns {

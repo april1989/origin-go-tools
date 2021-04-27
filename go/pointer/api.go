@@ -88,8 +88,6 @@ type Config struct {
 	Level         int      //bz: level == 0: traverse all app and lib, but with different ctx; level == 1: traverse 1 level lib call; level == 2: traverse 2 leve lib calls; no other option now
 	DoPerformance bool     //bz: if we output performance related info
 	DoCoverage    bool     //bz: compute (#analyzed fn/#total fn) in a program
-
-	Tests []*ssa.Package   //bz: contains the set of 'test' packages to analyze, can be nil
 }
 
 //bz: user API: race checker, added when ptaconfig.Level == 2
@@ -175,11 +173,6 @@ func (c *Config) AddExtendedQuery(v ssa.Value, query string) (*Pointer, error) {
 func (c *Config) prog() *ssa.Program {
 	for _, main := range c.Mains {
 		return main.Prog
-	}
-	if c.Tests != nil { //bz: only valid if we analyze tests
-		for _, test := range c.Tests {
-			return test.Prog
-		}
 	}
 	panic("empty scope")
 }

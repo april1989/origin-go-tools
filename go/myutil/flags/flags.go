@@ -12,18 +12,19 @@ var DoLog = false
 var Main = "" //bz: run for a specific main in this pkg; start from 0
 var DoDefault = false //bz: only Do default
 var DoCompare = false //bz: this has a super long time
-var TimeLimit time.Duration //bz: time limit, unit: ?h?m?s
 var DoLevel = 0 //bz: set the analysis scope to level ? default = 0
 var DoCallback = false //bz: simplify callback fn + preSolve()
 var DoCollapse = false //bz: collapse the lib function with its callback, no matter what are the context of caller of lib func
 var DoTests    = true  //bz: treat a test as a main to analyze
+
+var TimeLimit time.Duration //bz: time limit set by users, unit: ?h?m?s
 
 //my use
 var PrintCGNodes = false //bz: print #cgnodes (before solve())
 var DoPerforamnce = true
 var DoDetail = false   //bz: print out all data from countReachUnreachXXX
 var DoCommonPart = false //bz: do compute common path
-var DoCoverage = false //bz: compute (#analyzed fn/#total fn) in a program
+var DoCoverage = false //bz: compute (#analyzed fn/#total fn) in a program within the scope
 
 //different run scenario
 var DoSameRoot = false //bz: do all main in a pkg together from the same root -> all mains linked by the root node
@@ -47,7 +48,8 @@ func ParseFlags() {
 	_doSameRoot := flag.Bool("doSameRoot", false, "Do all main together from the same root in one pkg, linked by the root node.")
 	_doParallel := flag.Bool("doParallel", false, "Do all mains in a pkg in parallel, but input is multiple mains.")
 	_doCoverage := flag.Bool("doCoverage", false, "Compute (#analyzed fn/#total fn) in a program")
-	//test useage in race checker
+
+	//test useage in race checker -> main usage
 	_doSeq := flag.Bool("doSeq", false, "Do all mains in a pkg sequential, but input is multiple mains.")
 
 	flag.Parse()
