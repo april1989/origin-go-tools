@@ -431,7 +431,7 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 					fnkcs = a.createKCallSite(caller.callersite, special)
 				} else { // use parent context, since no go invoke afterwards (no go can be reachable currently at this point);
 					//update: we will update the parent ctx (including loopID) after solving
-					if a.consumeMakeClosureNext(closure) { //do not record if next instr is defer/call -> just a regular call
+					if !a.consumeMakeClosureNext(closure) { //only record if next instr is go -> context changes afterwards
 						a.closureWOGo[obj] = obj //record
 					}
 					fnkcs = caller.callersite
