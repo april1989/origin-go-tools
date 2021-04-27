@@ -251,6 +251,11 @@ func (a *analysis) makeFunctionObject(fn *ssa.Function, callersite *callsite) no
 	//if a.config.DEBUG {
 	//	fmt.Println("\t---- makeFunctionObject for " + fn.String())
 	//}
+	//if strings.Contains(fn.String(), "reflect.TypeOf") || //bz: debug
+	//	strings.Contains(fn.String(), "reflect.ValueOf") ||
+	//	strings.Contains(fn.String(), "(*reflect.rtype).Method") {
+	//	fmt.Println(fn, " ", callersite)
+	//}
 
 	// obj is the function object (identity, params, results).
 	obj := a.nextNode()
@@ -529,7 +534,7 @@ func (a *analysis) makeParamResultNodes(fn *ssa.Function, obj nodeid, cgn *cgnod
 	}
 	a.addNodes(sig.Params(), "func.params")
 	a.addNodes(sig.Results(), "func.results")
-	a.endObject(obj, cgn, fn).flags |= otFunction
+	a.endObject(obj, cgn, fn).flags |= otFunction //bz: here marks the sig node as function
 
 	if a.log != nil {
 		fmt.Fprintf(a.log, "\t----\n")
@@ -656,6 +661,19 @@ func (a *analysis) taggedValue(obj nodeid) (tDyn types.Type, v nodeid, indirect 
 		panic(fmt.Sprintf("not a tagged object: n%d = %s", obj, n))
 	}
 	return n.typ, obj + 1, flags&otIndirect != 0
+}
+
+//bz: added for rVCallConstraint, no panic; if not a function, reutrn nil
+func (a *analysis) taggedFunc(obj nodeid) (tDyn types.Type) {
+	n := a.nodes[obj]
+	if n.obj == nil || n.obj.flags&otFunction == 0 {
+		if a.log != nil {   //debug
+			fmt.Fprintf(a.log, "not a tagged function: n", obj, "=", n)
+		}
+		//panic(fmt.Sprintf("not a tagged function: n%d = %s", obj, n))
+		return nil
+	}
+	return n.typ
 }
 
 // funcParams returns the first node of the params (P) block of the
@@ -1595,6 +1613,17 @@ func (a *analysis) existCallback(fn *ssa.Function, callersite *callsite) ([]node
 	return nil, false, nil
 }
 
+//bz: whether this is a fn from reflect pkg
+func (a *analysis) isFromReflect(fn *ssa.Function) bool {
+	if fn.Pkg == nil || fn.Pkg.Pkg == nil {
+		return false
+	}
+	if fn.Pkg.Pkg.Name() == "reflect" {
+		return true
+	}
+	return false
+}
+
 //bz : the following several functions generate constraints for different method calls --------------
 // genStaticCall generates constraints for a statically dispatched function call.
 func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site *callsite, call *ssa.CallCommon, result nodeid) {
@@ -1705,7 +1734,23 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 				obj, _ = a.makeFunctionObjectWithContext(caller, fn, site, nil, 0)
 			}
 		} else {
-			obj = a.objectNode(nil, fn) // shared contour
+			if a.config.Reflection && a.isFromReflect(fn)  {
+				//bz: static reflection functions only have shared contours, however, this makes the pta exploded ...
+				// because their usage are like:
+				//   xt := reflect.TypeOf(x)
+				//	 xv := reflect.ValueOf(x)
+				//
+				//	 for i := 0; i < xt.NumMethod(); i++ {
+				//		methodName := xt.Method(i).Name ...
+				// all x passed to reflect.TypeOf() will be also passed to xt.Method(), including a lot of infeasible path.
+				//SOLUTION -> add context only if origin-sensitive and caller is within scope: use caller context, do not consider loop now;
+				// other reflection methods, ignore them
+				if a.considerMyContext(caller.fn.String()) {
+					obj, _ = a.makeFunctionObjectWithContext(caller, fn, site, nil, 0)
+				} //else: from reflections that are not in the tests from the analyzed app
+			}else{
+				obj = a.objectNode(nil, fn) // shared contour
+			}
 		}
 	} else {                        //default: context-insensitive
 		if a.shouldUseContext(fn) { // default
@@ -2349,9 +2394,6 @@ func (a *analysis) genInstr(cgn *cgnode, instr ssa.Instruction) {
 			prefix = val.Name() + " = "
 		}
 		fmt.Fprintf(a.log, "; %s%s\n", prefix, instr)
-		if strings.Contains(prefix + instr.String(), "t40 = next t34") && strings.Contains(cgn.fn.String(), "(*google.golang.org/grpc/xds/internal/balancer/edsbalancer.balancerGroup).close") {
-			fmt.Println()
-		}
 	}
 
 	switch instr := instr.(type) {
@@ -2501,7 +2543,7 @@ func (a *analysis) genInstr(cgn *cgnode, instr ssa.Instruction) {
 			odst := uint32(1) // offset within tuple (initially just after 'ok bool')
 			sz := uint32(0)   // amount to copy
 
-			//TODO: maybe report to go?
+			//TODO: report to go @ https://github.com/golang/go/issues/45735  (local log: my_log_0-panic-report)
 			// !!!! bz: panic@grpc commit e38032e9 at ir stmt (; t40 = next t34) in function (*google.golang.org/grpc/xds/internal/balancer/edsbalancer.balancerGroup).close
 			// REASON -> load base is wrong due to wrong computed odst: it maps to other localval
 			//   This has nothing to do with my code, so i guess it's some wrong logic in default algorithm?
@@ -2969,13 +3011,13 @@ func (a *analysis) generate() {
 		a.recordPreGen = true
 	}
 	if rtype := a.reflectRtypePtr; rtype != nil {
-		a.genMethodsOf(rtype)
+		a.genMethodsOf(rtype) //bz: generate cgns for all fns of type *reflect.rtype
 	}
 	a.recordPreGen = false
 
 	root := a.genRootCalls()
 
-	if a.config.BuildCallGraph { //bz:
+	if a.config.BuildCallGraph { //bz: i added
 		a.result.CallGraph = NewWCtx(root)
 	}
 

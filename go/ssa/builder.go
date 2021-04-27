@@ -2245,9 +2245,6 @@ func (prog *Program) Build() {
 		} else {
 			wg.Add(1)
 			go func(p *Package) {
-				//if strings.Contains(p.Pkg.String(), "primitives.test") {
-				//	fmt.Println()
-				//}
 				p.Build()
 				wg.Done()
 			}(p)

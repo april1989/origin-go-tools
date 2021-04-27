@@ -315,9 +315,28 @@ func (c *typeFilterConstraint) solve(a *analysis, delta *nodeset) {
 			panic("indirect tagged object")
 		}
 
-		if types.AssignableTo(tDyn, c.typ) {
-			if a.addLabel(c.dst, ifaceObj) {
-				a.addWork(c.dst)
+		//TODO: bz: this can cause panic if using REFLECTION and this x propagate to invoke constraints
+		// that requires implemented function body. e.g., @google.golang.org/grpc.test has panic:
+		//   n251518: no ssa.Function for func (fmt.Stringer).String() string
+		// did not see this when REFLECTION is off
+		// Tmp solution -> tDyn and c.typ cannot be exactly the same? this probably is not the root cause
+		if a.config.Reflection {
+			if types.AssignableTo(tDyn, c.typ) {
+				if _, ok := c.typ.(*types.Pointer); !ok {
+					if a.log != nil {
+						fmt.Fprintf(a.log, "\t\tskip: n%d has type (%s) with no virtual function\n", ifaceObj, tDyn)
+					}
+					return
+				}
+				if a.addLabel(c.dst, ifaceObj) {
+					a.addWork(c.dst)
+				}
+			}
+		}else{
+			if types.AssignableTo(tDyn, c.typ) {
+				if a.addLabel(c.dst, ifaceObj) {
+					a.addWork(c.dst)
+				}
 			}
 		}
 	}

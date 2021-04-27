@@ -16,7 +16,7 @@ var TimeLimit time.Duration //bz: time limit, unit: ?h?m?s
 var DoLevel = 0 //bz: set the analysis scope to level ? default = 0
 var DoCallback = false //bz: simplify callback fn + preSolve()
 var DoCollapse = false //bz: collapse the lib function with its callback, no matter what are the context of caller of lib func
-var DoTests    = false  //bz: treat a test as a main to analyze
+var DoTests    = true  //bz: treat a test as a main to analyze
 
 //my use
 var PrintCGNodes = false //bz: print #cgnodes (before solve())
@@ -41,6 +41,7 @@ func ParseFlags() {
 	_doLevel := flag.Int("doLevel", -1, "Set the analysis scope to level = ? .")
 	_doCollapse := flag.Bool("doCollapse", false, "Collapse the context of lib function which has callbacks. ")
 	_doTests := flag.Bool("doTests", false, "Treat a test as a main to analyze. ")
+
 	//my use
 	_printCGNodes := flag.Bool("printCGNodes", false, "Print #cgnodes (before solve()).")
 	_doSameRoot := flag.Bool("doSameRoot", false, "Do all main together from the same root in one pkg, linked by the root node.")

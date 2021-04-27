@@ -276,6 +276,9 @@ func (c *callsite) goEqual(o *callsite) bool {
 }
 
 func (c *callsite) String() string {
+	if c == nil {
+		return "nil"
+	}
 	if c.instr != nil {
 		//return c.instr.Common().Description() //bz: original code
 		if c.loopID == 0 {

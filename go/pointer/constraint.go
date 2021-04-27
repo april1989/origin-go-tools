@@ -153,16 +153,3 @@ func (c *invokeConstraint) renumber(mapping []nodeid) {
 	c.iface = mapping[c.iface]
 	c.params = mapping[c.params]
 }
-
-
-
-////bz: fake constraint -> just want a record for the interface type of receiver and its caller, site and invoked funcs from genStaticCallCommon and genDynamicCall
-////    do not need the methods in constraint interface
-//type recvConstraint struct {
-//	iface    types.Type
-//	method   *ssa.Function
-//
-//	// bz: similar to invokeConstraint
-//	site   *callsite
-//	caller *cgnode
-//}

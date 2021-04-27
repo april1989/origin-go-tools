@@ -8,6 +8,7 @@ package pointer
 
 import (
 	"fmt"
+	"github.com/april1989/origin-go-tools/go/myutil/flags"
 	"go/token"
 	"go/types"
 	"io"
@@ -27,7 +28,7 @@ import (
 const (
 	// optimization options; enable all when committing
 	// TODO: bz: optHVN mess up my constraints and also make it sloooooow, tmp turn it off ....
-	optRenumber = false  // enable renumbering optimization (makes logs hard to read)
+	optRenumber = false // enable renumbering optimization (makes logs hard to read)
 	optHVN      = false // enable pointer equivalence via Hash-Value Numbering
 
 	// debugging options; disable all when committing
@@ -168,31 +169,31 @@ type analysis struct {
 	//bz: my record
 	fn2cgnodeIdx map[*ssa.Function][]int //bz: a map of fn with a set of its cgnodes represented by the indexes of cgnodes[]
 	// NOW also used for static and invoke calls TODO: may be should use nodeid not int (idx) ?
-	closures    map[*ssa.Function]*Ctx2nodeid //bz: solution for makeclosure
-	result      *ResultWCtx                   //bz: our result, dump all
-	closureWOGo map[nodeid]nodeid             //bz: solution@field actualCallerSite []*callsite of cgnode type
-	isWithinScope bool //bz: whether the current genInstr() is working on a method within our scope
-	online        bool //bz: whether a constraint is from genInvokeOnline()
+	closures      map[*ssa.Function]*Ctx2nodeid //bz: solution for makeclosure
+	result        *ResultWCtx                   //bz: our result, dump all
+	closureWOGo   map[nodeid]nodeid             //bz: solution@field actualCallerSite []*callsite of cgnode type
+	isWithinScope bool                          //bz: whether the current genInstr() is working on a method within our scope
+	online        bool                          //bz: whether a constraint is from genInvokeOnline()
 
 	//bz: performance-related data
 	num_constraints int             //bz:  performance
 	numObjs         int             //bz: number of objects allocated
 	numOrigins      int             //bz: number of origins
 	preGens         []*ssa.Function //bz: number of pregenerated functions/cgs/constraints for reflection, os, runtime
-	recordPreGen  bool //bz: when to record preGens
+	recordPreGen    bool            //bz: when to record preGens
 
 	//bz: callback-related
-	globalcb        map[string]*ssa.Function          //bz: a map of synthetic fakeFn and its fn -> cannot use map of newFunction directly ...
-	callbacks       map[*ssa.Function]*Ctx2nodeid     //bz: fakeFn invoked by different context/call sites
-	gencb           []*cgnode                         //bz: queue of functions to generate constraints from genCallBack, we solve these at the end
-	cb2Callers      map[*ssa.Function]*callbackRecord //bz: record the relations among: callback fn, caller lib fn and its context to avoid recursive calls
+	globalcb   map[string]*ssa.Function          //bz: a map of synthetic fakeFn and its fn -> cannot use map of newFunction directly ...
+	callbacks  map[*ssa.Function]*Ctx2nodeid     //bz: fakeFn invoked by different context/call sites
+	gencb      []*cgnode                         //bz: queue of functions to generate constraints from genCallBack, we solve these at the end
+	cb2Callers map[*ssa.Function]*callbackRecord //bz: record the relations among: callback fn, caller lib fn and its context to avoid recursive calls
 	//recvConstraints []*recvConstraint               //bz: record of recvConstraint from genStaticCallCommon and genDynamicCall
 
 	//bz: preSolve-related
-	curIter         int                               //bz: the ith iteration of the loop in preSolve() TODO: maybe move to analysis as a field
+	curIter int //bz: the ith iteration of the loop in preSolve() TODO: maybe move to analysis as a field
 
 	//bz: analyzing tests related
-	tests           []*ssa.Function                   //bz: the tests in current analyzed test pkg TODO: currently one pkg one analysis, update to map?
+	tests []*ssa.Function //bz: the tests in current analyzed test pkg TODO: currently one pkg one analysis, update to map?
 
 	/** bz:
 	    we do have panics when turn on hvn optimization. panics are due to that hvn wrongly computes sccs.
@@ -405,14 +406,26 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 
 	printConfig(config)
 
-	fmt.Println(" *** Multiple Mains **************** ")
+	if flags.DoTests {
+		fmt.Println(" *** Multiple Mains/Tests ********** ")
+	} else {
+		fmt.Println(" *** Multiple Mains **************** ")
+	}
+
 	for i, main := range config.Mains { //analyze mains
 		//create a config
 		var _mains []*ssa.Package
 		_mains = append(_mains, main)
+
+		//bz: !! turn on reflection if includes tests requires base objs, e.g., grpc/internal/cache/TestCacheExpire
+		doReflect := config.Reflection
+		if flags.DoTests && strings.HasSuffix(main.Pkg.Path(), ".test") {
+			doReflect = true
+		}
+
 		_config := &Config{
 			Mains:          _mains,
-			Reflection:     config.Reflection,
+			Reflection:     doReflect,
 			BuildCallGraph: config.BuildCallGraph,
 			Log:            config.Log,
 			//CallSiteSensitive: true, //kcfa
@@ -431,6 +444,9 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 		}
 
 		fmt.Println("\n\n", i, ": "+main.String(), " ... ")
+		if doReflect {
+			fmt.Println(" *** Reflection ON ***") //default off
+		}
 
 		//we initially run the analysis
 		start := time.Now()
@@ -595,7 +611,7 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool, isMain bool) (result *Resul
 		callbacks:    make(map[*ssa.Function]*Ctx2nodeid),
 		globalcb:     make(map[string]*ssa.Function),
 		cb2Callers:   make(map[*ssa.Function]*callbackRecord),
-		curIter: 0,
+		curIter:      0,
 	}
 
 	if false {
@@ -612,7 +628,7 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool, isMain bool) (result *Resul
 	var imports []*types.Package
 	if isMain {
 		imports = a.config.Mains[0].Pkg.Imports()
-	}else{ //is test
+	} else { //is test
 		imports = a.config.Tests[0].Pkg.Imports()
 	}
 	if len(imports) > 0 {
@@ -762,7 +778,6 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool, isMain bool) (result *Resul
 		}
 	} //will not do the same for tests, since we put all tests (under the same test pkg) in to one root.
 
-
 	if a.log != nil { // dump call graph
 		fmt.Fprintf(a.log, "\n\n\nCall Graph -----> \n")
 		printed := make(map[int]int)
@@ -800,8 +815,8 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool, isMain bool) (result *Resul
 		//}
 		//fmt.Println("#tracked types (totol num): ", numTyp)
 		fmt.Println("#fns (totol num): ", len(a.result.CallGraph.Fn2CGNode))
-		fmt.Println("#tracked types (totol num): trackAll") //bz: updated a.track = trackAll, skip this number
-		fmt.Println("#origins (totol num): ", a.numOrigins + 1) //bz: main is not included here
+		fmt.Println("#tracked types (totol num): trackAll")   //bz: updated a.track = trackAll, skip this number
+		fmt.Println("#origins (totol num): ", a.numOrigins+1) //bz: main is not included here
 		fmt.Println("#objs (totol num): ", a.numObjs)
 		fmt.Println("\nCall Graph: (cgnode based: function + context) \n#Nodes: ", len(a.result.CallGraph.Nodes))
 		fmt.Println("#Edges: ", a.result.CallGraph.GetNumEdges())
@@ -924,7 +939,7 @@ func (a *analysis) updateActualCallSites() {
 						fmt.Printf("* Update actualCallerSite for ----> \n%s -> [%s] \n", target, cgn.contourkActualFull())
 					}
 					for _, actual := range cgn.actualCallerSite {
-						target.updateActualCallerSite(actual)//update
+						target.updateActualCallerSite(actual) //update
 					}
 					next[target.obj] = target.obj //next round
 				}
@@ -1048,6 +1063,16 @@ func (a *analysis) collectFnsWScope() {
 			mset := a.prog.MethodSets.MethodSet(T)
 			for i, n := 0, mset.Len(); i < n; i++ {
 				m := a.prog.MethodValue(mset.At(i))
+
+				//bz: exclude fns in xxx.pb.go
+				pos := m.Pos()
+				if pos.IsValid(){
+					filename := a.prog.Fset.Position(pos).Filename
+					if strings.HasSuffix(filename, ".pb.go") {
+						continue
+					}
+				}
+
 				s := m.String()
 				allFns[s] = s
 			}
@@ -1057,6 +1082,14 @@ func (a *analysis) collectFnsWScope() {
 		for _, mem := range pkg.Members {
 			if fn, ok := mem.(*ssa.Function); ok {
 				if a.withinScope(fn.Pkg.String()) {
+					//bz: exclude fns in xxx.pb.go
+					pos := fn.Pos()
+					if pos.IsValid(){
+						filename := a.prog.Fset.Position(pos).Filename
+						if strings.HasSuffix(filename, ".pb.go") {
+							continue
+						}
+					}
 					s := fn.String()
 					allFns[s] = s
 				}
@@ -1080,13 +1113,33 @@ func (a *analysis) computeCoverage() {
 			subs := strings.Split(s, "$")
 			if len(subs) == 1 {
 				other++
-			}else {
+			} else {
 				sub := subs[0]
 				if _, ok := allFns[sub]; ok {
 					closure++
 				}
 			}
 		}
+
+		//if a.config.Reflection {
+		//	//bz: this is a test, and we have a mismatch in tests, e.g.,
+		//	// (*google.golang.org/grpc/xds/internal/balancer/priority.s).Teardown in allFns
+		//	//  -> (google.golang.org/grpc/xds/internal/balancer/priority.s).Teardown in our cg
+		//	if strings.HasPrefix(s, "(") && strings.Contains(s, ".s).") {
+		//		s = "(*" + s[1:]
+		//		if _, ok := allFns[s]; ok {
+		//			covered++
+		//		}
+		//	}
+		//}
+
+		if string(s[0]) == "(" && string(s[1]) != "*" { //this is not a pointer type
+			s = "(*" + s[1:] //make it a pointer type
+			if _, ok := allFns[s]; ok {
+				covered++
+			}
+		}
+
 		//if strings.HasPrefix(s, "(*reflect.rtype)") {//bz: debug
 		//	continue
 		//}
@@ -1100,23 +1153,43 @@ func (a *analysis) computeCoverage() {
 func computeTotalCoverage() {
 	covered := make(map[string]string)
 	closure := make(map[string]string)
-	other := make(map[string]string)//others can be lib, reflect, <root>
+	other := make(map[string]string) //others can be lib, reflect, <root>
 	for _, result := range main2ResultWCtx {
 		for fn, _ := range result.CallGraph.Fn2CGNode {
 			s := fn.String()
 			if _, ok := allFns[s]; ok {
 				if _, ok := covered[s]; !ok {
 					covered[s] = s
-				}else {
+				} else {
 					subs := strings.Split(s, "$")
 					if len(subs) == 1 {
 						other[s] = s
-					}else {
+					} else {
 						sub := subs[0]
 						if _, ok := allFns[sub]; ok {
 							closure[s] = s
 						}
 					}
+				}
+			}
+
+			//if result.a.config.Reflection {
+			//	//bz: this is a test, and we have only mismatches function but no pointer in tests, e.g.,
+			//	// (*google.golang.org/grpc/xds/internal/balancer/priority.s).Teardown in allFns
+			//	//  -> (google.golang.org/grpc/xds/internal/balancer/priority.s).Teardown in our cg
+			//	// actually, there is no diff
+			//	if strings.HasPrefix(s, "(") && strings.Contains(s, ".s).") {
+			//		s = "(*" + s[1:]
+			//		if _, ok := allFns[s]; ok {
+			//			covered[s] = s
+			//		}
+			//	}
+			//}
+
+			if string(s[0]) == "(" && string(s[1]) != "*" { //this is not a pointer type
+				s = "(*" + s[1:] //make it a pointer type
+				if _, ok := allFns[s]; ok {
+					covered[s] = s
 				}
 			}
 		}
@@ -1126,7 +1199,7 @@ func computeTotalCoverage() {
 
 	if showUnCoveredFn {
 		fmt.Println("====================================================================")
-		fmt.Println("DUMP UNCOVERED FUNCTIONS: (#", len(allFns) - len(covered), ")")
+		fmt.Println("DUMP UNCOVERED FUNCTIONS: (#", len(allFns)-len(covered), ")")
 		for _, fn := range allFns {
 			if _, ok := covered[fn]; ok {
 				continue
