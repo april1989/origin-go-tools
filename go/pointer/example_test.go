@@ -107,9 +107,11 @@ func main() {
 	// Print the labels of (C).f(m)'s points-to set.
 	fmt.Println("m may point to:")
 	var labels []string
-	for _, l := range result.Queries[Cfm].PointsTo().Labels() {
-		label := fmt.Sprintf("  %s: %s", prog.Fset.Position(l.Pos()), l)
-		labels = append(labels, label)
+	for _, q := range result.Queries[Cfm] {
+		for _, l := range q.PointsTo().Labels() {
+			label := fmt.Sprintf("  %s: %s", prog.Fset.Position(l.Pos()), l)
+			labels = append(labels, label)
+		}
 	}
 	sort.Strings(labels)
 	for _, label := range labels {
