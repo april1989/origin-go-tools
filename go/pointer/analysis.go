@@ -47,7 +47,8 @@ const (
 //bz: a set of my config
 var (
 	// optimization options; enable all when committing
-	// bz: only turn on these two opt when flags.DoCallback == true, since its not on-the-fly but presolve
+	// bz: THIS IS ORIGINALLY DECLARED IN CONST ABOVE
+	//  only turn on these two opt when flags.DoCallback == true, since its not on-the-fly but presolve
 	optRenumber = false // enable renumbering optimization (makes logs hard to read)
 	optHVN      = false // enable pointer equivalence via Hash-Value Numbering
 
@@ -63,7 +64,7 @@ var (
 	//bz: for my use: coverage
 	allFns          map[string]string //bz: when DoCoverage = true: store all funcs within the scope/app, use map instead of array for an easier existence check
 	cCmplFns        map[string]string //bz: c/c++ compiled functions, e.g., functions in xxx.pb.go, some of these functions will nolonger be used/invoked in the app
-	showUnCoveredFn = true           //bz: whether print out those functions that we did not analyze
+	showUnCoveredFn = false           //bz: whether print out those functions that we did not analyze
 )
 
 // An object represents a contiguous block of memory to which some
@@ -193,6 +194,9 @@ type analysis struct {
 
 	//bz: preSolve-related
 	curIter int //bz: the ith iteration of the loop in preSolve() TODO: maybe move to analysis as a field
+
+	//bz: test-related
+	isMain  bool //whether this analysis obj is allocated for a main? otherwise, for a test
 
 	/** bz:
 	    we do have panics when turn on hvn optimization. panics are due to that hvn wrongly computes sccs.
@@ -352,6 +356,13 @@ func printConfig(config *Config) {
 	} else {
 		fmt.Println(" *** No Callback *** ")
 	}
+	if flags.DoCallback {//bz: see comments of optHVN
+		optHVN = true
+		optRenumber = true
+	}else{ //turn it off for on-the-fly
+		optHVN = false
+		optRenumber = false
+	}
 
 	if config.DoPerformance { //bz: this is from my main, i want them to print out
 		if optRenumber {
@@ -411,11 +422,6 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 		fmt.Println(" *** Multiple Mains **************** ")
 	}
 
-	if flags.DoCallback {//bz: see comments of optHVN
-		optHVN = true
-		optRenumber = true
-	}
-
 	for i, main := range config.Mains { //analyze mains
 		//create a config
 		var _mains []*ssa.Package
@@ -423,8 +429,10 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 
 		//bz: !! turn on reflection if includes tests requires base objs, e.g., grpc/internal/cache/TestCacheExpire
 		doReflect := config.Reflection
+		isMain := true
 		if flags.DoTests && strings.HasSuffix(main.Pkg.Path(), ".test") {
 			doReflect = true
+			isMain = false
 		}
 
 		_config := &Config{
@@ -453,7 +461,7 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 
 		//we initially run the analysis
 		start := time.Now()
-		_result, err := AnalyzeWCtx(_config, false, true)
+		_result, err := AnalyzeWCtx(_config, false, isMain)
 		if err != nil {
 			return nil, err
 		}
@@ -512,12 +520,18 @@ func Analyze(config *Config) (result *Result, err error) {
 		return result, nil
 	}
 
-	//we initially run the analysis
+	//setting
 	if flags.DoCallback {//bz: see comments of optHVN
 		optHVN = true
 		optRenumber = true
 	}
-	_result, err := AnalyzeWCtx(config, true, true)
+	//see if i'm analyzing a main or test; reflection should be set in config already
+	isMain := true
+	if flags.DoTests && strings.HasSuffix(main.Pkg.Path(), ".test") {
+		isMain = false
+	}
+	//we initially run the analysis
+	_result, err := AnalyzeWCtx(config, true, isMain)
 	if err != nil {
 		return nil, err
 	}
@@ -572,6 +586,7 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool, isMain bool) (result *Resul
 		globalcb:     make(map[string]*ssa.Function),
 		cb2Callers:   make(map[*ssa.Function]*callbackRecord),
 		curIter:      0,
+		isMain:       isMain,
 	}
 
 	if false {
@@ -1010,6 +1025,33 @@ func (a *analysis) showCounts() {
 			m[n.solve] = true
 		}
 		fmt.Fprintf(a.log, "# ptsets:\t%d\n", len(m))
+	}
+
+	if flags.DoCallback { //bz: add showcount to console
+		counts := make(map[reflect.Type]int)
+		for _, c := range a.constraints {
+			counts[reflect.TypeOf(c)]++
+		}
+		fmt.Println("# constraints:\t", len(a.constraints))
+
+		var lines []string
+		for t, n := range counts {
+			line := fmt.Sprintf("%7d  (%2d%%)\t%s", n, 100*n/len(a.constraints), t)
+			lines = append(lines, line)
+		}
+		sort.Sort(sort.Reverse(sort.StringSlice(lines)))
+		for _, line := range lines {
+			fmt.Println("\t", line)
+		}
+
+		fmt.Println("# nodes:\t", len(a.nodes))
+
+		// Show number of pointer equivalence classes.
+		m := make(map[*solverState]bool)
+		for _, n := range a.nodes {
+			m[n.solve] = true
+		}
+		fmt.Println("# ptsets:\t", len(m))
 	}
 }
 

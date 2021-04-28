@@ -89,7 +89,7 @@ func doCallback(filepath string) {
 	}
 }
 
-//do preparation job: commom job
+//do preparation job: common job
 func initial(args []string, cfg *packages.Config) []*ssa.Package {
 	fmt.Println("Loading input packages...")
 	initial, err := packages.Load(cfg, args...)
@@ -103,6 +103,8 @@ func initial(args []string, cfg *packages.Config) []*ssa.Package {
 		fmt.Println("Nil package in list")
 		return nil
 	}
+	////bz: even though there are errors in initial pkgs, pointer analysis can still run on them
+	//// -> tmp comment off the following code
 	//else if packages.PrintErrors(initial) > 0 {
 	//	errSize, errPkgs := packages.PrintErrorsAndMore(initial) //bz: errPkg will be nil in initial
 	//	if errSize > 0 {
@@ -143,7 +145,7 @@ func initial(args []string, cfg *packages.Config) []*ssa.Package {
 	}
 
 	//extract scope from pkgs
-	if len(pkgs) > 1 { //TODO: bz: this only works when running under proj root dir
+	if !flags.DoTests && len(pkgs) > 1 { //TODO: bz: this only works when running under proj root dir
 		//bz: compute the scope info == the root pkg: should follow the pattern xxx.xxx.xx/xxx
 		path, err := os.Getwd() //current working directory == project path
 		if err != nil {
@@ -234,18 +236,18 @@ func DoSeq(mains []*ssa.Package) {
 		level = flags.DoLevel //bz: reset the analysis scope
 	}
 
-	var logfile *os.File
-	if flags.DoLog { //bz: debug purpose  && len(mains) == 1
-		logfile, _ = os.Create("/Users/bozhen/Documents/GO2/origin-go-tools/_logs/my_log_0")
-	} else {
-		logfile = nil
-	}
+	//var logfile *os.File
+	//if flags.DoLog { //bz: debug purpose  && len(mains) == 1
+	//	logfile, _ = os.Create("/Users/bozhen/Documents/GO2/origin-go-tools/_logs/my_log_0")
+	//} else {
+	//	logfile = nil
+	//}
 
 	ptaConfig := &pointer.Config{
 		Mains:          mains,
 		Reflection:     false,
 		BuildCallGraph: true,
-		Log:            logfile,
+		Log:            nil,//logfile,
 		//CallSiteSensitive: true, //kcfa
 		Origin: true, //origin
 		//shared config
@@ -270,10 +272,23 @@ func DoSeq(mains []*ssa.Package) {
 	}
 	fmt.Println("\nDone  -- PTA/CG Build; Using " + elapsed.String() + ".\n ")
 
-	//check
+	//check queries
 	fmt.Println("#Receive Result: ", len(results))
 	for main, result := range results {
 		fmt.Println("Receive result (#Queries: ", len(result.Queries), ", #IndirectQueries: ", len(result.IndirectQueries), ") for main: ", main.String())
+	}
+
+	//check for test
+	for main, r := range results {
+		mp := r.GetTests()
+		if mp == nil {
+			continue
+		}
+
+		fmt.Println("\n\nTest Functions of: ", main)
+		for fn, cgn := range mp {
+			fmt.Println(fn, "\t-> ", cgn.String())
+		}
 	}
 }
 

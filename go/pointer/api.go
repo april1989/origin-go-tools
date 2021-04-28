@@ -76,13 +76,13 @@ type Config struct {
 	//bz: origin-sensitive -> go routine as origin-entry
 	Origin bool
 	//bz: shared config by context-sensitive
-	K              int      //how many level? the most recent callsite/origin?
-	LimitScope     bool     //only apply kcfa to app methods
-	DEBUG          bool     //print out debug info
-	Scope          []string //analyzed scope -> from user input: -path
-	Exclusion      []string //excluded packages from this analysis -> from race_checker if any
-	TrackMore      bool     //bz: track pointers with all types
-	DoCallback     bool     //bz: we synthesize for callback fn in app
+	K          int      //how many level? the most recent callsite/origin?
+	LimitScope bool     //only apply kcfa to app methods
+	DEBUG      bool     //print out debug info
+	Scope      []string //analyzed scope -> from user input: -path
+	Exclusion  []string //excluded packages from this analysis -> from race_checker if any
+	TrackMore  bool     //bz: track pointers with all types
+	DoCallback bool     //bz: we synthesize for callback fn in app
 
 	imports       []string //bz: internal use: store all import pkgs in a main
 	Level         int      //bz: level == 0: traverse all app and lib, but with different ctx; level == 1: traverse 1 level lib call; level == 2: traverse 2 leve lib calls; no other option now
@@ -211,7 +211,7 @@ type ResultWCtx struct {
 	ExtendedQueries map[ssa.Value][]PointerWCtx
 	Warnings        []Warning // warnings of unsoundness
 
-	DEBUG          bool // bz: print out debug info ...
+	DEBUG bool // bz: print out debug info ...
 }
 
 //bz:
@@ -754,6 +754,42 @@ func (r *Result) GetMySyntheticFn(fn *ssa.Function) *ssa.Function {
 	return r.a.GetMySyntheticFn(fn)
 }
 
+//bz: user API: return a map of (fn <-> cgnode) that are Testxxx, Examplexxx, Benchmarkxxx
+// from a test analyzed by this r *Result
+func (r *Result) GetTests() map[*ssa.Function]*cgnode {
+	if r.a.isMain {
+		fmt.Println("This result is for the main entry:", r.a.config.Mains[0], ", not for a test. Return.")
+		return nil
+	}
+
+	a := r.a
+	result := make(map[*ssa.Function]*cgnode)
+	testSig := a.config.Mains[0].Pkg.Path() // this is xx/xx/xxx.test, we need to remove the '.test'
+	testSig = testSig[0:len(testSig)-5]
+
+	for v, id := range a.globalobj {
+		if fn, ok := v.(*ssa.Function); ok {
+			name := fn.Name()
+			pkg := fn.String()
+			if (strings.HasPrefix(pkg, testSig) || strings.HasPrefix(pkg, "(" + testSig)) && //static/non-static functions
+				(strings.HasPrefix(name, "Test") || strings.HasPrefix(name, "Benchmark") || strings.HasPrefix(name, "Example")) && // test format
+				!strings.Contains(name, "$") { //exclude closure
+				obj := a.nodes[id].obj
+				if obj == nil {
+					panic(fmt.Sprintf("nil obj of %s: %s", id, a.nodes[id]))
+				}
+				cgn := obj.cgn
+				if cgn == nil {
+					panic(fmt.Sprintf("nil cgnode in obj: %s", obj))
+				}
+				result[fn] = cgn
+			}
+		}
+	}
+
+	return result
+}
+
 //bz: user API: return PointerWCtx for a ssa.Value used under context of *ssa.GO,
 //input: ssa.Value, *ssa.GO
 //output: PointerWCtx; this can be empty if we cannot match any v with its goInstr
@@ -808,7 +844,7 @@ func (r *Result) PointsToByGoWithLoopID(v ssa.Value, goInstr *ssa.Go, loopID int
 	_, ok1 := v.(*ssa.FreeVar)
 	_, ok2 := v.(*ssa.Global)
 	_, ok3 := v.(*ssa.UnOp)
-	if ok1 || ok2 {//free var: only one pts available
+	if ok1 || ok2 { //free var: only one pts available
 		return ptss[0]
 	} else if ok3 && len(ptss) == 1 { //this is hard to say ...
 		return ptss[0]
@@ -893,7 +929,7 @@ func (r *Result) GetAllocations(p PointerWCtx) []*Site {
 			continue
 		}
 		site := &Site{
-			Fn: obj.cgn.fn,
+			Fn:  obj.cgn.fn,
 			Ctx: obj.cgn.callersite,
 		}
 		allocs = append(allocs, site)
@@ -903,8 +939,8 @@ func (r *Result) GetAllocations(p PointerWCtx) []*Site {
 
 //bz: user api used by GetAllocations()
 type Site struct {
-	Fn   *ssa.Function
-	Ctx  []*callsite
+	Fn  *ssa.Function
+	Ctx []*callsite
 }
 
 // A Pointer is an equivalence class of pointer-like values.
@@ -1097,7 +1133,6 @@ func (p PointerWCtx) MatchMyContextWithLoopID(go_instr *ssa.Go, loopID int) bool
 	}
 	return false //loop id not matched
 }
-
 
 //bz: return the context of cgn which calls setValueNode() to record this pointer;
 func (p PointerWCtx) GetMyContext() []*callsite {
