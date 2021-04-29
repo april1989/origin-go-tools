@@ -206,8 +206,8 @@ type ResultWCtx struct {
 
 	//bz: if DiscardQueries the following will be empty
 	Queries         map[ssa.Value][]PointerWCtx // pts(v) for each v in setValueNode().
-	IndirectQueries map[ssa.Value][]PointerWCtx // pts(*v) for each v in setValueNode().
-	GlobalQueries   map[ssa.Value][]PointerWCtx // pts(v) for each freevar in setValueNode().
+	IndirectQueries map[ssa.Value][]PointerWCtx // pts(*v) for each v in setValueNode(). Not used now
+	GlobalQueries   map[ssa.Value][]PointerWCtx // pts(v) for each freevar in setValueNode(). Not used now
 	ExtendedQueries map[ssa.Value][]PointerWCtx
 	Warnings        []Warning // warnings of unsoundness
 
@@ -478,7 +478,7 @@ func (r *ResultWCtx) pointsToByMain(v ssa.Value) PointerWCtx {
 	return PointerWCtx{a: nil}
 }
 
-//bz: return []PointerWCtx for query and indirect query and extended query
+//bz: return []PointerWCtx for query and indirect query and extended query1Ò
 func (r *ResultWCtx) pointsToRegular(v ssa.Value) []PointerWCtx {
 	pointers := r.Queries[v]
 	if pointers != nil {
@@ -801,7 +801,9 @@ func (r *Result) PointsToByGo(v ssa.Value, goInstr *ssa.Go) PointerWCtx {
 	_, ok1 := v.(*ssa.FreeVar)
 	_, ok2 := v.(*ssa.Global)
 	_, ok3 := v.(*ssa.UnOp)
-	if ok1 || ok2 || ok3 { //free var: only one pts available
+	if ok1 || ok2 { //free var: only one pts available
+		return ptss[0]
+	} else if ok3 && len(ptss) == 1 { //this is hard to say ...
 		return ptss[0]
 	}
 

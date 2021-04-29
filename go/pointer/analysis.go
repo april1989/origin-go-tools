@@ -739,14 +739,13 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool, isMain bool) (result *Resul
 	a.updateActualCallSites()
 
 	//bz: just assign for the main method; not a good solution, will resolve later
-	if isMain {
-		for _, cgn := range a.cgnodes {
-			if cgn.fn == a.config.Mains[0].Func("main") {
-				//this is the main methid in app
-				a.result.main = cgn
-			}
+	//  do the same for tests, however, all test functions (under the same test pkg and same main) in to one root.
+	for _, cgn := range a.cgnodes {
+		if cgn.fn == a.config.Mains[0].Func("main") {
+			//this is the main methid in app
+			a.result.main = cgn
 		}
-	} //will not do the same for tests, since we put all tests (under the same test pkg) in to one root.
+	}
 
 	if a.log != nil { // dump call graph
 		fmt.Fprintf(a.log, "\n\n\nCall Graph -----> \n")
