@@ -64,7 +64,7 @@ var (
 	//bz: for my use: coverage
 	allFns          map[string]string //bz: when DoCoverage = true: store all funcs within the scope/app, use map instead of array for an easier existence check
 	cCmplFns        map[string]string //bz: c/c++ compiled functions, e.g., functions in xxx.pb.go, some of these functions will nolonger be used/invoked in the app
-	showUnCoveredFn = false           //bz: whether print out those functions that we did not analyze
+	showUnCoveredFn = true            //bz: whether print out those functions that we did not analyze
 )
 
 // An object represents a contiguous block of memory to which some
@@ -196,7 +196,7 @@ type analysis struct {
 	curIter int //bz: the ith iteration of the loop in preSolve() TODO: maybe move to analysis as a field
 
 	//bz: test-related
-	isMain  bool //whether this analysis obj is allocated for a main? otherwise, for a test
+	isMain bool //whether this analysis obj is allocated for a main? otherwise, for a test
 
 	/** bz:
 	    we do have panics when turn on hvn optimization. panics are due to that hvn wrongly computes sccs.
@@ -305,6 +305,26 @@ func GetMain2ResultWCtx() map[*ssa.Package]*ResultWCtx {
 
 //bz: fill in the result
 func translateQueries(val ssa.Value, id nodeid, cgn *cgnode, result *Result, _result *ResultWCtx) {
+	if cgn == nil && !flags.DoCompare { //global var
+		//bz: default algo only has Queries and IndirectQueries in its result, if we want to do
+		// comparison, we need to record these GlobalQueries to Queries/IndirectQueries
+		_, ok1 := val.(*ssa.FreeVar)
+		_, ok2 := val.(*ssa.Global)
+		if ok1 || ok2 {
+			ptr := PointerWCtx{_result.a, id, nil}
+			ptrs, ok := result.GlobalQueries[val]
+			if !ok {
+				// First time?  Create the canonical query node.
+				ptrs = make([]PointerWCtx, 1)
+				ptrs[0] = ptr
+			} else {
+				ptrs = append(ptrs, ptr)
+			}
+			result.GlobalQueries[val] = ptrs
+			return
+		}
+	}
+
 	t := val.Type()
 	if CanPoint(t) {
 		ptr := PointerWCtx{_result.a, id, cgn}
@@ -356,15 +376,15 @@ func printConfig(config *Config) {
 	} else {
 		fmt.Println(" *** No Callback *** ")
 	}
-	if flags.DoCallback {//bz: see comments of optHVN
+	if flags.DoCallback { //bz: see comments of optHVN
 		optHVN = true
 		optRenumber = true
-	}else{ //turn it off for on-the-fly
+	} else { //turn it off for on-the-fly
 		optHVN = false
 		optRenumber = false
 	}
 
-	if config.DoPerformance { //bz: this is from my main, i want them to print out
+	if flags.DoPerformance { //bz: this is from my main, i want them to print out
 		if optRenumber {
 			fmt.Println(" *** optRenumber ON *** ")
 		} else {
@@ -434,6 +454,11 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 			doReflect = true
 			isMain = false
 		}
+		if i == 11 {
+			flags.PTSLimit = 100
+		}else{
+			flags.PTSLimit = 0
+		}
 
 		_config := &Config{
 			Mains:          _mains,
@@ -451,11 +476,9 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 			TrackMore:     config.TrackMore,  //bz: track pointers with all types
 			DoCallback:    config.DoCallback, //bz: do callback
 			Level:         config.Level,      //bz: see pointer.Config
-			DoPerformance: config.DoPerformance,
-			DoCoverage:    config.DoCoverage, //bz: compute (#analyzed fn/#total fn) in a program
 		}
 
-		if config.DoPerformance {
+		if flags.DoPerformance {
 			fmt.Println("\n\n", i, ": "+main.String(), " ... ")
 		}
 
@@ -491,7 +514,7 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 	fmt.Println("Min: ", minTime.String()+".")
 	fmt.Println("Avg: ", float32(total)/float32(len(config.Mains))/float32(1000), "s.")
 
-	if config.DoCoverage { //bz: total coverage
+	if flags.DoCoverage { //bz: total coverage
 		computeTotalCoverage()
 	}
 
@@ -521,7 +544,7 @@ func Analyze(config *Config) (result *Result, err error) {
 	}
 
 	//setting
-	if flags.DoCallback {//bz: see comments of optHVN
+	if flags.DoCallback { //bz: see comments of optHVN
 		optHVN = true
 		optRenumber = true
 	}
@@ -611,7 +634,7 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool, isMain bool) (result *Resul
 		printConfig(a.config)
 	}
 
-	if a.config.DoCoverage && allFns == nil {
+	if flags.DoCoverage && allFns == nil {
 		a.collectFnsWScope()
 		//for fn, _ := range allFns { //bz: debug
 		//	fmt.Println(fn)
@@ -769,7 +792,7 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool, isMain bool) (result *Resul
 	a.result.CallGraph.computeFn2CGNode() //bz: update Fn2CGNode for user API
 	a.result.a = a                        //bz: update
 
-	if a.config.DoPerformance { //bz: performance test; dump info
+	if flags.DoPerformance { //bz: performance test; dump info
 		fmt.Println("--------------------- Performance ------------------------")
 		fmt.Println("#Pre-generated cgnodes: ", len(a.preGens))
 		fmt.Println("#pts: ", len(a.nodes)) //this includes all kinds of pointers, e.g., cgnode, func, pointer
@@ -795,7 +818,7 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool, isMain bool) (result *Resul
 			fmt.Println("#Callback Fn: ", len(a.cb2Callers))
 		}
 
-		if a.config.DoCoverage {
+		if flags.DoCoverage {
 			a.computeCoverage()
 		}
 
@@ -817,6 +840,7 @@ func translateResult(_result *ResultWCtx, main *ssa.Package) *Result {
 	result := &Result{
 		Queries:         make(map[ssa.Value][]PointerWCtx),
 		IndirectQueries: make(map[ssa.Value][]PointerWCtx),
+		GlobalQueries:   make(map[ssa.Value][]PointerWCtx),
 	}
 
 	//go through each cgnode
@@ -868,6 +892,7 @@ func translateResult(_result *ResultWCtx, main *ssa.Package) *Result {
 	//also udpate _result for new api
 	_result.Queries = result.Queries
 	_result.IndirectQueries = result.IndirectQueries
+	_result.GlobalQueries = result.GlobalQueries
 
 	return result
 }

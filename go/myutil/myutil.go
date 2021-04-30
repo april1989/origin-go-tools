@@ -128,22 +128,6 @@ func initial(args []string, cfg *packages.Config) []*ssa.Package {
 	prog.Build()
 	fmt.Println("Done  -- SSA code built")
 
-	mains, tests, err := findMainPackages(pkgs)
-	if err != nil {
-		fmt.Println(err)
-		return nil
-	}
-
-	if flags.DoTests {
-		fmt.Println("#TOTAL MAIN: " + strconv.Itoa(len(mains) - len(tests)) + "\n")
-		fmt.Println("#TOTAL TESTS: " + strconv.Itoa(len(tests)) + "\n")
-	}else{
-		fmt.Println("#TOTAL MAIN: " + strconv.Itoa(len(mains)) + "\n")
-	}
-	if flags.Main != "" {
-		fmt.Println("Capture -- ", flags.Main, "\n")
-	}
-
 	//extract scope from pkgs
 	if !flags.DoTests && len(pkgs) > 1 { //TODO: bz: this only works when running under proj root dir
 		//bz: compute the scope info == the root pkg: should follow the pattern xxx.xxx.xx/xxx
@@ -179,9 +163,27 @@ func initial(args []string, cfg *packages.Config) []*ssa.Package {
 		parts := strings.Split(mod, " ")
 		scope = append(scope, parts[1])
 	}else {  //else: default input .go file with default scope
-		//scope = append(scope, "google.golang.org/grpc") //bz: debug purpose
-		scope = append(scope, "github.com/pingcap/tidb") //bz: debug purpose
-		//scope = append(scope, "k8s.io/kubernetes") //bz: debug purpose
+		scope = append(scope, "command-line-arguments")
+		//bz: the following are for debug purpose
+		//scope = append(scope, "google.golang.org/grpc")
+		//scope = append(scope, "github.com/pingcap/tidb")
+		//scope = append(scope, "k8s.io/kubernetes")
+	}
+
+	mains, tests, err := findMainPackages(pkgs)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+
+	if flags.DoTests {
+		fmt.Println("#TOTAL MAIN: " + strconv.Itoa(len(mains) - len(tests)) + "\n")
+		fmt.Println("#TOTAL TESTS: " + strconv.Itoa(len(tests)) + "\n")
+	}else{
+		fmt.Println("#TOTAL MAIN: " + strconv.Itoa(len(mains)) + "\n")
+	}
+	if flags.Main != "" {
+		fmt.Println("Capture -- ", flags.Main, "\n")
 	}
 
 	//initial set
@@ -201,9 +203,14 @@ func findMainPackages(pkgs []*ssa.Package) ([]*ssa.Package, []*ssa.Package, erro
 	for _, p := range pkgs {
 		if p != nil {
 			if p.Pkg.Name() == "main" && p.Func("main") != nil {
-				mains = append(mains, p)
-				if flags.DoTests && strings.HasSuffix(p.Pkg.String(), ".test") { //this is a test-assembled main, just identify, no other use
-					tests = append(tests, p)
+				//bz: we may see a main from out-of-scope pkg, e.g.,
+				//  k8s.io/apiextensions-apiserver/test/integration/conversion.test when analyzing k8s.io/kubernetes, which is from /kubernetes/vendor/*
+				// now wee need to check the pkg with scope[0], for most cases, we only have one scope
+				if len(scope) > 0 && strings.HasPrefix(p.Pkg.Path(), scope[0]) {
+					mains = append(mains, p)
+					if flags.DoTests && strings.HasSuffix(p.Pkg.String(), ".test") { //this is a test-assembled main, just identify, no other use
+						tests = append(tests, p)
+					}
 				}
 			}
 		}
@@ -227,27 +234,25 @@ func DoSameRoot(mains []*ssa.Package) {
 	doSameRootMy(mains)
 }
 
-
-
 //bz: test usesage in race checker -> this is the major usage now
 func DoSeq(mains []*ssa.Package) {
 	level := 0
-	if flags.DoLevel != -1 {
+	if flags.DoLevel != 0 {
 		level = flags.DoLevel //bz: reset the analysis scope
 	}
 
-	//var logfile *os.File
-	//if flags.DoLog { //bz: debug purpose  && len(mains) == 1
-	//	logfile, _ = os.Create("/Users/bozhen/Documents/GO2/origin-go-tools/_logs/my_log_0")
-	//} else {
-	//	logfile = nil
-	//}
+	var logfile *os.File
+	if flags.DoLog { //bz: debug purpose  && len(mains) == 1
+		logfile, _ = os.Create("/Users/bozhen/Documents/GO2/origin-go-tools/_logs/my_log_0")
+	} else {
+		logfile = nil
+	}
 
 	ptaConfig := &pointer.Config{
 		Mains:          mains,
 		Reflection:     false,
 		BuildCallGraph: true,
-		Log:            nil,//logfile,
+		Log:            logfile,
 		//CallSiteSensitive: true, //kcfa
 		Origin: true, //origin
 		//shared config
@@ -259,8 +264,6 @@ func DoSeq(mains []*ssa.Package) {
 		TrackMore:     true,                //bz: track pointers with all types
 		Level:         level,               //bz: see pointer.Config
 		DoCallback:    flags.DoCallback,    //bz: sythesize callback
-		DoPerformance: flags.DoPerforamnce, //bz: i want to see this performance
-		DoCoverage:    flags.DoCoverage,    //bz: compute (#analyzed fn/#total fn) in a program
 	}
 
 	start := time.Now()                                    //performance
@@ -275,7 +278,8 @@ func DoSeq(mains []*ssa.Package) {
 	//check queries
 	fmt.Println("#Receive Result: ", len(results))
 	for main, result := range results {
-		fmt.Println("Receive result (#Queries: ", len(result.Queries), ", #IndirectQueries: ", len(result.IndirectQueries), ") for main: ", main.String())
+		fmt.Println("Receive result (#Queries: ", len(result.Queries), ", #IndirectQueries: ", len(result.IndirectQueries),
+			", #GlobalQueries: ", len(result.GlobalQueries), ") for main: ", main.String())
 	}
 
 	//check for test
@@ -310,7 +314,6 @@ func doSameRootMy(mains []*ssa.Package) *pointer.Result {
 		TrackMore:     true,                              //bz: track pointers with all types
 		Level:         0,                                 //bz: see pointer.Config
 		DoCallback:    flags.DoCallback, //bz: sythesize callback
-		DoPerformance: flags.DoPerforamnce,               //bz: if we output performance related info
 	}
 
 	//*** compute pta here
@@ -363,7 +366,7 @@ func doSameRootDefault(mains []*ssa.Package) []*default_algo.Result {
 		Reflection:      false,
 		BuildCallGraph:  true,
 		Log:             nil,
-		DoPerformance:   flags.DoPerforamnce, //bz: I add to output performance for comparison
+		DoPerformance:   flags.DoPerformance, //bz: I add to output performance for comparison
 		DoRecordQueries: flags.DoCompare,     //bz: record all queries to compare result
 	}
 
@@ -497,21 +500,19 @@ func DoEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 		TrackMore:     true,                //bz: track pointers with types declared in Analyze Scope
 		Level:         flags.DoLevel,       //bz: see pointer.Config
 		DoCallback:    flags.DoCallback,    //bz: sythesize callback
-		DoPerformance: flags.DoPerforamnce, //bz: if we output performance related info
-		DoCoverage:    flags.DoCoverage,    //bz: compute (#analyzed fn/#total fn) in a program
 	}
 
 	//*** compute pta here
 	start := time.Now() //performance
 	var result *pointer.Result
-	var r_err error
+	var rErr error
 	if flags.TimeLimit != 0 { //we set time limit
 		c := make(chan string, 1)
 
 		// Run the pta in it's own goroutine and pass back it's
 		// response into our channel.
 		go func() {
-			result, r_err = pointer.Analyze(ptaConfig) // conduct pointer analysis
+			result, rErr = pointer.Analyze(ptaConfig) // conduct pointer analysis
 			c <- "done"
 		}()
 
@@ -524,16 +525,16 @@ func DoEachMainMy(i int, main *ssa.Package) *pointer.ResultWCtx {
 			return nil
 		}
 	} else {
-		result, r_err = pointer.Analyze(ptaConfig) // conduct pointer analysis
+		result, rErr = pointer.Analyze(ptaConfig) // conduct pointer analysis
 	}
 	t := time.Now()
 	elapsed := t.Sub(start)
-	if r_err != nil {
-		panic(fmt.Sprintln(r_err))
+	if rErr != nil {
+		panic(fmt.Sprintln(rErr))
 	}
 	defer logfile.Close()
 
-	if flags.DoPerforamnce {
+	if flags.DoPerformance {
 		_, _, _, preNodes, preFuncs := result.GetResult().CountMyReachUnreachFunctions(flags.DoDetail)
 		fmt.Println("#Unreach Nodes: ", len(preNodes))
 		fmt.Println("#Reach Nodes: ", len(result.GetResult().CallGraph.Nodes)-len(preNodes))
@@ -588,7 +589,7 @@ func doEachMainDefault(i int, main *ssa.Package) *default_algo.Result {
 		Reflection:      false,
 		BuildCallGraph:  true,
 		Log:             logfile,
-		DoPerformance:   flags.DoPerforamnce, //bz: I add to output performance for comparison
+		DoPerformance:   flags.DoPerformance, //bz: I add to output performance for comparison
 		DoRecordQueries: flags.DoCompare,     //bz: record all queries to compare result
 	}
 
@@ -624,7 +625,7 @@ func doEachMainDefault(i int, main *ssa.Package) *default_algo.Result {
 	}
 	defer logfile.Close()
 
-	if flags.DoPerforamnce {
+	if flags.DoPerformance {
 		reaches, unreaches := countReachUnreachFunctions(result)
 		fmt.Println("#Unreach Nodes: ", len(unreaches))
 		fmt.Println("#Reach Nodes: ", len(reaches))

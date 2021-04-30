@@ -86,11 +86,9 @@ type Config struct {
 
 	imports       []string //bz: internal use: store all import pkgs in a main
 	Level         int      //bz: level == 0: traverse all app and lib, but with different ctx; level == 1: traverse 1 level lib call; level == 2: traverse 2 leve lib calls; no other option now
-	DoPerformance bool     //bz: if we output performance related info
-	DoCoverage    bool     //bz: compute (#analyzed fn/#total fn) in a program
 }
 
-//bz: user API: race checker, added when ptaconfig.Level == 2
+//bz: user API: race checker
 func (c *Config) GetImports() []string {
 	return c.imports
 }
@@ -183,9 +181,9 @@ type Warning struct {
 }
 
 // A Result contains the results of a pointer analysis.
-//
 // See Config for how to request the various Result components.
 //
+// bz: updated
 type Result struct {
 	a         *analysis        // bz: for debug
 	CallGraph *callgraph.Graph // discovered call graph
@@ -195,10 +193,12 @@ type Result struct {
 	//bz: we replaced default to include context
 	Queries         map[ssa.Value][]PointerWCtx // pts(v) for each v in setValueNode().
 	IndirectQueries map[ssa.Value][]PointerWCtx // pts(*v) for each v in setValueNode().
+	GlobalQueries   map[ssa.Value][]PointerWCtx // pts(v) for each freevar in setValueNode(). -> bz: used by api, will not expose to users
 	Warnings        []Warning                   // warnings of unsoundness
 }
 
 //bz: same as default , but we want contexts
+// most of its apis are hidden from users
 type ResultWCtx struct {
 	a         *analysis  // bz: we need a lot from here...
 	main      *cgnode    // bz: the cgnode for main method; can be nil if analyzing tests
@@ -206,12 +206,12 @@ type ResultWCtx struct {
 
 	//bz: if DiscardQueries the following will be empty
 	Queries         map[ssa.Value][]PointerWCtx // pts(v) for each v in setValueNode().
-	IndirectQueries map[ssa.Value][]PointerWCtx // pts(*v) for each v in setValueNode(). Not used now
-	GlobalQueries   map[ssa.Value][]PointerWCtx // pts(v) for each freevar in setValueNode(). Not used now
-	ExtendedQueries map[ssa.Value][]PointerWCtx
-	Warnings        []Warning // warnings of unsoundness
+	IndirectQueries map[ssa.Value][]PointerWCtx // pts(*v) for each v in setValueNode().
+	GlobalQueries   map[ssa.Value][]PointerWCtx // pts(v) for each freevar in setValueNode().
+	ExtendedQueries map[ssa.Value][]PointerWCtx // not used now
+	Warnings        []Warning                   // warnings of unsoundness
 
-	DEBUG bool // bz: print out debug info ...
+	DEBUG bool // bz: print out debug info; used in race checker to debug
 }
 
 //bz:
@@ -497,7 +497,6 @@ func (r *ResultWCtx) pointsToRegular(v ssa.Value) []PointerWCtx {
 }
 
 //bz: return []PointerWCtx for a free var,
-//UPDATE: NOT USED
 func (r *ResultWCtx) pointsToFreeVar(v ssa.Value) []PointerWCtx {
 	if globalv, ok := v.(*ssa.Global); ok {
 		pointers := r.GlobalQueries[globalv]
@@ -794,21 +793,12 @@ func (r *Result) GetTests() map[*ssa.Function]*cgnode {
 //input: ssa.Value, *ssa.GO
 //output: PointerWCtx; this can be empty if we cannot match any v with its goInstr
 func (r *Result) PointsToByGo(v ssa.Value, goInstr *ssa.Go) PointerWCtx {
-	ptss := r.a.result.pointsToRegular(v) //return type: []PointerWCtx
-	if len(ptss) == 0 {
-		return PointerWCtx{a: nil}
-	}
-	_, ok1 := v.(*ssa.FreeVar)
-	_, ok2 := v.(*ssa.Global)
-	_, ok3 := v.(*ssa.UnOp)
-	if ok1 || ok2 { //free var: only one pts available
-		return ptss[0]
-	} else if ok3 && len(ptss) == 1 { //this is hard to say ...
-		return ptss[0]
-	}
-
-	if goInstr == nil {
-		return r.a.result.pointsToByMain(v)
+	ptss := r.a.result.pointsToFreeVar(v)
+	if ptss == nil {
+		ptss = r.a.result.pointsToRegular(v)
+		if ptss == nil { //no record for this v
+			return PointerWCtx{a: nil}
+		}
 	}
 
 	//others
@@ -839,21 +829,12 @@ func (r *Result) PointsToByGo(v ssa.Value, goInstr *ssa.Go) PointerWCtx {
 //output: PointerWCtx; this can be empty if we cannot match any v with its goInstr
 //Update: many same v from different functions ... further separate them
 func (r *Result) PointsToByGoWithLoopID(v ssa.Value, goInstr *ssa.Go, loopID int) PointerWCtx {
-	ptss := r.a.result.pointsToRegular(v) //return type: []PointerWCtx
-	if len(ptss) == 0 {
-		return PointerWCtx{a: nil}
-	}
-	_, ok1 := v.(*ssa.FreeVar)
-	_, ok2 := v.(*ssa.Global)
-	_, ok3 := v.(*ssa.UnOp)
-	if ok1 || ok2 { //free var: only one pts available
-		return ptss[0]
-	} else if ok3 && len(ptss) == 1 { //this is hard to say ...
-		return ptss[0]
-	}
-
-	if goInstr == nil {
-		return r.a.result.pointsToByMain(v)
+	ptss := r.a.result.pointsToFreeVar(v)
+	if ptss == nil {
+		ptss = r.a.result.pointsToRegular(v)
+		if ptss == nil { //no record for this v
+			return PointerWCtx{a: nil}
+		}
 	}
 
 	//others
@@ -912,9 +893,9 @@ func (r *Result) DumpToCompare(cgfile *os.File, queryfile *os.File) {
 	}
 }
 
-//bz: user api, return an array of *Site {*ssa.Function, []*callsite}
-func (r *Result) GetAllocations(p PointerWCtx) []*Site {
-	var allocs []*Site
+//bz: user api, return an array of *AllocSite {*ssa.Function, []*callsite}
+func (r *Result) GetAllocations(p PointerWCtx) []*AllocSite {
+	var allocs []*AllocSite
 	pts := p.PointsTo().pts
 	if pts.IsEmpty() {
 		return allocs
@@ -930,7 +911,7 @@ func (r *Result) GetAllocations(p PointerWCtx) []*Site {
 		if obj == nil {
 			continue
 		}
-		site := &Site{
+		site := &AllocSite{
 			Fn:  obj.cgn.fn,
 			Ctx: obj.cgn.callersite,
 		}
@@ -940,7 +921,7 @@ func (r *Result) GetAllocations(p PointerWCtx) []*Site {
 }
 
 //bz: user api used by GetAllocations()
-type Site struct {
+type AllocSite struct {
 	Fn  *ssa.Function
 	Ctx []*callsite
 }
@@ -1077,8 +1058,15 @@ type PointerWCtx struct {
 //TODO: this does not match parent context if callsite.length > 1 (k > 1)
 func (p PointerWCtx) MatchMyContext(go_instr *ssa.Go) bool {
 	if p.cgn == nil || p.cgn.callersite == nil || p.cgn.callersite[0] == nil {
+		if go_instr == nil {//shared contour ~> main
+			return true
+		}
 		return false
 	}
+	if go_instr == nil { //not matched
+		return false
+	}
+
 	my_go_instr := p.cgn.callersite[0].goInstr
 	if my_go_instr == go_instr {
 		return true
@@ -1100,11 +1088,19 @@ func (p PointerWCtx) MatchMyContext(go_instr *ssa.Go) bool {
 }
 
 //bz: whether goID is match with the contexts in this pointer + loopID
+//Update: go_instr can be nil for main go routine
 //TODO: this does not match parent context if callsite.length > 1 (k > 1)
 func (p PointerWCtx) MatchMyContextWithLoopID(go_instr *ssa.Go, loopID int) bool {
 	if p.cgn == nil || p.cgn.callersite == nil || p.cgn.callersite[0] == nil {
-		return false //shared contour
+		if go_instr == nil && loopID == 0 { //shared contour ~> main
+			return true
+		}
+		return false
 	}
+	if go_instr == nil { //not matched
+		return false
+	}
+
 	my_cs := p.cgn.callersite[0]
 	my_go_instr := my_cs.goInstr
 	if my_go_instr == go_instr {

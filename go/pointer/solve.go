@@ -27,7 +27,7 @@ var (
 )
 
 func (a *analysis) solve() {
-	if a.config.DoPerformance { //bz: performance dump info
+	if flags.DoPerformance { //bz: performance dump info
 		a.num_constraints = 0
 		fmt.Println("#constraints (before solve()): ", len(a.constraints))
 		fmt.Println("#cgnodes (before solve()): ", len(a.cgnodes))
@@ -183,7 +183,7 @@ func (a *analysis) solveLimit() {
 func (a *analysis) processNewConstraints() {
 	// Take the slice of new constraints.
 	// (May grow during call to solveConstraints.)
-	if a.config.DoPerformance && len(a.constraints) > 0 {
+	if flags.DoPerformance && len(a.constraints) > 0 {
 		a.num_constraints = a.num_constraints + len(a.constraints)
 		//if len(a.constraints) > 0 { //bz: debug: changed
 		//	fmt.Println("#constraints (during solve()): ", a.num_constraints)

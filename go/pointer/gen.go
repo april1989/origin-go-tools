@@ -1013,7 +1013,7 @@ func (a *analysis) withinScope(method string) bool {
 					} // && !strings.Contains(method, "google.golang.org/grpc/grpclog")
 				}
 			}
-			//if len(a.config.imports) > 0 { //user assigned scope
+			//if len(a.config.imports) > 0 { //consider imports in scope
 			//	for _, pkg := range a.config.imports {
 			//		if strings.Contains(method, pkg) && !strings.Contains(method, "google.golang.org/grpc/grpclog") {
 			//			return true
@@ -2951,7 +2951,7 @@ func (a *analysis) generate() {
 	// Create nodes and constraints
 	//for all methods of reflect.rtype.
 	// (Shared contours are used by dynamic calls to reflect.Type methods---typically just String().)
-	if a.config.DoPerformance {
+	if flags.DoPerformance {
 		a.recordPreGen = true
 	}
 	if rtype := a.reflectRtypePtr; rtype != nil {
