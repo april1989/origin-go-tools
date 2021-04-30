@@ -872,6 +872,11 @@ func (r *Result) PointsToByGoWithLoopID(v ssa.Value, goInstr *ssa.Go, loopID int
 	return PointerWCtx{a: nil}
 }
 
+//bz: user API: tmp solution for missing invoke callee target if func wrapped in parameters
+func (r *Result) GetFreeVarFunc(alloc *ssa.Alloc, call *ssa.Call, goInstr *ssa.Go) *ssa.Function {
+	return r.a.result.getFreeVarFunc(alloc, call, goInstr)
+}
+
 //bz: do comparison with default
 func (r *Result) DumpToCompare(cgfile *os.File, queryfile *os.File) {
 	_result := r.a.result

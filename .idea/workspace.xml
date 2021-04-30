@@ -30,9 +30,6 @@
   <component name="ChangeListManager">
     <list default="true" id="02839b5a-55a2-4e24-b425-23255e76dae7" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go/myutil/flags/flags.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/myutil/flags/flags.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go/myutil/myutil.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/myutil/myutil.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go/pointer/analysis.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/analysis.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/go/pointer/api.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/api.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -533,26 +530,26 @@
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state x="737" y="322" key="FileChooserDialogImpl/0.23.1920.1057@0.23.1920.1057" timestamp="1618932606675" />
-    <state width="1878" height="358" key="GridCell.Tab.0.bottom" timestamp="1619806420373">
+    <state width="1878" height="307" key="GridCell.Tab.0.bottom" timestamp="1619807420071">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="160" key="GridCell.Tab.0.bottom/0.23.1440.877@0.23.1440.877" timestamp="1614203163002" />
-    <state width="1878" height="358" key="GridCell.Tab.0.bottom/0.23.1920.1057@0.23.1920.1057" timestamp="1619806420373" />
-    <state width="1878" height="358" key="GridCell.Tab.0.center" timestamp="1619806420372">
+    <state width="1878" height="307" key="GridCell.Tab.0.bottom/0.23.1920.1057@0.23.1920.1057" timestamp="1619807420071" />
+    <state width="1878" height="307" key="GridCell.Tab.0.center" timestamp="1619807420070">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="160" key="GridCell.Tab.0.center/0.23.1440.877@0.23.1440.877" timestamp="1614203163002" />
-    <state width="1878" height="358" key="GridCell.Tab.0.center/0.23.1920.1057@0.23.1920.1057" timestamp="1619806420372" />
-    <state width="1878" height="358" key="GridCell.Tab.0.left" timestamp="1619806420372">
+    <state width="1878" height="307" key="GridCell.Tab.0.center/0.23.1920.1057@0.23.1920.1057" timestamp="1619807420070" />
+    <state width="1878" height="307" key="GridCell.Tab.0.left" timestamp="1619807420070">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="160" key="GridCell.Tab.0.left/0.23.1440.877@0.23.1440.877" timestamp="1614203163001" />
-    <state width="1878" height="358" key="GridCell.Tab.0.left/0.23.1920.1057@0.23.1920.1057" timestamp="1619806420372" />
-    <state width="1878" height="358" key="GridCell.Tab.0.right" timestamp="1619806420373">
+    <state width="1878" height="307" key="GridCell.Tab.0.left/0.23.1920.1057@0.23.1920.1057" timestamp="1619807420070" />
+    <state width="1878" height="307" key="GridCell.Tab.0.right" timestamp="1619807420070">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="160" key="GridCell.Tab.0.right/0.23.1440.877@0.23.1440.877" timestamp="1614203163002" />
-    <state width="1878" height="358" key="GridCell.Tab.0.right/0.23.1920.1057@0.23.1920.1057" timestamp="1619806420373" />
+    <state width="1878" height="307" key="GridCell.Tab.0.right/0.23.1920.1057@0.23.1920.1057" timestamp="1619807420070" />
     <state x="295" y="116" key="SettingsEditor" timestamp="1619201141346">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
@@ -611,11 +608,6 @@
           <url>file://$PROJECT_DIR$/go/pointer/reflect.go</url>
           <line>356</line>
           <option name="timeStamp" value="501" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
-          <url>file://$PROJECT_DIR$/go/pointer/analysis.go</url>
-          <line>308</line>
-          <option name="timeStamp" value="556" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
