@@ -1075,12 +1075,15 @@ type PointerWCtx struct {
 //TODO: this does not match parent context if callsite.length > 1 (k > 1)
 func (p PointerWCtx) MatchMyContext(go_instr *ssa.Go) bool {
 	if p.cgn == nil || p.cgn.callersite == nil || p.cgn.callersite[0] == nil {
-		if go_instr == nil {//shared contour ~> main
+		if go_instr == nil { //shared contour ~> when using test as entry
 			return true
 		}
 		return false
 	}
-	if go_instr == nil { //not matched
+	if go_instr == nil { //when using main as entry
+		if p.cgn.callersite[0].targets == p.a.result.main.callersite[0].targets {
+			return true
+		}
 		return false
 	}
 
@@ -1109,12 +1112,15 @@ func (p PointerWCtx) MatchMyContext(go_instr *ssa.Go) bool {
 //TODO: this does not match parent context if callsite.length > 1 (k > 1)
 func (p PointerWCtx) MatchMyContextWithLoopID(go_instr *ssa.Go, loopID int) bool {
 	if p.cgn == nil || p.cgn.callersite == nil || p.cgn.callersite[0] == nil {
-		if go_instr == nil && loopID == 0 { //shared contour ~> main
+		if go_instr == nil && loopID == 0 { //shared contour ~> when using test as entry
 			return true
 		}
 		return false
 	}
-	if go_instr == nil { //not matched
+	if go_instr == nil { //when using main as entry
+		if p.cgn.callersite[0].targets == p.a.result.main.callersite[0].targets {
+			return true
+		}
 		return false
 	}
 
