@@ -794,14 +794,23 @@ func (r *Result) GetTests() map[*ssa.Function]*cgnode {
 //output: PointerWCtx; this can be empty if we cannot match any v with its goInstr
 func (r *Result) PointsToByGo(v ssa.Value, goInstr *ssa.Go) PointerWCtx {
 	ptss := r.a.result.pointsToFreeVar(v)
-	if ptss == nil {
-		ptss = r.a.result.pointsToRegular(v)
-		if ptss == nil { //no record for this v
+	if ptss != nil { // global var
+		if len(ptss) == 0 { //no record for this v
 			return PointerWCtx{a: nil}
+		} else if len(ptss) == 1 {
+			return ptss[0]
+		} else { // > 1
+			fmt.Println(">1 pts for", v, ": len =", len(ptss))
+			return ptss[0]
 		}
 	}
 
 	//others
+	ptss = r.a.result.pointsToRegular(v)
+	if ptss == nil { //no record for this v
+		return PointerWCtx{a: nil}
+	}
+
 	for _, pts := range ptss {
 		if pts.cgn.fn == v.Parent() { //many same v (ssa.Value) from different functions, separate them
 			if v.Parent().IsFromApp {
@@ -830,14 +839,23 @@ func (r *Result) PointsToByGo(v ssa.Value, goInstr *ssa.Go) PointerWCtx {
 //Update: many same v from different functions ... further separate them
 func (r *Result) PointsToByGoWithLoopID(v ssa.Value, goInstr *ssa.Go, loopID int) PointerWCtx {
 	ptss := r.a.result.pointsToFreeVar(v)
-	if ptss == nil {
-		ptss = r.a.result.pointsToRegular(v)
-		if ptss == nil { //no record for this v
+	if ptss != nil { // global var
+		if len(ptss) == 0 { //no record for this v
 			return PointerWCtx{a: nil}
+		} else if len(ptss) == 1 {
+			return ptss[0]
+		} else { // > 1
+			fmt.Println(">1 pts for", v, ": len =", len(ptss))
+			return ptss[0]
 		}
 	}
 
 	//others
+	ptss = r.a.result.pointsToRegular(v)
+	if ptss == nil { //no record for this v
+		return PointerWCtx{a: nil}
+	}
+
 	for _, pts := range ptss {
 		if pts.cgn.fn == v.Parent() { //many same v (ssa.Value) from different functions, separate them
 			if v.Parent().IsFromApp {
