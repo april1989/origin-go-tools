@@ -341,26 +341,26 @@ func (r *ResultWCtx) getInvokeFunc(call *ssa.Call, pointer PointerWCtx, goInstr 
 
 //bz: user API: tmp solution for missing invoke callee target if func wrapped in parameters
 //alloc should be a freevar
-func (r *ResultWCtx) getFreeVarFunc(alloc *ssa.Alloc, call *ssa.Call, goInstr *ssa.Go) *ssa.Function {
-	val, _ := call.Common().Value.(*ssa.UnOp)
-	freeV := val.X //this should be the free var of func
-	pointers := r.pointsToFreeVar(freeV)
-	p := pointers[0].PointsTo() //here should be only one element
-	a := p.a
-	pts := p.pts
+func (r *ResultWCtx) getFreeVarFunc(caller *ssa.Function, call *ssa.Call, goInstr *ssa.Go) *ssa.Function {
+	cg := r.a.result.CallGraph
+	nodes := cg.GetNodesForFn(caller)
+	if nodes == nil {
+		if r.DEBUG {
+			fmt.Println(" ****  Pointer Analysis: " + caller.String() + " has no contexts **** ") //panic
+		}
+		return nil
+	} else if len(nodes) > 1 {
+		if r.DEBUG {
+			fmt.Println(" ****  Pointer Analysis: " + caller.String() + " has multiple contexts **** ") //panic
+		}
+	}
 
-	for { //recursively find the func body, since it can be assigned multiple times...
-		if pts.Len() > 1 {
-			if r.DEBUG {
-				fmt.Println(" ****  Pointer Analysis: " + freeV.String() + " has multiple targets **** ") //panic
+	for _, node := range nodes {
+		for _, out := range node.Out {
+			if out.Site == call {
+				return out.Callee.cgn.fn
 			}
 		}
-		nid := pts.Min()
-		n := a.nodes[nid]
-		pts = &n.solve.pts
-		if pts.IsEmpty() { //TODO: bz: this maybe right maybe wrong ....
-			return n.obj.cgn.fn
-		} //else: continue to find...
 	}
 
 	return nil
@@ -873,8 +873,8 @@ func (r *Result) PointsToByGoWithLoopID(v ssa.Value, goInstr *ssa.Go, loopID int
 }
 
 //bz: user API: tmp solution for missing invoke callee target if func wrapped in parameters
-func (r *Result) GetFreeVarFunc(alloc *ssa.Alloc, call *ssa.Call, goInstr *ssa.Go) *ssa.Function {
-	return r.a.result.getFreeVarFunc(alloc, call, goInstr)
+func (r *Result) GetFreeVarFunc(caller *ssa.Function, call *ssa.Call, goInstr *ssa.Go) *ssa.Function {
+	return r.a.result.getFreeVarFunc(caller, call, goInstr)
 }
 
 //bz: do comparison with default
