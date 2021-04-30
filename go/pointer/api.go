@@ -500,19 +500,13 @@ func (r *ResultWCtx) pointsToRegular(v ssa.Value) []PointerWCtx {
 func (r *ResultWCtx) pointsToFreeVar(v ssa.Value) []PointerWCtx {
 	if globalv, ok := v.(*ssa.Global); ok {
 		pointers := r.GlobalQueries[globalv]
-		if pointers != nil {
-			return pointers
-		}
+		return pointers
 	} else if freev, ok := v.(*ssa.FreeVar); ok {
 		pointers := r.GlobalQueries[freev]
-		if pointers != nil {
-			return pointers
-		}
+		return pointers
 	} else if op, ok := v.(*ssa.UnOp); ok {
 		pointers := r.GlobalQueries[op.X] //bz: X is the freeVar
-		if pointers != nil {
-			return pointers
-		}
+		return pointers
 	}
 	//fmt.Println(" ****  Pointer Analysis did not record for this ssa.Value: " + v.String() + " **** (PointsToFreeVar)") //panic
 	return nil

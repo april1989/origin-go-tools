@@ -163,9 +163,9 @@ func initial(args []string, cfg *packages.Config) []*ssa.Package {
 		parts := strings.Split(mod, " ")
 		scope = append(scope, parts[1])
 	}else {  //else: default input .go file with default scope
-		scope = append(scope, "command-line-arguments")
+		//scope = append(scope, "command-line-arguments")
 		//bz: the following are for debug purpose
-		//scope = append(scope, "google.golang.org/grpc")
+		scope = append(scope, "google.golang.org/grpc")
 		//scope = append(scope, "github.com/pingcap/tidb")
 		//scope = append(scope, "k8s.io/kubernetes")
 	}
@@ -241,18 +241,18 @@ func DoSeq(mains []*ssa.Package) {
 		level = flags.DoLevel //bz: reset the analysis scope
 	}
 
-	var logfile *os.File
-	if flags.DoLog { //bz: debug purpose  && len(mains) == 1
-		logfile, _ = os.Create("/Users/bozhen/Documents/GO2/origin-go-tools/_logs/my_log_0")
-	} else {
-		logfile = nil
-	}
+	//var logfile *os.File
+	//if flags.DoLog { //bz: debug purpose  && len(mains) == 1
+	//	logfile, _ = os.Create("/Users/bozhen/Documents/GO2/origin-go-tools/_logs/my_log_0")
+	//} else {
+	//	logfile = nil
+	//}
 
 	ptaConfig := &pointer.Config{
 		Mains:          mains,
 		Reflection:     false,
 		BuildCallGraph: true,
-		Log:            logfile,
+		Log:            nil,//logfile,
 		//CallSiteSensitive: true, //kcfa
 		Origin: true, //origin
 		//shared config

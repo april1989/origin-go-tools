@@ -308,9 +308,22 @@ func translateQueries(val ssa.Value, id nodeid, cgn *cgnode, result *Result, _re
 	if cgn == nil && !flags.DoCompare { //global var
 		//bz: default algo only has Queries and IndirectQueries in its result, if we want to do
 		// comparison, we need to record these GlobalQueries to Queries/IndirectQueries
+		//Update: one val can map to multiple pts,
+		// e.g., n618499 and n63251 in /google.golang.org/grpc/test.test@commit5bc9b325fa575e8938292b45c29292401de9bb8a
+		// n63251 is a global object, and n618499 is a pointer with the same type of n63251, they share the same key v in GlobalQueries
+		// we do not want the object, its useless (its pts is empty and confuse the query)
+		// tmp solution -> check the type of id, if is an heap alloc, skip its record;
+		//     others like function pointer/constant can also be *ssa.Global, and we record them
 		_, ok1 := val.(*ssa.FreeVar)
 		_, ok2 := val.(*ssa.Global)
 		if ok1 || ok2 {
+			obj := _result.a.nodes[id].obj
+			if obj != nil {
+				if _, ok := obj.data.(*ssa.Global); ok {
+					return //this is an heap alloc, an object, pts is meaning less
+				}
+			}
+
 			ptr := PointerWCtx{_result.a, id, nil}
 			ptrs, ok := result.GlobalQueries[val]
 			if !ok {
