@@ -280,6 +280,12 @@ func DoSeq(mains []*ssa.Package) {
 	for main, result := range results {
 		fmt.Println("Receive result (#Queries: ", len(result.Queries), ", #IndirectQueries: ", len(result.IndirectQueries),
 			", #GlobalQueries: ", len(result.GlobalQueries), ") for main: ", main.String())
+		//result.Statistics()
+	}
+
+	//total statistics
+	if len(results) > 1 {
+		pointer.TotalStatistics(results)
 	}
 
 	//check for test

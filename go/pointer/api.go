@@ -355,9 +355,9 @@ func (r *ResultWCtx) getFreeVarFunc(caller *ssa.Function, call *ssa.Call, goInst
 		}
 	}
 
-	for _, node := range nodes {
-		for _, out := range node.Out {
-			if out.Site == call {
+	for _, node := range nodes { //caller
+		for _, out := range node.Out { //outgoing call edge
+			if out.Site == call { //the same call site
 				return out.Callee.cgn.fn
 			}
 		}
@@ -735,6 +735,304 @@ func (r *Result) DumpAll() {
 			fmt.Println(p.String() + " (SSA:" + v.String() + "): {" + p.PointsTo().String() + "}")
 		}
 	}
+}
+
+//bz: for my use
+func (r *Result) Statistics() {
+	fmt.Println("\nStatistics of PTS: ")
+	_result := r.a.result
+	sPts := 0
+	nPts := 0
+	distributes := make([]int, 13) //bz: want to know the distribution of pts:
+	//                  idx:  0     1     2     3    4      5      6      7      8      9      10      11    12
+	// the array represents: <10, <100, <200, <500, <700, <1000, <1500, <2000, <2500, <3000, <3500, <4000, all others ...
+	ranges := make([]int, 13) //bz: same as above, but == max obj idx - min obj idx
+	mins := make([]int, 13) //bz: the min obj idx in a pts
+	//                  idx:   0       1      2       3       4       5       6        7       8         9       10      11       12
+	// the array represents: <1000, <5000, <10000, <30000, <50000, <70000, <90000, <100000, <200000, <300000, <500000, <700000, all others ...
+
+	for _, n := range _result.a.nodes {
+		if !n.solve.pts.IsEmpty() {
+			sPts++
+			s := n.solve.pts.Len()
+			r := n.solve.pts.Max() - n.solve.pts.Min()
+			m := n.solve.pts.Min()
+			nPts = nPts + s
+			if s < 10 {
+				distributes[0] = distributes[0] + 1
+			} else if s < 100 {
+				distributes[1] = distributes[1] + 1
+			} else if s < 200 {
+				distributes[2] = distributes[2] + 1
+			} else if s < 500 {
+				distributes[3] = distributes[3] + 1
+			} else if s < 700 {
+				distributes[4] = distributes[4] + 1
+			} else if s < 1000 {
+				distributes[5] = distributes[5] + 1
+			} else if s < 1500 {
+				distributes[6] = distributes[6] + 1
+			} else if s < 2000 {
+				distributes[7] = distributes[7] + 1
+			} else if s < 2500 {
+				distributes[8] = distributes[8] + 1
+			} else if s < 3000 {
+				distributes[9] = distributes[9] + 1
+			} else if s < 3500 {
+				distributes[10] = distributes[10] + 1
+			} else if s < 4000 {
+				distributes[11] = distributes[11] + 1
+			} else {
+				distributes[12] = distributes[12] + 1
+			}
+			if r < 10 {
+				ranges[0] = ranges[0] + 1
+			} else if r < 100 {
+				ranges[1] = ranges[1] + 1
+			} else if r < 200 {
+				ranges[2] = ranges[2] + 1
+			} else if r < 500 {
+				ranges[3] = ranges[3] + 1
+			} else if r < 700 {
+				ranges[4] = ranges[4] + 1
+			} else if r < 1000 {
+				ranges[5] = ranges[5] + 1
+			} else if r < 1500 {
+				ranges[6] = ranges[6] + 1
+			} else if r < 2000 {
+				ranges[7] = ranges[7] + 1
+			} else if r < 2500 {
+				ranges[8] = ranges[8] + 1
+			} else if r < 3000 {
+				ranges[9] = ranges[9] + 1
+			} else if r < 3500 {
+				ranges[10] = ranges[10] + 1
+			} else if r < 4000 {
+				ranges[11] = ranges[11] + 1
+			} else {
+				ranges[12] = ranges[12] + 1
+			}
+			if m < 1000 {
+				mins[0] = mins[0] + 1
+			} else if r < 5000 {
+				mins[1] = mins[1] + 1
+			} else if r < 10000 {
+				mins[2] = mins[2] + 1
+			} else if r < 30000 {
+				mins[3] = mins[3] + 1
+			} else if r < 50000 {
+				mins[4] = mins[4] + 1
+			} else if r < 70000 {
+				mins[5] = mins[5] + 1
+			} else if r < 90000 {
+				mins[6] = mins[6] + 1
+			} else if r < 100000 {
+				mins[7] = mins[7] + 1
+			} else if r < 200000 {
+				mins[8] = mins[8] + 1
+			} else if r < 300000 {
+				mins[9] = mins[9] + 1
+			} else if r < 500000 {
+				mins[10] = mins[10] + 1
+			} else if r < 700000 {
+				mins[11] = mins[11] + 1
+			} else {
+				mins[12] = mins[12] + 1
+			}
+		}
+	}
+
+	fmt.Println("#pts: ", sPts, "\n#total of pts:", nPts, "\n#avg of pts:", float64(nPts)/float64(sPts))
+	fmt.Println("Distribution: ", "\n# < 10:", float64(distributes[0])/float64(sPts)*100, "%",
+		"\n# < 100: ", float64(distributes[1])/float64(sPts)*100, "%",
+		"\n# < 200: ", float64(distributes[2])/float64(sPts)*100, "%",
+		"\n# < 500: ", float64(distributes[3])/float64(sPts)*100, "%",
+		"\n# < 700: ", float64(distributes[4])/float64(sPts)*100, "%",
+		"\n# < 1000:", float64(distributes[5])/float64(sPts)*100, "%",
+		"\n# < 1500:", float64(distributes[6])/float64(sPts)*100, "%",
+		"\n# < 2000:", float64(distributes[7])/float64(sPts)*100, "%",
+		"\n# < 2500:", float64(distributes[8])/float64(sPts)*100, "%",
+		"\n# < 3000:", float64(distributes[9])/float64(sPts)*100, "%",
+		"\n# < 3500:", float64(distributes[10])/float64(sPts)*100, "%",
+		"\n# < 4000:", float64(distributes[11])/float64(sPts)*100, "%",
+		"\n# others:", float64(distributes[12])/float64(sPts)*100, "%")
+	fmt.Println("Min Idx in PTS: ", "\n# < 1000:  ", float64(mins[0])/float64(sPts)*100, "%",
+		"\n# < 5000:  ", float64(mins[1])/float64(sPts)*100, "%",
+		"\n# < 10000: ", float64(mins[2])/float64(sPts)*100, "%",
+		"\n# < 30000: ", float64(mins[3])/float64(sPts)*100, "%",
+		"\n# < 50000: ", float64(mins[4])/float64(sPts)*100, "%",
+		"\n# < 70000: ", float64(mins[5])/float64(sPts)*100, "%",
+		"\n# < 90000: ", float64(mins[6])/float64(sPts)*100, "%",
+		"\n# < 100000:", float64(mins[7])/float64(sPts)*100, "%",
+		"\n# < 200000:", float64(mins[8])/float64(sPts)*100, "%",
+		"\n# < 300000:", float64(mins[9])/float64(sPts)*100, "%",
+		"\n# < 500000:", float64(mins[10])/float64(sPts)*100, "%",
+		"\n# < 700000:", float64(mins[11])/float64(sPts)*100, "%",
+		"\n# others:", float64(mins[12])/float64(sPts)*100, "%")
+	fmt.Println("Range(Max obj - Min obj): ", "\n# < 10:", float64(ranges[0])/float64(sPts)*100, "%",
+		"\n# < 100: ", float64(ranges[1])/float64(sPts)*100, "%",
+		"\n# < 200: ", float64(ranges[2])/float64(sPts)*100, "%",
+		"\n# < 500: ", float64(ranges[3])/float64(sPts)*100, "%",
+		"\n# < 700: ", float64(ranges[4])/float64(sPts)*100, "%",
+		"\n# < 1000:", float64(ranges[5])/float64(sPts)*100, "%",
+		"\n# < 1500:", float64(ranges[6])/float64(sPts)*100, "%",
+		"\n# < 2000:", float64(ranges[7])/float64(sPts)*100, "%",
+		"\n# < 2500:", float64(ranges[8])/float64(sPts)*100, "%",
+		"\n# < 3000:", float64(ranges[9])/float64(sPts)*100, "%",
+		"\n# < 3500:", float64(ranges[10])/float64(sPts)*100, "%",
+		"\n# < 4000:", float64(ranges[11])/float64(sPts)*100, "%",
+		"\n# others:", float64(ranges[12])/float64(sPts)*100, "%")
+}
+
+//bz: for my use; statistics for all mains
+func TotalStatistics(results map[*ssa.Package]*Result) {
+	fmt.Println("\n\n*************************************\nTotal Statistics of PTS: ")
+	sPts := 0
+	nPts := 0
+	distributes := make([]int, 13) //bz: want to know the distribution of pts:
+	//                  idx:  0     1     2     3    4      5      6      7      8      9      10      11    12
+	// the array represents: <10, <100, <200, <500, <700, <1000, <1500, <2000, <2500, <3000, <3500, <4000, all others ...
+	ranges := make([]int, 13) //bz: same as above, but == max obj idx - min obj idx
+	mins := make([]int, 13) //bz: the min obj idx in a pts
+	//                  idx:   0       1      2       3       4       5       6        7       8         9       10      11       12
+	// the array represents: <1000, <5000, <10000, <30000, <50000, <70000, <90000, <100000, <200000, <300000, <500000, <700000, all others ...
+	for _, r := range results {
+		_result := r.a.result
+		for _, n := range _result.a.nodes {
+			if !n.solve.pts.IsEmpty() {
+				sPts++
+				s := n.solve.pts.Len()
+				r := n.solve.pts.Max() - n.solve.pts.Min()
+				m := n.solve.pts.Min()
+				nPts = nPts + s
+				if s < 10 {
+					distributes[0] = distributes[0] + 1
+				} else if s < 100 {
+					distributes[1] = distributes[1] + 1
+				} else if s < 200 {
+					distributes[2] = distributes[2] + 1
+				} else if s < 500 {
+					distributes[3] = distributes[3] + 1
+				} else if s < 700 {
+					distributes[4] = distributes[4] + 1
+				} else if s < 1000 {
+					distributes[5] = distributes[5] + 1
+				} else if s < 1500 {
+					distributes[6] = distributes[6] + 1
+				} else if s < 2000 {
+					distributes[7] = distributes[7] + 1
+				} else if s < 2500 {
+					distributes[8] = distributes[8] + 1
+				} else if s < 3000 {
+					distributes[9] = distributes[9] + 1
+				} else if s < 3500 {
+					distributes[10] = distributes[10] + 1
+				} else if s < 4000 {
+					distributes[11] = distributes[11] + 1
+				} else {
+					distributes[12] = distributes[12] + 1
+				}
+
+				if r < 10 {
+					ranges[0] = ranges[0] + 1
+				} else if r < 100 {
+					ranges[1] = ranges[1] + 1
+				} else if r < 200 {
+					ranges[2] = ranges[2] + 1
+				} else if r < 500 {
+					ranges[3] = ranges[3] + 1
+				} else if r < 700 {
+					ranges[4] = ranges[4] + 1
+				} else if r < 1000 {
+					ranges[5] = ranges[5] + 1
+				} else if r < 1500 {
+					ranges[6] = ranges[6] + 1
+				} else if r < 2000 {
+					ranges[7] = ranges[7] + 1
+				} else if r < 2500 {
+					ranges[8] = ranges[8] + 1
+				} else if r < 3000 {
+					ranges[9] = ranges[9] + 1
+				} else if r < 3500 {
+					ranges[10] = ranges[10] + 1
+				} else if r < 4000 {
+					ranges[11] = ranges[11] + 1
+				} else {
+					ranges[12] = ranges[12] + 1
+				}
+
+				if m < 1000 {
+					mins[0] = mins[0] + 1
+				} else if r < 5000 {
+					mins[1] = mins[1] + 1
+				} else if r < 10000 {
+					mins[2] = mins[2] + 1
+				} else if r < 30000 {
+					mins[3] = mins[3] + 1
+				} else if r < 50000 {
+					mins[4] = mins[4] + 1
+				} else if r < 70000 {
+					mins[5] = mins[5] + 1
+				} else if r < 90000 {
+					mins[6] = mins[6] + 1
+				} else if r < 100000 {
+					mins[7] = mins[7] + 1
+				} else if r < 200000 {
+					mins[8] = mins[8] + 1
+				} else if r < 300000 {
+					mins[9] = mins[9] + 1
+				} else if r < 500000 {
+					mins[10] = mins[10] + 1
+				} else if r < 700000 {
+					mins[11] = mins[11] + 1
+				} else {
+					mins[12] = mins[12] + 1
+				}
+			}
+		}
+	}
+
+	fmt.Println("#pts: ", sPts, "\n#total of pts:", nPts, "\n#avg of pts:", float64(nPts)/float64(sPts))
+	fmt.Println("Distribution: ", "\n# < 10:", float64(distributes[0])/float64(sPts)*100, "%",
+		"\n# < 100: ", float64(distributes[1])/float64(sPts)*100, "%",
+		"\n# < 200: ", float64(distributes[2])/float64(sPts)*100, "%",
+		"\n# < 500: ", float64(distributes[3])/float64(sPts)*100, "%",
+		"\n# < 700: ", float64(distributes[4])/float64(sPts)*100, "%",
+		"\n# < 1000:", float64(distributes[5])/float64(sPts)*100, "%",
+		"\n# < 1500:", float64(distributes[6])/float64(sPts)*100, "%",
+		"\n# < 2000:", float64(distributes[7])/float64(sPts)*100, "%",
+		"\n# < 2500:", float64(distributes[8])/float64(sPts)*100, "%",
+		"\n# < 3000:", float64(distributes[9])/float64(sPts)*100, "%",
+		"\n# < 3500:", float64(distributes[10])/float64(sPts)*100, "%",
+		"\n# < 4000:", float64(distributes[11])/float64(sPts)*100, "%",
+		"\n# others:", float64(distributes[12])/float64(sPts)*100, "%")
+	fmt.Println("Min Idx in PTS: ", "\n# < 1000:  ", float64(mins[0])/float64(sPts)*100, "%",
+		"\n# < 5000:  ", float64(mins[1])/float64(sPts)*100, "%",
+		"\n# < 10000: ", float64(mins[2])/float64(sPts)*100, "%",
+		"\n# < 30000: ", float64(mins[3])/float64(sPts)*100, "%",
+		"\n# < 50000: ", float64(mins[4])/float64(sPts)*100, "%",
+		"\n# < 70000: ", float64(mins[5])/float64(sPts)*100, "%",
+		"\n# < 90000: ", float64(mins[6])/float64(sPts)*100, "%",
+		"\n# < 100000:", float64(mins[7])/float64(sPts)*100, "%",
+		"\n# < 200000:", float64(mins[8])/float64(sPts)*100, "%",
+		"\n# < 300000:", float64(mins[9])/float64(sPts)*100, "%",
+		"\n# < 500000:", float64(mins[10])/float64(sPts)*100, "%",
+		"\n# < 700000:", float64(mins[11])/float64(sPts)*100, "%",
+		"\n# others:", float64(mins[12])/float64(sPts)*100, "%")
+	fmt.Println("Range(Max obj - Min obj): ", "\n# < 10:", float64(ranges[0])/float64(sPts)*100, "%",
+		"\n# < 100: ", float64(ranges[1])/float64(sPts)*100, "%",
+		"\n# < 200: ", float64(ranges[2])/float64(sPts)*100, "%",
+		"\n# < 500: ", float64(ranges[3])/float64(sPts)*100, "%",
+		"\n# < 700: ", float64(ranges[4])/float64(sPts)*100, "%",
+		"\n# < 1000:", float64(ranges[5])/float64(sPts)*100, "%",
+		"\n# < 1500:", float64(ranges[6])/float64(sPts)*100, "%",
+		"\n# < 2000:", float64(ranges[7])/float64(sPts)*100, "%",
+		"\n# < 2500:", float64(ranges[8])/float64(sPts)*100, "%",
+		"\n# < 3000:", float64(ranges[9])/float64(sPts)*100, "%",
+		"\n# < 3500:", float64(ranges[10])/float64(sPts)*100, "%",
+		"\n# < 4000:", float64(ranges[11])/float64(sPts)*100, "%",
+		"\n# others:", float64(ranges[12])/float64(sPts)*100, "%")
+	fmt.Println("*************************************\n\n")
 }
 
 //bz: do comparison with default

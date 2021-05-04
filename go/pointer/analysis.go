@@ -389,13 +389,13 @@ func printConfig(config *Config) {
 	} else {
 		fmt.Println(" *** No Callback *** ")
 	}
-	if flags.DoCallback { //bz: see comments of optHVN
-		optHVN = true
-		optRenumber = true
-	} else { //turn it off for on-the-fly
-		optHVN = false
-		optRenumber = false
-	}
+	//if flags.DoCallback { //bz: see comments of optHVN
+	//	optHVN = true
+	//	optRenumber = true
+	//} else { //turn it off for on-the-fly
+	//	optHVN = false
+	//	optRenumber = false
+	//}
 
 	if flags.DoPerformance { //bz: this is from my main, i want them to print out
 		if optRenumber {
@@ -467,11 +467,11 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 			doReflect = true
 			isMain = false
 		}
-		if i == 11 {
-			flags.PTSLimit = 100
-		}else{
-			flags.PTSLimit = 0
-		}
+		//if i == 11 { //bz: tidb only -> when main is /tidb/explaintest
+		//	flags.PTSLimit = 100
+		//}else{
+		//	flags.PTSLimit = 0
+		//}
 
 		_config := &Config{
 			Mains:          _mains,
@@ -811,6 +811,7 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool, isMain bool) (result *Resul
 		fmt.Println("#pts: ", len(a.nodes)) //this includes all kinds of pointers, e.g., cgnode, func, pointer
 		fmt.Println("#constraints (totol num): ", a.num_constraints)
 		fmt.Println("#cgnodes (totol num): ", len(a.cgnodes))
+		fmt.Println("#nodes (totol num): ", len(a.nodes))
 		//fmt.Println("#func (totol num): ", len(a.fn2cgnodeIdx))
 		//numTyp := 0
 		//for _, track := range a.trackTypes {

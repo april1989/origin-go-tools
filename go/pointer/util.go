@@ -7,6 +7,7 @@ package pointer
 import (
 	"bytes"
 	"fmt"
+	"github.com/april1989/origin-go-tools/container/sparsesets"
 	"go/types"
 	"log"
 	"os"
@@ -278,7 +279,7 @@ type nodeset struct {
 	intsets.Sparse
 }
 
-//bz: i added
+//bz: i added this
 func (ns *nodeset) IsEmpty() bool {
 	return ns.Len() == 0
 }
@@ -304,6 +305,28 @@ func (ns *nodeset) add(n nodeid) bool {
 
 func (ns *nodeset) addAll(y *nodeset) bool {
 	return ns.UnionWith(&y.Sparse)
+}
+
+// bz: Node set: SparseDense: NOT USED -------------------------------------------------------------------
+//  just a wrapper in order to use nodeid
+type nodesdset struct {
+	sparsesets.SparseDense
+}
+
+func (ns *nodesdset) IsEmpty() bool {
+	return ns.Len() == 0
+}
+
+func (ns *nodesdset) String() string {
+	return ns.SparseDense.String()
+}
+
+func (ns *nodesdset) add(n nodeid) bool {
+	return ns.SparseDense.Insert(int(n))
+}
+
+func (ns *nodesdset) addAll(y *nodesdset) bool {
+	return ns.UnionWith(&y.SparseDense)
 }
 
 // Profiling & debugging -------------------------------------------------------
