@@ -37,7 +37,8 @@ import (
 // Sparse sets must be copied using the Copy method, not by assigning
 // a Sparse value.
 //
-// bz: this is a bit vector but grouped by block: each block contains wordsPerBlock bits,
+// bz: this is a bit vector but grouped by block (a block grouped by words):
+//   each block contains wordsPerBlock bits,
 //   and each bit represent the existence of an int value; blocks are linked by pointers;
 //   -> quite convenient to add more blocks when pts increases
 type Sparse struct {

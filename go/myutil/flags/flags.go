@@ -11,12 +11,14 @@ var Main = ""          //bz: run for a specific main in this pkg; start from 0
 var DoDefault = false  //bz: only Do default
 var DoCompare = false  //bz: this has a super long time
 var DoLevel = 0        //bz: set the analysis scope to level ? default = 0
-var DoCallback = false  //bz: simplify callback fn + preSolve()
+var DoCallback = false //bz: simplify callback fn + preSolve()
 var DoCollapse = false //bz: collapse the lib function with its callback, no matter what are the context of caller of lib func -> DoCallback must be true
 var DoTests = false    //bz: treat a test as a main to analyze
 var DoCoverage = false //bz: compute (#analyzed fn/#total fn) in a program within the scope
 
-var PTSLimit int            //bz: limit the size of pts; if excess, skip its solving
+var PTSLimit int   //bz: limit the size of pts; if excess, skip its solving
+var DoDiff = false //bz: compute the diff functions when turn on/off ptsLimit
+
 var TimeLimit time.Duration //bz: time limit set by users, unit: ?h?m?s
 
 //my use
@@ -88,6 +90,7 @@ func ParseFlags() {
 	}
 	if *_pts != 0 {
 		PTSLimit = *_pts
+		//DoDiff = true
 	}
 
 	//my use

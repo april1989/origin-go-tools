@@ -64,7 +64,7 @@ var (
 	//bz: for my use: coverage
 	allFns          map[string]string //bz: when DoCoverage = true: store all funcs within the scope/app, use map instead of array for an easier existence check
 	cCmplFns        map[string]string //bz: c/c++ compiled functions, e.g., functions in xxx.pb.go, some of these functions will nolonger be used/invoked in the app
-	showUnCoveredFn = true            //bz: whether print out those functions that we did not analyze
+	showUnCoveredFn = false           //bz: whether print out those functions that we did not analyze
 )
 
 // An object represents a contiguous block of memory to which some
@@ -467,6 +467,7 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 			doReflect = true
 			isMain = false
 		}
+
 		//if i == 11 { //bz: tidb only -> when main is /tidb/explaintest
 		//	flags.PTSLimit = 100
 		//}else{
@@ -517,6 +518,49 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 			fmt.Println(i, ": "+main.String(), " (use "+elapse.String()+") *** Reflection ON ***")
 		} else {
 			fmt.Println(i, ": "+main.String(), " (use "+elapse.String()+")")
+		}
+
+		if flags.PTSLimit != 0 && flags.DoDiff {
+			//bz: i want to see the not covered functions when turn on/off ptsLimit,
+			// so do one time analysis with ptsLimit off and compare; turn this off by setting flags.DoDiff = false
+			ptsLimit := flags.PTSLimit //store original setting
+			flags.PTSLimit = 0 //turn off
+
+			//run analysis again
+			fmt.Println("\n\n", i, ": "+main.String(), " (No PTSLimit) ... ")
+			start := time.Now()
+			fullResult, err := AnalyzeWCtx(_config, false, isMain)
+			if err != nil {
+				return nil, err
+			}
+			elapse := time.Now().Sub(start)
+
+			if doReflect { //default off
+				fmt.Println(i, ": "+main.String(), " (No PTSLimit, use "+elapse.String()+") *** Reflection ON ***")
+			} else {
+				fmt.Println(i, ": "+main.String(), " (No PTSLimit, use "+elapse.String()+")")
+			}
+
+			//compare diff
+			fmt.Println("\nThe uncovered functions when turning on PTSLimit: ")
+			s := 0
+			in := 0
+			limitCFn2CGNode := _result.CallGraph.Fn2CGNode
+			a := _result.a
+			for ffn, _ := range fullResult.CallGraph.Fn2CGNode {
+				if _, ok := limitCFn2CGNode[ffn]; !ok {
+					//not exist when turn on PTSLimit
+					fmt.Println(ffn.String())
+					s++
+					if a.withinScope(ffn.String()) {
+						in++
+					}
+				}
+			}
+			fmt.Println("Finish. #Total: ", s, " (#WithinScope: ", in, ")")
+
+			//done
+			flags.PTSLimit = ptsLimit //set it back
 		}
 	}
 	fmt.Println(" *********************************** ")

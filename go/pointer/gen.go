@@ -3219,7 +3219,7 @@ func (a *analysis) genMissingFn(fn *ssa.Function, caller *cgnode, site *callsite
 			if a.log != nil { //debug
 				fmt.Fprintf(a.log, "Level excluded: "+fn.String()+"\n")
 			}
-			if a.config.DoCallback && fn.IsMySynthetic { //bz: this is the callback
+			if a.config.DoCallback && fn.IsMySynthetic { //bz: this is my callback fn
 				instr := site.instr.(ssa.CallInstruction)
 				call := instr.Common()
 				fnObjs := a.genCallBack(caller, instr, fn, site, call)

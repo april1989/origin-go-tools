@@ -737,12 +737,20 @@ func (r *Result) DumpAll() {
 	}
 }
 
+//bz: intervals used as distributes and ranges in Statistics and TotalStatistics
+var (
+	//             idx:  0    1    2    3    4     5     6     7     8    9     10    11
+	intervals1 = [12]int{10, 100, 200, 500, 700, 1000, 1500, 2000, 2500, 3000, 3500, 4000}
+	intervals2 = [12]int{16, 128, 256, 512, 768, 1024, 1536, 2048, 2560, 3072, 3584, 4096}
+)
+
 //bz: for my use
 func (r *Result) Statistics() {
 	fmt.Println("\nStatistics of PTS: ")
 	_result := r.a.result
 	sPts := 0
 	nPts := 0
+	intervals := intervals1 //bz: intervals used to classify pts
 	distributes := make([]int, 13) //bz: want to know the distribution of pts:
 	//                  idx:  0     1     2     3    4      5      6      7      8      9      10      11    12
 	// the array represents: <10, <100, <200, <500, <700, <1000, <1500, <2000, <2500, <3000, <3500, <4000, all others ...
@@ -751,63 +759,63 @@ func (r *Result) Statistics() {
 	//                  idx:   0       1      2       3       4       5       6        7       8         9       10      11       12
 	// the array represents: <1000, <5000, <10000, <30000, <50000, <70000, <90000, <100000, <200000, <300000, <500000, <700000, all others ...
 
-	for _, n := range _result.a.nodes {
+	for id, n := range _result.a.nodes {
 		if !n.solve.pts.IsEmpty() {
 			sPts++
 			s := n.solve.pts.Len()
 			r := n.solve.pts.Max() - n.solve.pts.Min()
 			m := n.solve.pts.Min()
 			nPts = nPts + s
-			if s < 10 {
+			if s < intervals[0] {
 				distributes[0] = distributes[0] + 1
-			} else if s < 100 {
+			} else if s < intervals[1] {
 				distributes[1] = distributes[1] + 1
-			} else if s < 200 {
+			} else if s < intervals[2] {
 				distributes[2] = distributes[2] + 1
-			} else if s < 500 {
+			} else if s < intervals[3] {
 				distributes[3] = distributes[3] + 1
-			} else if s < 700 {
+			} else if s < intervals[4] {
 				distributes[4] = distributes[4] + 1
-			} else if s < 1000 {
+			} else if s < intervals[5] {
 				distributes[5] = distributes[5] + 1
-			} else if s < 1500 {
+			} else if s < intervals[6] {
 				distributes[6] = distributes[6] + 1
-			} else if s < 2000 {
+			} else if s < intervals[7] {
 				distributes[7] = distributes[7] + 1
-			} else if s < 2500 {
+			} else if s < intervals[8] {
 				distributes[8] = distributes[8] + 1
-			} else if s < 3000 {
+			} else if s < intervals[9] {
 				distributes[9] = distributes[9] + 1
-			} else if s < 3500 {
+			} else if s < intervals[10] {
 				distributes[10] = distributes[10] + 1
-			} else if s < 4000 {
+			} else if s < intervals[11] {
 				distributes[11] = distributes[11] + 1
 			} else {
 				distributes[12] = distributes[12] + 1
 			}
-			if r < 10 {
+			if r < intervals[0] {
 				ranges[0] = ranges[0] + 1
-			} else if r < 100 {
+			} else if r < intervals[1] {
 				ranges[1] = ranges[1] + 1
-			} else if r < 200 {
+			} else if r < intervals[2] {
 				ranges[2] = ranges[2] + 1
-			} else if r < 500 {
+			} else if r < intervals[3] {
 				ranges[3] = ranges[3] + 1
-			} else if r < 700 {
+			} else if r < intervals[4] {
 				ranges[4] = ranges[4] + 1
-			} else if r < 1000 {
+			} else if r < intervals[5] {
 				ranges[5] = ranges[5] + 1
-			} else if r < 1500 {
+			} else if r < intervals[6] {
 				ranges[6] = ranges[6] + 1
-			} else if r < 2000 {
+			} else if r < intervals[7] {
 				ranges[7] = ranges[7] + 1
-			} else if r < 2500 {
+			} else if r < intervals[8] {
 				ranges[8] = ranges[8] + 1
-			} else if r < 3000 {
+			} else if r < intervals[9] {
 				ranges[9] = ranges[9] + 1
-			} else if r < 3500 {
+			} else if r < intervals[10] {
 				ranges[10] = ranges[10] + 1
-			} else if r < 4000 {
+			} else if r < intervals[11] {
 				ranges[11] = ranges[11] + 1
 			} else {
 				ranges[12] = ranges[12] + 1
@@ -839,49 +847,18 @@ func (r *Result) Statistics() {
 			} else {
 				mins[12] = mins[12] + 1
 			}
+
+			//bz: check the details
+			if s > 1000 {
+				if n.obj == nil {
+					fmt.Printf("-> len = %d: pts(n%d : %s)\n", s, id, n.typ)
+				}else{
+					fmt.Printf("-> len = %d: pts(n%d : %s), created at: %s \n", s, id, n.typ, n.obj.cgn)
+				}
+			}
 		}
 	}
-
-	fmt.Println("#pts: ", sPts, "\n#total of pts:", nPts, "\n#avg of pts:", float64(nPts)/float64(sPts))
-	fmt.Println("Distribution: ", "\n# < 10:", float64(distributes[0])/float64(sPts)*100, "%",
-		"\n# < 100: ", float64(distributes[1])/float64(sPts)*100, "%",
-		"\n# < 200: ", float64(distributes[2])/float64(sPts)*100, "%",
-		"\n# < 500: ", float64(distributes[3])/float64(sPts)*100, "%",
-		"\n# < 700: ", float64(distributes[4])/float64(sPts)*100, "%",
-		"\n# < 1000:", float64(distributes[5])/float64(sPts)*100, "%",
-		"\n# < 1500:", float64(distributes[6])/float64(sPts)*100, "%",
-		"\n# < 2000:", float64(distributes[7])/float64(sPts)*100, "%",
-		"\n# < 2500:", float64(distributes[8])/float64(sPts)*100, "%",
-		"\n# < 3000:", float64(distributes[9])/float64(sPts)*100, "%",
-		"\n# < 3500:", float64(distributes[10])/float64(sPts)*100, "%",
-		"\n# < 4000:", float64(distributes[11])/float64(sPts)*100, "%",
-		"\n# others:", float64(distributes[12])/float64(sPts)*100, "%")
-	fmt.Println("Min Idx in PTS: ", "\n# < 1000:  ", float64(mins[0])/float64(sPts)*100, "%",
-		"\n# < 5000:  ", float64(mins[1])/float64(sPts)*100, "%",
-		"\n# < 10000: ", float64(mins[2])/float64(sPts)*100, "%",
-		"\n# < 30000: ", float64(mins[3])/float64(sPts)*100, "%",
-		"\n# < 50000: ", float64(mins[4])/float64(sPts)*100, "%",
-		"\n# < 70000: ", float64(mins[5])/float64(sPts)*100, "%",
-		"\n# < 90000: ", float64(mins[6])/float64(sPts)*100, "%",
-		"\n# < 100000:", float64(mins[7])/float64(sPts)*100, "%",
-		"\n# < 200000:", float64(mins[8])/float64(sPts)*100, "%",
-		"\n# < 300000:", float64(mins[9])/float64(sPts)*100, "%",
-		"\n# < 500000:", float64(mins[10])/float64(sPts)*100, "%",
-		"\n# < 700000:", float64(mins[11])/float64(sPts)*100, "%",
-		"\n# others:", float64(mins[12])/float64(sPts)*100, "%")
-	fmt.Println("Range(Max obj - Min obj): ", "\n# < 10:", float64(ranges[0])/float64(sPts)*100, "%",
-		"\n# < 100: ", float64(ranges[1])/float64(sPts)*100, "%",
-		"\n# < 200: ", float64(ranges[2])/float64(sPts)*100, "%",
-		"\n# < 500: ", float64(ranges[3])/float64(sPts)*100, "%",
-		"\n# < 700: ", float64(ranges[4])/float64(sPts)*100, "%",
-		"\n# < 1000:", float64(ranges[5])/float64(sPts)*100, "%",
-		"\n# < 1500:", float64(ranges[6])/float64(sPts)*100, "%",
-		"\n# < 2000:", float64(ranges[7])/float64(sPts)*100, "%",
-		"\n# < 2500:", float64(ranges[8])/float64(sPts)*100, "%",
-		"\n# < 3000:", float64(ranges[9])/float64(sPts)*100, "%",
-		"\n# < 3500:", float64(ranges[10])/float64(sPts)*100, "%",
-		"\n# < 4000:", float64(ranges[11])/float64(sPts)*100, "%",
-		"\n# others:", float64(ranges[12])/float64(sPts)*100, "%")
+	printStatistics(sPts, nPts, intervals, distributes, mins, ranges)
 }
 
 //bz: for my use; statistics for all mains
@@ -889,6 +866,7 @@ func TotalStatistics(results map[*ssa.Package]*Result) {
 	fmt.Println("\n\n*************************************\nTotal Statistics of PTS: ")
 	sPts := 0
 	nPts := 0
+	intervals := intervals1 //bz: intervals used to classify pts
 	distributes := make([]int, 13) //bz: want to know the distribution of pts:
 	//                  idx:  0     1     2     3    4      5      6      7      8      9      10      11    12
 	// the array represents: <10, <100, <200, <500, <700, <1000, <1500, <2000, <2500, <3000, <3500, <4000, all others ...
@@ -896,71 +874,70 @@ func TotalStatistics(results map[*ssa.Package]*Result) {
 	mins := make([]int, 13) //bz: the min obj idx in a pts
 	//                  idx:   0       1      2       3       4       5       6        7       8         9       10      11       12
 	// the array represents: <1000, <5000, <10000, <30000, <50000, <70000, <90000, <100000, <200000, <300000, <500000, <700000, all others ...
-	for _, r := range results {
+	for main, r := range results {
 		_result := r.a.result
-		for _, n := range _result.a.nodes {
+		fmt.Println("main: ", main)
+		for id, n := range _result.a.nodes {
 			if !n.solve.pts.IsEmpty() {
 				sPts++
 				s := n.solve.pts.Len()
 				r := n.solve.pts.Max() - n.solve.pts.Min()
 				m := n.solve.pts.Min()
 				nPts = nPts + s
-				if s < 10 {
+				if s < intervals[0] {
 					distributes[0] = distributes[0] + 1
-				} else if s < 100 {
+				} else if s < intervals[1] {
 					distributes[1] = distributes[1] + 1
-				} else if s < 200 {
+				} else if s < intervals[2] {
 					distributes[2] = distributes[2] + 1
-				} else if s < 500 {
+				} else if s < intervals[3] {
 					distributes[3] = distributes[3] + 1
-				} else if s < 700 {
+				} else if s < intervals[4] {
 					distributes[4] = distributes[4] + 1
-				} else if s < 1000 {
+				} else if s < intervals[5] {
 					distributes[5] = distributes[5] + 1
-				} else if s < 1500 {
+				} else if s < intervals[6] {
 					distributes[6] = distributes[6] + 1
-				} else if s < 2000 {
+				} else if s < intervals[7] {
 					distributes[7] = distributes[7] + 1
-				} else if s < 2500 {
+				} else if s < intervals[8] {
 					distributes[8] = distributes[8] + 1
-				} else if s < 3000 {
+				} else if s < intervals[9] {
 					distributes[9] = distributes[9] + 1
-				} else if s < 3500 {
+				} else if s < intervals[10] {
 					distributes[10] = distributes[10] + 1
-				} else if s < 4000 {
+				} else if s < intervals[11] {
 					distributes[11] = distributes[11] + 1
 				} else {
 					distributes[12] = distributes[12] + 1
 				}
-
-				if r < 10 {
+				if r < intervals[0] {
 					ranges[0] = ranges[0] + 1
-				} else if r < 100 {
+				} else if r < intervals[1] {
 					ranges[1] = ranges[1] + 1
-				} else if r < 200 {
+				} else if r < intervals[2] {
 					ranges[2] = ranges[2] + 1
-				} else if r < 500 {
+				} else if r < intervals[3] {
 					ranges[3] = ranges[3] + 1
-				} else if r < 700 {
+				} else if r < intervals[4] {
 					ranges[4] = ranges[4] + 1
-				} else if r < 1000 {
+				} else if r < intervals[5] {
 					ranges[5] = ranges[5] + 1
-				} else if r < 1500 {
+				} else if r < intervals[6] {
 					ranges[6] = ranges[6] + 1
-				} else if r < 2000 {
+				} else if r < intervals[7] {
 					ranges[7] = ranges[7] + 1
-				} else if r < 2500 {
+				} else if r < intervals[8] {
 					ranges[8] = ranges[8] + 1
-				} else if r < 3000 {
+				} else if r < intervals[9] {
 					ranges[9] = ranges[9] + 1
-				} else if r < 3500 {
+				} else if r < intervals[10] {
 					ranges[10] = ranges[10] + 1
-				} else if r < 4000 {
+				} else if r < intervals[11] {
 					ranges[11] = ranges[11] + 1
 				} else {
 					ranges[12] = ranges[12] + 1
 				}
-
 				if m < 1000 {
 					mins[0] = mins[0] + 1
 				} else if r < 5000 {
@@ -988,23 +965,38 @@ func TotalStatistics(results map[*ssa.Package]*Result) {
 				} else {
 					mins[12] = mins[12] + 1
 				}
+
+				//bz: check the details
+				if s > 1000 {
+					if n.obj == nil {
+						fmt.Printf("-> len = %d: pts(n%d : %s): underlying %s \n", s, id, n.typ, n.typ.Underlying())
+					}else{
+						fmt.Printf("-> len = %d: pts(n%d : %s), created at: %s \n", s, id, n.typ, n.obj.cgn)
+					}
+				}
 			}
 		}
 	}
 
+	printStatistics(sPts, nPts, intervals, distributes, mins, ranges)
+	fmt.Println("*************************************\n\n")
+}
+
+//bz: common part for Statistics and TotalStatistics
+func printStatistics(sPts, nPts int, intervals [12]int, distributes, mins, ranges []int) {
 	fmt.Println("#pts: ", sPts, "\n#total of pts:", nPts, "\n#avg of pts:", float64(nPts)/float64(sPts))
-	fmt.Println("Distribution: ", "\n# < 10:", float64(distributes[0])/float64(sPts)*100, "%",
-		"\n# < 100: ", float64(distributes[1])/float64(sPts)*100, "%",
-		"\n# < 200: ", float64(distributes[2])/float64(sPts)*100, "%",
-		"\n# < 500: ", float64(distributes[3])/float64(sPts)*100, "%",
-		"\n# < 700: ", float64(distributes[4])/float64(sPts)*100, "%",
-		"\n# < 1000:", float64(distributes[5])/float64(sPts)*100, "%",
-		"\n# < 1500:", float64(distributes[6])/float64(sPts)*100, "%",
-		"\n# < 2000:", float64(distributes[7])/float64(sPts)*100, "%",
-		"\n# < 2500:", float64(distributes[8])/float64(sPts)*100, "%",
-		"\n# < 3000:", float64(distributes[9])/float64(sPts)*100, "%",
-		"\n# < 3500:", float64(distributes[10])/float64(sPts)*100, "%",
-		"\n# < 4000:", float64(distributes[11])/float64(sPts)*100, "%",
+	fmt.Println("Distribution: ", "\n# < ", intervals[0], ":", float64(distributes[0])/float64(sPts)*100, "%",
+		"\n# <", intervals[1], ": ", float64(distributes[1])/float64(sPts)*100, "%",
+		"\n# <", intervals[2], ": ", float64(distributes[2])/float64(sPts)*100, "%",
+		"\n# <", intervals[3], ": ", float64(distributes[3])/float64(sPts)*100, "%",
+		"\n# <", intervals[4], ": ", float64(distributes[4])/float64(sPts)*100, "%",
+		"\n# <", intervals[5], ":", float64(distributes[5])/float64(sPts)*100, "%",
+		"\n# <", intervals[6], ":", float64(distributes[6])/float64(sPts)*100, "%",
+		"\n# <", intervals[7], ":", float64(distributes[7])/float64(sPts)*100, "%",
+		"\n# <", intervals[8], ":", float64(distributes[8])/float64(sPts)*100, "%",
+		"\n# <", intervals[9], ":", float64(distributes[9])/float64(sPts)*100, "%",
+		"\n# <", intervals[10], ":", float64(distributes[10])/float64(sPts)*100, "%",
+		"\n# <", intervals[11], ":", float64(distributes[11])/float64(sPts)*100, "%",
 		"\n# others:", float64(distributes[12])/float64(sPts)*100, "%")
 	fmt.Println("Min Idx in PTS: ", "\n# < 1000:  ", float64(mins[0])/float64(sPts)*100, "%",
 		"\n# < 5000:  ", float64(mins[1])/float64(sPts)*100, "%",
@@ -1019,21 +1011,21 @@ func TotalStatistics(results map[*ssa.Package]*Result) {
 		"\n# < 500000:", float64(mins[10])/float64(sPts)*100, "%",
 		"\n# < 700000:", float64(mins[11])/float64(sPts)*100, "%",
 		"\n# others:", float64(mins[12])/float64(sPts)*100, "%")
-	fmt.Println("Range(Max obj - Min obj): ", "\n# < 10:", float64(ranges[0])/float64(sPts)*100, "%",
-		"\n# < 100: ", float64(ranges[1])/float64(sPts)*100, "%",
-		"\n# < 200: ", float64(ranges[2])/float64(sPts)*100, "%",
-		"\n# < 500: ", float64(ranges[3])/float64(sPts)*100, "%",
-		"\n# < 700: ", float64(ranges[4])/float64(sPts)*100, "%",
-		"\n# < 1000:", float64(ranges[5])/float64(sPts)*100, "%",
-		"\n# < 1500:", float64(ranges[6])/float64(sPts)*100, "%",
-		"\n# < 2000:", float64(ranges[7])/float64(sPts)*100, "%",
-		"\n# < 2500:", float64(ranges[8])/float64(sPts)*100, "%",
-		"\n# < 3000:", float64(ranges[9])/float64(sPts)*100, "%",
-		"\n# < 3500:", float64(ranges[10])/float64(sPts)*100, "%",
-		"\n# < 4000:", float64(ranges[11])/float64(sPts)*100, "%",
+	fmt.Println("Range(Max obj - Min obj): ", "\n# <", intervals[0], ":", float64(ranges[0])/float64(sPts)*100, "%",
+		"\n# <", intervals[1], ": ", float64(ranges[1])/float64(sPts)*100, "%",
+		"\n# <", intervals[2], ": ", float64(ranges[2])/float64(sPts)*100, "%",
+		"\n# <", intervals[3], ": ", float64(ranges[3])/float64(sPts)*100, "%",
+		"\n# <", intervals[4], ": ", float64(ranges[4])/float64(sPts)*100, "%",
+		"\n# <", intervals[5], ":", float64(ranges[5])/float64(sPts)*100, "%",
+		"\n# <", intervals[6], ":", float64(ranges[6])/float64(sPts)*100, "%",
+		"\n# <", intervals[7], ":", float64(ranges[7])/float64(sPts)*100, "%",
+		"\n# <", intervals[8], ":", float64(ranges[8])/float64(sPts)*100, "%",
+		"\n# <", intervals[9], ":", float64(ranges[9])/float64(sPts)*100, "%",
+		"\n# <", intervals[10], ":", float64(ranges[10])/float64(sPts)*100, "%",
+		"\n# <", intervals[11], ":", float64(ranges[11])/float64(sPts)*100, "%",
 		"\n# others:", float64(ranges[12])/float64(sPts)*100, "%")
-	fmt.Println("*************************************\n\n")
 }
+
 
 //bz: do comparison with default
 func (r *Result) GetResult() *ResultWCtx {
