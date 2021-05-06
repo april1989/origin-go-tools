@@ -35,12 +35,12 @@ func (p *pp) printArg(arg interface{}, verb rune) {
 
 The arg here corresponds to t86 in the IR. This print function is a super heavy used function in almost all programs,
 not directly called in program code but called by public methods from the same package, such as:
-fmt.Fprintf()
-fmt.Sprintf()
-fmt.Fprint()
-fmt.Sprint()
-fmt.Fprintln()
-fmt.Sprintln()
+ fmt.Fprintf()
+ fmt.Sprintf()
+ fmt.Fprint()
+ fmt.Sprint()
+ fmt.Fprintln()
+ fmt.Sprintln()
 (for the source code of the above functions: https://github.com/golang/go/blob/d2fd503f687ca686cb8fbee0b29e64ba529038fe/src/fmt/print.go)
 
 One usage of such public print functions is to trigger panics or errors. There are 273 .go files in grpc
@@ -80,8 +80,8 @@ Generating constraints for cg768:net/http.init@[0:shared contour; ], shared cont
 	----
 ...
 
-We turned off reflection when analyzing main entries, so no constraints are created when encountering
-function reflect.TypeOf(). The IR is shown below:
+I turned off reflection when analyzing main entries, so no constraints are created when encountering
+function reflect.TypeOf(). Its IR is shown below:
 
 Generating constraints for cg53397:reflect.TypeOf@[0:shared contour; ], shared contour
 # Name: reflect.TypeOf

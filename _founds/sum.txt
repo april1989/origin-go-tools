@@ -1,8 +1,8 @@
-### from Jeff: "im not expecting len(pts) > 1000, ... ", ... so let's set ptsLimit when using this
+### from Jeff: "im not expecting len(pts) > 1000, ... ", so let's set ptsLimit when using this
 
 Why use double linked-list like block in intset.Sparse?
 To estimate the size of block/array, did a statistic survey on the mains of these benchmarks:
-Check console-grpc-dist.txt, console-ethereum-dist.txt (callback), console-kubernetes-dist.txt (callback):
+Check console-grpc-dist.txt, console-ethereum-dist.txt (callback), console-kubernetes-cb-dist.txt (callback):
 1. 96% has <10 obj in a pts;
 2. 92% has idx < 5000 as the min obj idx;
 3. 90% has < 10 distance between max and min obj idx
@@ -58,7 +58,7 @@ And
 
 
 How about in Kubernetes?
-Check console-kubernetes-dist-detail.txt
+Check console-kubernetes-dist-cb-detail.txt
 Similar to grpc, all pts > 1000 are interface related types. One diff is:
 pts(n56491 : func(a interface{}, b interface{}, scope k8s.io/apimachinery/pkg/conversion.Scope) error): underlying func(a interface{}, b interface{}, scope k8s.io/apimachinery/pkg/conversion.Scope) error
 This is a lib type:
