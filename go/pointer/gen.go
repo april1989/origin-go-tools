@@ -424,10 +424,7 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 				var fnkcs []*callsite
 				goInstr := a.isGoNext(closure)
 				if goInstr != nil { //case 2: create one with only target, make closure is not ssa.CallInstruction
-					special := &callsite{targets: obj, goInstr: goInstr}
-					if loopID != -1 { //handle loop TODO: will this affect exist checking?
-						special = &callsite{targets: obj, loopID: loopID, goInstr: goInstr}
-					}
+					special := &callsite{targets: obj, loopID: loopID, goInstr: goInstr}
 					fnkcs = a.createKCallSite(caller.callersite, special)
 				} else { // use parent context, since no go invoke afterwards (no go can be reachable currently at this point);
 					//update: we will update the parent ctx (including loopID) after solving
@@ -1895,9 +1892,14 @@ func (a *analysis) valueNodeInvoke(caller *cgnode, site *callsite, fn *ssa.Funct
 			return id
 		}
 	}
-    loopID := caller.callersite[0].loopID
+
+	//loopID here should be consistent with caller's loopID -> the context of an invoked target should be consistent with its caller
+	loopID := 0
+	if caller.callersite[0] != nil {
+		loopID = caller.callersite[0].loopID
+	}
 	//similar with valueNode(), created on demand. Instead of a.globalval[], we use a.fn2cgnodeid[] due to contexts
-	_, _, obj, isNew := a.existContext(fn, site, caller, loopID) //loopID here should be consistent with caller's loopID -> the context of an invoked target should be consistent with its caller
+	_, _, obj, isNew := a.existContext(fn, site, caller, loopID)
 	if isNew {
 		var comment string
 		if a.log != nil {
@@ -3131,7 +3133,10 @@ func (a *analysis) preSolve() {
 						var fnObj nodeid
 						if c.site != nil && c.caller != nil {
 							//loopID here should be consistent with caller's loopID -> the context of an invoked target should be consistent with its caller
-							loopID := c.caller.callersite[0].loopID
+							loopID := 0
+							if c.caller.callersite[0] != nil {
+								loopID = c.caller.callersite[0].loopID
+							}
 							_, _, fnObj, _ = a.existContext(fn, c.site, c.caller, loopID) //check existence
 						} else {
 							fnObj = a.globalobj[fn] // dynamic calls use shared contour  ---> bz: fnObj is nodeid
