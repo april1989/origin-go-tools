@@ -389,13 +389,13 @@ func printConfig(config *Config) {
 	} else {
 		fmt.Println(" *** No Callback *** ")
 	}
-	//if flags.DoCallback { //bz: see comments of optHVN
-	//	optHVN = true
-	//	optRenumber = true
-	//} else { //turn it off for on-the-fly
-	//	optHVN = false
-	//	optRenumber = false
-	//}
+	if flags.DoCallback { //bz: see comments of optHVN
+		//optHVN = true
+		optRenumber = true
+	} else { //turn it off for on-the-fly
+		//optHVN = false
+		optRenumber = false
+	}
 
 	if flags.DoPerformance { //bz: this is from my main, i want them to print out
 		if optRenumber {
@@ -1109,7 +1109,7 @@ func (a *analysis) showCounts() {
 		fmt.Fprintf(a.log, "# ptsets:\t%d\n", len(m))
 	}
 
-	if flags.DoCallback { //bz: add showcount to console
+	if flags.DoCallback && optHVN { //bz: add showcount to console
 		counts := make(map[reflect.Type]int)
 		for _, c := range a.constraints {
 			counts[reflect.TypeOf(c)]++

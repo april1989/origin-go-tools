@@ -967,7 +967,7 @@ func TotalStatistics(results map[*ssa.Package]*Result) {
 				}
 
 				//bz: check the details
-				if s > 1000 {
+				if s > 1000 { //s > 100 && s < 1000
 					if n.obj == nil {
 						fmt.Printf("-> len = %d: pts(n%d : %s): underlying %s \n", s, id, n.typ, n.typ.Underlying())
 					}else{
@@ -997,7 +997,7 @@ func printStatistics(sPts, nPts int, intervals [12]int, distributes, mins, range
 		"\n# <", intervals[9], ":", float64(distributes[9])/float64(sPts)*100, "%",
 		"\n# <", intervals[10], ":", float64(distributes[10])/float64(sPts)*100, "%",
 		"\n# <", intervals[11], ":", float64(distributes[11])/float64(sPts)*100, "%",
-		"\n# others:", float64(distributes[12])/float64(sPts)*100, "%")
+		"\n# others:", float64(distributes[12])/float64(sPts)*100, "%\n")
 	fmt.Println("Min Idx in PTS: ", "\n# < 1000:  ", float64(mins[0])/float64(sPts)*100, "%",
 		"\n# < 5000:  ", float64(mins[1])/float64(sPts)*100, "%",
 		"\n# < 10000: ", float64(mins[2])/float64(sPts)*100, "%",
@@ -1010,7 +1010,7 @@ func printStatistics(sPts, nPts int, intervals [12]int, distributes, mins, range
 		"\n# < 300000:", float64(mins[9])/float64(sPts)*100, "%",
 		"\n# < 500000:", float64(mins[10])/float64(sPts)*100, "%",
 		"\n# < 700000:", float64(mins[11])/float64(sPts)*100, "%",
-		"\n# others:", float64(mins[12])/float64(sPts)*100, "%")
+		"\n# others:", float64(mins[12])/float64(sPts)*100, "%\n")
 	fmt.Println("Range(Max obj - Min obj): ", "\n# <", intervals[0], ":", float64(ranges[0])/float64(sPts)*100, "%",
 		"\n# <", intervals[1], ": ", float64(ranges[1])/float64(sPts)*100, "%",
 		"\n# <", intervals[2], ": ", float64(ranges[2])/float64(sPts)*100, "%",

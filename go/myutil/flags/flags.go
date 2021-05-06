@@ -23,7 +23,7 @@ var TimeLimit time.Duration //bz: time limit set by users, unit: ?h?m?s
 
 //my use
 var PrintCGNodes = false //bz: print #cgnodes (before solve())
-var DoPerformance = false //bz: print out all statistics (time, number)
+var DoPerformance = true //bz: print out all statistics (time, number)
 var DoDetail = false     //bz: print out all data from countReachUnreachXXX
 var DoCommonPart = false //bz: do compute common path
 

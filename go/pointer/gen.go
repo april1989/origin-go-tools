@@ -418,7 +418,7 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 	if a.config.Mains[0].Func("main") == fn { //bz: give the main method a context, instead of using shared contour
 		single := a.createSingleCallSite(callersite)
 		cgn = &cgnode{fn: fn, obj: obj, callersite: single}
-	} else {  // other functions
+	} else {                 // other functions
 		if a.config.Origin { //bz: for origin-sensitive
 			if callersite == nil { //we only create new context for make closure and go instruction
 				var fnkcs []*callsite
@@ -440,7 +440,7 @@ func (a *analysis) makeCGNodeAndRelated(fn *ssa.Function, caller *cgnode, caller
 			} else if goInstr, ok := callersite.instr.(*ssa.Go); ok { //case 1 and 3: this is a *ssa.GO without closure
 				special := callersite
 				special.goInstr = goInstr //update
-				if loopID > 0 {         //handle loop TODO: will this affect exist checking?
+				if loopID > 0 {           //handle loop TODO: will this affect exist checking?
 					special = &callsite{targets: callersite.targets, instr: callersite.instr, loopID: loopID, goInstr: goInstr}
 				}
 				fnkcs := a.createKCallSite(caller.callersite, special)
@@ -646,7 +646,7 @@ func (a *analysis) taggedValue(obj nodeid) (tDyn types.Type, v nodeid, indirect 
 func (a *analysis) taggedFunc(obj nodeid) (tDyn types.Type) {
 	n := a.nodes[obj]
 	if n.obj == nil || n.obj.flags&otFunction == 0 {
-		if a.log != nil {   //debug
+		if a.log != nil { //debug
 			fmt.Fprintf(a.log, "not a tagged function: n", obj, "=", n)
 		}
 		//panic(fmt.Sprintf("not a tagged function: n%d = %s", obj, n))
@@ -1630,6 +1630,9 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 		return
 
 	case a.reflectValueCall:
+		if !a.config.Reflection {
+			return //bz: skip reflection constraints if we do not consider reflection
+		}
 		// Inline (reflect.Value).Call so the call appears direct.
 		dotdotdot := false
 		ret := reflectCallImpl(a, caller, site, a.valueNode(call.Args[0]), a.valueNode(call.Args[1]), dotdotdot)
@@ -1713,21 +1716,27 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 				obj, _ = a.makeFunctionObjectWithContext(caller, fn, site, nil, 0)
 			}
 		} else {
-			if a.config.Reflection && a.isFromReflect(fn)  {
-				//bz: static reflection functions only have shared contours, however, this makes the pta exploded ...
+			if a.config.Reflection {
+				//bz: for using tests as entry -> use reflection
+				// static reflection functions only have shared contours, however, this makes the pta exploded ...
 				// because their usage are like:
 				//   xt := reflect.TypeOf(x)
 				//	 xv := reflect.ValueOf(x)
 				//
 				//	 for i := 0; i < xt.NumMethod(); i++ {
 				//		methodName := xt.Method(i).Name ...
+				//
 				// all x passed to reflect.TypeOf() will be also passed to xt.Method(), including a lot of infeasible path.
 				//SOLUTION -> add context only if origin-sensitive and caller is within scope: use caller context, do not consider loop now;
 				// other reflection methods, ignore them
-				if a.considerMyContext(caller.fn.String()) {
+				if a.isFromReflect(fn) && a.considerMyContext(caller.fn.String()) {
 					obj, _ = a.makeFunctionObjectWithContext(caller, fn, site, nil, 0)
 				} //else: from reflections that are not in the tests from the analyzed app
-			}else{
+			} else {
+				if a.isFromReflect(fn) {
+					//bz: skip reflection constraints if we do not consider reflection
+					return
+				}
 				obj = a.objectNode(nil, fn) // shared contour
 			}
 		}
@@ -1928,7 +1937,9 @@ func (a *analysis) valueNodeInvoke(caller *cgnode, site *callsite, fn *ssa.Funct
 //  so we create the constraints here; if we confirm this is not reachable or excluded, we just leave the constraints here
 func (a *analysis) genInvoke(caller *cgnode, site *callsite, call *ssa.CallCommon, result nodeid) {
 	if call.Value.Type() == a.reflectType {
-		a.genInvokeReflectType(caller, site, call, result)
+		if a.config.Reflection { //bz: skip reflection constraints if we do not consider reflection
+			a.genInvokeReflectType(caller, site, call, result)
+		}
 		return
 	}
 	sig := call.Signature()
@@ -3198,19 +3209,21 @@ func (a *analysis) genMissingFn(fn *ssa.Function, caller *cgnode, site *callsite
 		fmt.Fprintln(a.log, "\n------------- GENERATING INVOKE FUNC HERE: (", where, ") "+fn.String()+" ------------------------------ ")
 	}
 
+	//if strings.Contains(fn.String(), "(*github.com/ethereum/go-ethereum/p2p.meteredConn).SetWriteDeadline") &&
+	//	caller == nil && site == nil {
+	//	fmt.Println(where)
+	//} //bz: debug
+
 	var fnObj nodeid
 	if a.considerMyContext(fn.String()) {
-		if caller == nil && site == nil {
-			if a.config.DEBUG {
+		if a.config.DEBUG {
+			if caller == nil && site == nil {
 				fmt.Println("!! GENERATING INVOKE FUNC ONLINE (share contour): " + fn.String())
-			}
-			fnObj = a.genInvokeOnline(nil, nil, fn)
-		} else { //bz: special handling of invoke targets, create here
-			if a.config.DEBUG {
+			} else { //bz: special handling of invoke targets, create here
 				fmt.Println("!! GENERATING INVOKE FUNC ONLINE (ctx-sensitive): " + fn.String())
 			}
-			fnObj = a.genInvokeOnline(caller, site, fn)
 		}
+		fnObj = a.genInvokeOnline(caller, site, fn) //caller and site can be nil
 	} else { //newly created app func invokes lib func: use share contour
 		if !a.createForLevelX(nil, fn) {
 			if a.config.DEBUG {
@@ -3219,11 +3232,11 @@ func (a *analysis) genMissingFn(fn *ssa.Function, caller *cgnode, site *callsite
 			if a.log != nil { //debug
 				fmt.Fprintf(a.log, "Level excluded: "+fn.String()+"\n")
 			}
-			if a.config.DoCallback && fn.IsMySynthetic { //bz: this is my callback fn
+			if a.config.DoCallback && fn.IsMySynthetic { //bz: this is my callback fn, we store new cgnodes in a.gencb and a.genq.
+				// Note: run this code only if we turn on DoCallback + preSolve; TODO: if only turn on DoCallback, a.gencb will not be solved ...
 				instr := site.instr.(ssa.CallInstruction)
 				call := instr.Common()
-				fnObjs := a.genCallBack(caller, instr, fn, site, call)
-				fmt.Println(fnObjs)
+				a.genCallBack(caller, instr, fn, site, call)
 			}
 			return 0 //not consider here
 		}
@@ -3236,7 +3249,7 @@ func (a *analysis) genMissingFn(fn *ssa.Function, caller *cgnode, site *callsite
 
 	// bz: we continue our Online process
 	if a.log != nil { //debug
-		fmt.Fprintf(a.log, "\n----------- GENERATING CONSTRAINTS HERE (", where, ") -------------------------- -----------------------\n")
+		fmt.Fprintf(a.log, "\n----------- GENERATING CONSTRAINTS HERE (%s) -------------------------- -----------------------\n", where)
 	}
 
 	a.genConstraintsOnline()
