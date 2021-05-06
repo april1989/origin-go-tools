@@ -1,15 +1,16 @@
-### from Jeff: "im not expecting len(pts) > 1000, ... ", so let's set ptsLimit when using this
+### from Jeff: "im not expecting len(pts) > 1000, ... ", so let's set ptsLimit 
 
-Why use double linked-list like block in intset.Sparse?
-To estimate the size of block/array, did a statistic survey on the mains of these benchmarks:
+To estimate the size of points-to set, did a statistic survey on the mains of these benchmarks:
 Check console-grpc-dist.txt, console-ethereum-dist.txt (callback), console-kubernetes-cb-dist.txt (callback):
 1. 96% has <10 obj in a pts;
 2. 92% has idx < 5000 as the min obj idx;
 3. 90% has < 10 distance between max and min obj idx
-similar trends in other benchmarks
+
+Similar trends in other benchmarks
 
 
 Specific in grpc, the size of pts is [2500, 3000] (from console-grpc-dist.txt):
+```go
 Distribution:
 # < 10: 96.9087162435092 %
 # < 100:  2.6219196003402803 %
@@ -24,9 +25,9 @@ Distribution:
 # < 3500: 0 %
 # < 4000: 0 %
 # others: 0 %
+```
 
-
-Why pts > 1000?
+#### Why exists pts > 1000?
 Those pointers are all interface related types: interface{}, *interface{}, []interface{}
 Check console-grpc-dist-detail.txt
 There are three reasons why those pointers are created:
@@ -36,54 +37,59 @@ There are three reasons why those pointers are created:
 3. nil check or type cast
 
 
-Can those pointers/their points-to sets invoke app functions/propagated to app function pointers?
+#### Can those pointers/their points-to sets invoke app functions/propagated to app function pointers?
 Theoretically, if there is no callback functions that use them, this will not happen.
 But there can be return values.
 
 
-How about 100 < pts < 1000 ?
+#### How about 100 < pts < 1000 ?
 Check console-grpc-dist-detail2.txt
 Except for interface related types, those pointers are of type:
-1. error: underlying interface{Error() string}
+1. error: underlying type is interface{Error() string}
 2. *sync.Mutex
-3. fmt.Stringer: underlying interface{String() string}
+3. fmt.Stringer: underlying type is interface{String() string}
 4. *unicode.RangeTable
 5. *math/big.nat, *math/big.Int
 6. basic types: e.g., *int32, *uint32, *byte, []byte
 
-And
-1. error type pointers are create as return value: e.g., n7075 error for func.results
-2. *sync.Mutex type pointers are create as function receiver: e.g., n17856 *sync.Mutex for func.recv
-3 ~ 6. are mostly used by library functions
+Continue
+- 1 error type pointers are create as return value: e.g., n7075 error for func.results
+- 2 *sync.Mutex type pointers are create as function receiver: e.g., n17856 *sync.Mutex for func.recv
+- 3 ~ 6 are mostly used by library functions
 
 
-How about in Kubernetes?
+#### How about in Kubernetes?
 Check console-kubernetes-dist-cb-detail.txt
 Similar to grpc, all pts > 1000 are interface related types. One diff is:
+```go
 pts(n56491 : func(a interface{}, b interface{}, scope k8s.io/apimachinery/pkg/conversion.Scope) error): underlying func(a interface{}, b interface{}, scope k8s.io/apimachinery/pkg/conversion.Scope) error
+```
 This is a lib type:
+```go
  type ConversionFunc func(a, b interface{}, scope Scope) error //from k8s.io/apimachinery/pkg/conversion/converter.go
-
+```
 It is used as a parameter passed to function, e.g.,
+```go
  func (c *Converter) RegisterUntypedConversionFunc(a interface{}, b interface{}, fn ConversionFunc) error
+```
 which requires to create an anonymous function pointer each time.
 
 
-How about in go-ethereum?
+#### How about in go-ethereum?
 The on-the-fly and callback analysis cannot stop after 30min for main: so cannot compare the diff.
 Check console-ethereum-dist-lmt10.txt: we still have pts > 100 even though we limit the size of pts.
 1. 100 < pts < 1000 ?
 Except for the ones explained above, there are some pointers of app types, e.g.,
-(0) a lot of pointers of type []string
-(1) github.com/ethereum/go-ethereum/trie.node
-(2) *github.com/ethereum/go-ethereum/core/vm.operation
-(3) *github.com/ethereum/go-ethereum/rlp.typeinfo
-(4) *github.com/ethereum/go-ethereum/rlp.listhead
-(5) func(reflect.Value, *github.com/ethereum/go-ethereum/rlp.encbuf) error)
+- (0) a lot of pointers of type []string
+- (1) github.com/ethereum/go-ethereum/trie.node
+- (2) *github.com/ethereum/go-ethereum/core/vm.operation
+- (3) *github.com/ethereum/go-ethereum/rlp.typeinfo
+- (4) *github.com/ethereum/go-ethereum/rlp.listhead
+- (5) func(reflect.Value, *github.com/ethereum/go-ethereum/rlp.encbuf) error)
 
-2. > 1000 ?
+2. pts > 1000 ?
 Check console-ethereum-dist-lmt10-2.txt
-The same as other benchmarks, only interface related types.
+The same as other benchmarks, all pointers have interface related types.
 
 
 
