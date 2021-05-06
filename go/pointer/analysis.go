@@ -170,8 +170,8 @@ type analysis struct {
 	runtimeSetFinalizer *ssa.Function   // runtime.SetFinalizer
 
 	//bz: my record
-	fn2cgnodeIdx map[*ssa.Function][]int //bz: a map of fn with a set of its cgnodes represented by the indexes of cgnodes[]
-	// NOW also used for static and invoke calls TODO: may be should use nodeid not int (idx) ?
+	fn2cgnodeIdx map[*ssa.Function][]int //bz: a map of fn with a set of its cgnodes represented by the indexes of cgnodes[] -> when using contexts
+	//TODO: may be should use nodeid not int (idx) ?
 	closures      map[*ssa.Function]*Ctx2nodeid //bz: solution for makeclosure
 	result        *ResultWCtx                   //bz: our result, dump all
 	closureWOGo   map[nodeid]nodeid             //bz: solution@field actualCallerSite []*callsite of cgnode type
@@ -179,7 +179,7 @@ type analysis struct {
 	online        bool                          //bz: whether a constraint is from genInvokeOnline()
 
 	//bz: performance-related data
-	num_constraints int             //bz:  performance
+	num_constraints int             //bz: performance
 	numObjs         int             //bz: number of objects allocated
 	numOrigins      int             //bz: number of origins
 	preGens         []*ssa.Function //bz: number of pregenerated functions/cgs/constraints for reflection, os, runtime
@@ -190,10 +190,9 @@ type analysis struct {
 	callbacks  map[*ssa.Function]*Ctx2nodeid     //bz: fakeFn invoked by different context/call sites
 	gencb      []*cgnode                         //bz: queue of functions to generate constraints from genCallBack, we solve these at the end
 	cb2Callers map[*ssa.Function]*callbackRecord //bz: record the relations among: callback fn, caller lib fn and its context to avoid recursive calls
-	//recvConstraints []*recvConstraint               //bz: record of recvConstraint from genStaticCallCommon and genDynamicCall
 
 	//bz: preSolve-related
-	curIter int //bz: the ith iteration of the loop in preSolve() TODO: maybe move to analysis as a field
+	curIter int //bz: for debug, the ith iteration of the loop in preSolve() TODO: maybe move to analysis as a field
 
 	//bz: test-related
 	isMain bool //whether this analysis obj is allocated for a main? otherwise, for a test
@@ -204,17 +203,9 @@ type analysis struct {
 	    This not-marked behavior is because we do not create function pointers for those functions that
 	    we skip their cgnode/func/constraints creation in offline generate(). So we keep a record here.
 
-	HOWEVER, we still have panics ... e.g., google.golang.org/grpc/benchmark/worker
-	OR maybe we need to do this for all functions?
-	HOWEVER, why is this a must?
-
-	MOREOVER, this makes the analysis even slower, since hvn uses a lot of time (it has nothing to do with my renumbering code)
-	do we really need this?
-	MAYBE this favors large programs? but the performance on tidb cannot stop ...
-
-	Update: we only record this skipTypes when optHVN is on
+	    we ONLY record this skipTypes when optHVN is on and mark indirect in genStaticCall()
 	*/
-	skipTypes map[string]string //bz: a record of skiped methods in generate() off-line
+	skipTypes map[string]string //bz: a record of skipped methods in generate() off-line
 }
 
 //bz: for callback use only
@@ -390,11 +381,11 @@ func printConfig(config *Config) {
 		fmt.Println(" *** No Callback *** ")
 	}
 	if flags.DoCallback { //bz: see comments of optHVN
-		//optHVN = true
-		optRenumber = true
+		optHVN = true
+		//optRenumber = true
 	} else { //turn it off for on-the-fly
-		//optHVN = false
-		optRenumber = false
+		optHVN = false
+		//optRenumber = false
 	}
 
 	if flags.DoPerformance { //bz: this is from my main, i want them to print out
@@ -1088,7 +1079,7 @@ func (a *analysis) showCounts() {
 		for _, c := range a.constraints {
 			counts[reflect.TypeOf(c)]++
 		}
-		fmt.Fprintf(a.log, "# constraints:\t%d\n", len(a.constraints))
+		fmt.Fprintf(a.log, "#constraints:\t%d\n", len(a.constraints))
 		var lines []string
 		for t, n := range counts {
 			line := fmt.Sprintf("%7d  (%2d%%)\t%s", n, 100*n/len(a.constraints), t)
@@ -1099,14 +1090,14 @@ func (a *analysis) showCounts() {
 			fmt.Fprintf(a.log, "\t%s\n", line)
 		}
 
-		fmt.Fprintf(a.log, "# nodes:\t%d\n", len(a.nodes))
+		fmt.Fprintf(a.log, "#nodes:\t%d\n", len(a.nodes))
 
 		// Show number of pointer equivalence classes.
 		m := make(map[*solverState]bool)
 		for _, n := range a.nodes {
 			m[n.solve] = true
 		}
-		fmt.Fprintf(a.log, "# ptsets:\t%d\n", len(m))
+		fmt.Fprintf(a.log, "#ptsets:\t%d\n", len(m))
 	}
 
 	if flags.DoCallback && optHVN { //bz: add showcount to console
@@ -1114,7 +1105,7 @@ func (a *analysis) showCounts() {
 		for _, c := range a.constraints {
 			counts[reflect.TypeOf(c)]++
 		}
-		fmt.Println("# constraints:\t", len(a.constraints))
+		fmt.Println("#constraints:\t", len(a.constraints))
 
 		var lines []string
 		for t, n := range counts {
@@ -1126,14 +1117,14 @@ func (a *analysis) showCounts() {
 			fmt.Println("\t", line)
 		}
 
-		fmt.Println("# nodes:\t", len(a.nodes))
+		fmt.Println("#nodes:\t", len(a.nodes))
 
 		// Show number of pointer equivalence classes.
 		m := make(map[*solverState]bool)
 		for _, n := range a.nodes {
 			m[n.solve] = true
 		}
-		fmt.Println("# ptsets:\t", len(m))
+		fmt.Println("#ptsets:\t", len(m))
 	}
 }
 

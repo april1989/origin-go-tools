@@ -1644,9 +1644,10 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 
 	// Ascertain the context (contour/cgnode) for a particular call.
 	var obj nodeid //bz: only used in some cases below
-	var id nodeid  //bz: only used if fn is in skips
+	var id nodeid  //bz: only used if fn is in skips and optHVN == true
 
 	//bz: check if in skip; only if we have not create it before -> optHVN only
+	//TODO: bz: how about fn that will have multiple contexts? we did not store them in a.globalobj ...
 	if _, ok := a.globalobj[fn]; optHVN && !ok {
 		//TODO: bz: this name matching is not perfect ... and this is not a good solution
 		name := fn.String()
@@ -1685,7 +1686,7 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 			_, okCall := instr.Common().Value.(*ssa.MakeClosure) //otherwise if inst like the e.g. in isCallNext(): a direct call to makeclosure, not used as params
 			if okGo || okDefer || okCall {                       //bz: invoke a go routine --> detail check for different context-sensitivities; defer/call is similar
 				if a.config.DEBUG { //debug
-					fmt.Println("        BUT ssa.GO/ssa.Defer/ssa.Call -- " + site.instr.String() + "   LET'S SEE.")
+					fmt.Println("\tBUT ssa.GO/ssa.Defer/ssa.Call -- " + site.instr.String() + "   LET'S SEE.")
 				}
 				a.genStaticCallAfterMakeClosure(caller, instr, site, call, result) //bz: direct the handling outside and return
 				return
@@ -1716,7 +1717,7 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 				obj, _ = a.makeFunctionObjectWithContext(caller, fn, site, nil, 0)
 			}
 		} else {
-			if a.config.Reflection {
+			if a.isFromReflect(fn) {
 				//bz: for using tests as entry -> use reflection
 				// static reflection functions only have shared contours, however, this makes the pta exploded ...
 				// because their usage are like:
@@ -1729,14 +1730,10 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 				// all x passed to reflect.TypeOf() will be also passed to xt.Method(), including a lot of infeasible path.
 				//SOLUTION -> add context only if origin-sensitive and caller is within scope: use caller context, do not consider loop now;
 				// other reflection methods, ignore them
-				if a.isFromReflect(fn) && a.considerMyContext(caller.fn.String()) {
+				if a.config.Reflection && a.considerMyContext(caller.fn.String()) {
 					obj, _ = a.makeFunctionObjectWithContext(caller, fn, site, nil, 0)
 				} //else: from reflections that are not in the tests from the analyzed app
-			} else {
-				if a.isFromReflect(fn) {
-					//bz: skip reflection constraints if we do not consider reflection
-					return
-				}
+			} else { //bz: skip reflection constraints if we do not consider reflection
 				obj = a.objectNode(nil, fn) // shared contour
 			}
 		}
@@ -1751,7 +1748,7 @@ func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site
 	if obj != 0 {
 		if optHVN && id != 0 { //bz: we need to make up this missing constraints
 			a.addressOf(fn.Type(), id, obj)
-			//but do we set value in a.globalobj?
+			//but do we set value in a.globalobj? since fn might have multiple contexts
 		}
 
 		a.genStaticCallCommon(caller, obj, site, call, result)
@@ -1898,16 +1895,16 @@ func (a *analysis) valueNodeInvoke(caller *cgnode, site *callsite, fn *ssa.Funct
 			return id
 		}
 	}
-
+    loopID := caller.callersite[0].loopID
 	//similar with valueNode(), created on demand. Instead of a.globalval[], we use a.fn2cgnodeid[] due to contexts
-	_, _, obj, isNew := a.existContext(fn, site, caller, 0) //existContextForComb
+	_, _, obj, isNew := a.existContext(fn, site, caller, loopID) //loopID here should be consistent with caller's loopID -> the context of an invoked target should be consistent with its caller
 	if isNew {
 		var comment string
 		if a.log != nil {
 			comment = fn.String()
 		}
 		var id = a.addNodes(fn.Type(), comment) //bz: id + 1 = obj
-		if obj = a.objectNodeSpecial(caller, nil, site, fn, 0); obj != 0 {
+		if obj = a.objectNodeSpecial(caller, nil, site, fn, loopID); obj != 0 {
 			a.addressOf(fn.Type(), id, obj)
 		}
 		a.setValueNode(fn, id, nil) //bz: do we need this?? for now, no since we will not use it
@@ -3007,14 +3004,11 @@ func (a *analysis) generate() {
 		}
 	}
 
-	if a.config.DEBUG {
-		fmt.Println("#Excluded types in genMethodsOf() offline (not function): ", skip)
-	}
-
 	if a.log != nil {
 		fmt.Fprintf(a.log, "\nDone genMethodsOf() offline. \n\n")
 
 		if optHVN {
+			fmt.Println("#Excluded types in genMethodsOf() offline (not function): ", skip)
 			fmt.Fprintf(a.log, "\nDump out skipped types:  \n")
 			for _, _type := range a.skipTypes {
 				fmt.Fprintf(a.log, _type+"\n")
@@ -3136,7 +3130,9 @@ func (a *analysis) preSolve() {
 
 						var fnObj nodeid
 						if c.site != nil && c.caller != nil {
-							_, _, fnObj, _ = a.existContext(fn, c.site, c.caller, 0) //check existence
+							//loopID here should be consistent with caller's loopID -> the context of an invoked target should be consistent with its caller
+							loopID := c.caller.callersite[0].loopID
+							_, _, fnObj, _ = a.existContext(fn, c.site, c.caller, loopID) //check existence
 						} else {
 							fnObj = a.globalobj[fn] // dynamic calls use shared contour  ---> bz: fnObj is nodeid
 						}
