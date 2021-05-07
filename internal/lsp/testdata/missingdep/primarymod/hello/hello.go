@@ -1,3 +1,5 @@
+// +build missing
+
 package hello
 
 import (

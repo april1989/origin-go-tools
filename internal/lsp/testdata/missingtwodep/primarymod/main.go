@@ -1,3 +1,5 @@
+// +build missing
+
 // Package missingtwodep does something
 package missingtwodep
 

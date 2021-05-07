@@ -1,3 +1,5 @@
+// +build missing
+
 // Package upgradedep does something
 package upgradedep
 

@@ -8,6 +8,7 @@ import (
 
 	_ "database/sql" //@link(`database/sql`, `https://pkg.go.dev/database/sql`)
 
+	//bz: this is missing
 	//_ "example.com/extramodule/pkg" //@link(`example.com/extramodule/pkg`,`https://pkg.go.dev/example.com/extramodule@v1.0.0/pkg`)//bz: does not matter, comment off
 )
 

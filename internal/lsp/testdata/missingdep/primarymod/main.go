@@ -1,3 +1,5 @@
+// +build missing
+
 // Package missingdep does something
 package missingdep
 
