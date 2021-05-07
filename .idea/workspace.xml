@@ -29,12 +29,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="02839b5a-55a2-4e24-b425-23255e76dae7" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/_founds/sum.md" beforeDir="false" afterPath="$PROJECT_DIR$/_founds/sum.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go/myutil/myutil.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/myutil/myutil.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go/pointer/analysis.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/analysis.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go/myutil/flags/flags.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/myutil/flags/flags.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/go/pointer/gen.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/gen.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go/pointer/solve.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/solve.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -163,7 +161,7 @@
       <module name="go_tools" />
       <working_directory value="$PROJECT_DIR$/../go-benchs/go-ethereum/cmd/geth" />
       <go_parameters value="-i" />
-      <parameters value="-doSeq -doCoverage -doCallback" />
+      <parameters value="-doSeq -doCoverage -doCallback -ptsLimit=10 " />
       <kind value="FILE" />
       <filePath value="$PROJECT_DIR$/main/main.go" />
       <package value="github.tamu.edu/April1989/go_tools" />
@@ -508,11 +506,11 @@
     </state>
     <state x="506" y="398" key="#GOROOT/0.23.1440.877@0.23.1440.877" timestamp="1614201261896" />
     <state x="675" y="475" key="#GOROOT/0.23.1920.1057@0.23.1920.1057" timestamp="1618929571213" />
-    <state x="636" y="23" width="1258" height="1057" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1620405823344">
+    <state x="636" y="23" width="1258" height="1057" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1620417410468">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state x="184" y="23" width="1071" height="877" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.23.1440.877@0.23.1440.877" timestamp="1614203058621" />
-    <state x="636" y="23" width="1258" height="1057" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.23.1920.1057@0.23.1920.1057" timestamp="1620405823344" />
+    <state x="636" y="23" width="1258" height="1057" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.23.1920.1057@0.23.1920.1057" timestamp="1620417410468" />
     <state x="679" y="360" key="#com.intellij.fileTypes.FileTypeChooser" timestamp="1615581984766">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
@@ -547,26 +545,26 @@
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state x="737" y="322" key="FileChooserDialogImpl/0.23.1920.1057@0.23.1920.1057" timestamp="1618932606675" />
-    <state width="1878" height="444" key="GridCell.Tab.0.bottom" timestamp="1620405897778">
+    <state width="1878" height="454" key="GridCell.Tab.0.bottom" timestamp="1620420478957">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="160" key="GridCell.Tab.0.bottom/0.23.1440.877@0.23.1440.877" timestamp="1614203163002" />
-    <state width="1878" height="444" key="GridCell.Tab.0.bottom/0.23.1920.1057@0.23.1920.1057" timestamp="1620405897778" />
-    <state width="1878" height="444" key="GridCell.Tab.0.center" timestamp="1620405897777">
+    <state width="1878" height="454" key="GridCell.Tab.0.bottom/0.23.1920.1057@0.23.1920.1057" timestamp="1620420478957" />
+    <state width="1878" height="454" key="GridCell.Tab.0.center" timestamp="1620420478957">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="160" key="GridCell.Tab.0.center/0.23.1440.877@0.23.1440.877" timestamp="1614203163002" />
-    <state width="1878" height="444" key="GridCell.Tab.0.center/0.23.1920.1057@0.23.1920.1057" timestamp="1620405897777" />
-    <state width="1878" height="444" key="GridCell.Tab.0.left" timestamp="1620405897777">
+    <state width="1878" height="454" key="GridCell.Tab.0.center/0.23.1920.1057@0.23.1920.1057" timestamp="1620420478957" />
+    <state width="1878" height="454" key="GridCell.Tab.0.left" timestamp="1620420478957">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="160" key="GridCell.Tab.0.left/0.23.1440.877@0.23.1440.877" timestamp="1614203163001" />
-    <state width="1878" height="444" key="GridCell.Tab.0.left/0.23.1920.1057@0.23.1920.1057" timestamp="1620405897777" />
-    <state width="1878" height="444" key="GridCell.Tab.0.right" timestamp="1620405897778">
+    <state width="1878" height="454" key="GridCell.Tab.0.left/0.23.1920.1057@0.23.1920.1057" timestamp="1620420478957" />
+    <state width="1878" height="454" key="GridCell.Tab.0.right" timestamp="1620420478957">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="160" key="GridCell.Tab.0.right/0.23.1440.877@0.23.1440.877" timestamp="1614203163002" />
-    <state width="1878" height="444" key="GridCell.Tab.0.right/0.23.1920.1057@0.23.1920.1057" timestamp="1620405897778" />
+    <state width="1878" height="454" key="GridCell.Tab.0.right/0.23.1920.1057@0.23.1920.1057" timestamp="1620420478957" />
     <state x="295" y="116" key="SettingsEditor" timestamp="1619201141346">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
@@ -596,11 +594,11 @@
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="600" height="428" key="javadoc.popup/0.23.1920.1057@0.23.1920.1057" timestamp="1619021777612" />
-    <state x="513" y="252" width="894" height="815" key="search.everywhere.popup" timestamp="1620408010481">
+    <state x="513" y="252" width="894" height="815" key="search.everywhere.popup" timestamp="1620413108907">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state x="385" y="213" width="670" height="676" key="search.everywhere.popup/0.23.1440.877@0.23.1440.877" timestamp="1614202814179" />
-    <state x="513" y="252" width="894" height="815" key="search.everywhere.popup/0.23.1920.1057@0.23.1920.1057" timestamp="1620408010481" />
+    <state x="513" y="252" width="894" height="815" key="search.everywhere.popup/0.23.1920.1057@0.23.1920.1057" timestamp="1620413108907" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -612,12 +610,12 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="DlvLineBreakpoint">
           <url>file://$PROJECT_DIR$/go/pointer/gen.go</url>
-          <line>1752</line>
+          <line>1763</line>
           <option name="timeStamp" value="126" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="DlvLineBreakpoint">
           <url>file://$PROJECT_DIR$/go/pointer/gen.go</url>
-          <line>1697</line>
+          <line>1708</line>
           <option name="timeStamp" value="201" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="DlvLineBreakpoint">
@@ -627,8 +625,13 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="DlvLineBreakpoint">
           <url>file://$PROJECT_DIR$/go/pointer/gen.go</url>
-          <line>1926</line>
+          <line>1937</line>
           <option name="timeStamp" value="519" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/go/pointer/gen.go</url>
+          <line>3030</line>
+          <option name="timeStamp" value="532" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

@@ -22,8 +22,8 @@ type solverState struct {
 
 //bz: to limit the size of pts
 var (
-	ptsLimit   int
-	skipIDs    map[int]int //these pts reach the ptsLimit, skip their solving if added to worklist
+	ptsLimit int
+	skipIDs  map[int]int //these pts reach the ptsLimit, skip their solving if added to worklist
 )
 
 func (a *analysis) solve() {
@@ -49,7 +49,7 @@ func (a *analysis) solve() {
 	// Solver main loop: separate to avoid frequent bool check of whether we do ptslimit
 	if flags.PTSLimit == 0 {
 		a.solveDefault()
-	}else{
+	} else {
 		a.solveLimit()
 	}
 
@@ -160,10 +160,13 @@ func (a *analysis) solveLimit() {
 			//fmt.Fprintf(a.log, "\t\tpts(n%d : %s) = %s + %s\n", id, n.typ, &delta, &n.solve.prevPTS)  //bz: too verbose
 			fmt.Fprintf(a.log, "\t\tpts(n%d : %s) = %s + ... \n", id, n.typ, &delta)
 		}
-		n.solve.prevPTS.Copy(&n.solve.pts.Sparse)
 
 		if n.solve.pts.Len() >= ptsLimit { //bz: check ptsLimit here
 			skipIDs[x] = x
+			n.solve.prevPTS.Clear()
+			continue
+		}else {
+			n.solve.prevPTS.Copy(&n.solve.pts.Sparse)
 		}
 
 		// Apply all resolution rules attached to n.
@@ -462,8 +465,8 @@ func (c *invokeConstraint) solve(a *analysis, delta *nodeset) {
 
 		if fnObj == 0 { //bz: because a.objectNode(fn) was not called during gen phase or fn is stored at other fields
 			//bz: this should not create new constraints anymore; just retrieve the existing nodeid for fn
-			fnObj = a.genMissingFn(fn, c.caller, c.site, "online") // should not create any new things if using preSolve()
-			if fnObj == 0 { //return 0 for out of scope functions
+			fnObj = a.genMissingFn(fn, c.caller, c.site, "online") // should not create any new things if using DoCallback && preSolve()
+			if fnObj == 0 {                                        //return 0 for out of scope functions
 				continue
 			}
 		} else {

@@ -990,19 +990,30 @@ func (a *analysis) considerKCFA(fn string) bool {
 //bz:  currently compare string, already considered LimitScope
 func (a *analysis) withinScope(method string) bool {
 	if a.config.LimitScope {
-		if strings.Contains(method, "command-line-arguments") || strings.HasPrefix(method, "main.") { //default scope and in test cases TODO: bz: update?
+		// preprocess
+		if string(method[0]) == "*" { // from collectFnsWScope(): pointer/named/interface types
+			method = method[1:]
+	    }else if method[0:2] == "(*" { //this is a pointer type -> remove pointer
+			method = method[2:]
+		}else if string(method[0]) == "(" { //this is a wrapper bracket -> remove bracket
+			method = method[1:]
+		}else if len(method) > 8 && method[0:8] == "package " { //package github.com/ethereum/go-ethereum/common/fdlimit
+			method = method[8:]
+		}
+		//compare: must be xxx.xxx.xx/xx
+		if strings.HasPrefix(method, "command-line-arguments") || strings.HasPrefix(method, "main.") { //default scope or when running my tests in _test_main, _tests_callback
 			return true
 		} else {
 			if len(a.config.Exclusion) > 0 { //user assigned exclusion -> bz: want to exclude all reflection ...
 				for _, pkg := range a.config.Exclusion {
-					if strings.Contains(method, pkg) {
+					if strings.HasPrefix(method, pkg) {
 						return false
 					}
 				}
 			}
 			if len(a.config.Scope) > 0 { //project scope
 				for _, pkg := range a.config.Scope {
-					if strings.Contains(method, pkg) {
+					if strings.HasPrefix(method, pkg) {
 						return true
 					}
 				}
@@ -2984,16 +2995,16 @@ func (a *analysis) generate() {
 	if a.log != nil || optHVN {
 		skip := 0 //bz: assist a.skipTypes
 		for _, T := range a.prog.RuntimeTypes() {
-			_type := T.String()
+			typ := T.String()
 			if a.log != nil {
-				if a.considerMyContext(_type) {
+				if a.considerMyContext(typ) {
 					fmt.Fprintf(a.log, "SKIP genMethodsOf() offline for type: "+T.String()+"\n")
 				} else {
 					fmt.Fprintf(a.log, "EXCLUDE genMethodsOf() offline for type: "+T.String()+"\n")
 				}
 			}
 			if optHVN { //record
-				a.skipTypes[_type] = _type
+				a.skipTypes[typ] = typ
 			}
 			skip++
 		}
@@ -3004,8 +3015,8 @@ func (a *analysis) generate() {
 			if optHVN {
 				fmt.Fprintf(a.log, "\n#Excluded types in genMethodsOf() offline (not function): %d\n", skip)
 				fmt.Fprintf(a.log, "Dump out skipped types:  \n")
-				for _, _type := range a.skipTypes {
-					fmt.Fprintf(a.log, _type+"\n")
+				for _, typ := range a.skipTypes {
+					fmt.Fprintf(a.log, typ + "\n")
 				}
 			}
 		}
