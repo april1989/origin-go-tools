@@ -22,12 +22,17 @@ import (
 
 //bz: utility functions and var declared for my use
 
-var scope []string           //bz: now extract from pkgs
-var excludedPkgs = []string{ //bz: excluded a lot of default constraints
+var scope []string           //bz: now extract from pkgs, or add manually for debug
+var excludedPkgs = []string{ //bz: excluded a lot of default constraints -> only works if a.config.Level == 1 or turn on DoCallback (check a.createForLevelX() for details)
 	//"runtime",
-	//"reflect",
+	//"reflect", -> only consider when turn on a.config.Reflection or analyzing tests
 	//"os",
+
+	//bz: check /_founds/sum.md for the following exclusions -> create too many interface related type of pointers with pts > 100
+	"fmt",
+	"errors", //there are so many wrappers of errors ...
 }
+
 var MyMaxTime time.Duration
 var MyMinTime time.Duration
 var MyElapsed int64

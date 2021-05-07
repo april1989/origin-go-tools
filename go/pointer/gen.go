@@ -988,10 +988,9 @@ func (a *analysis) considerKCFA(fn string) bool {
 }
 
 //bz:  currently compare string, already considered LimitScope
-// !!!!!! manually excluded pkg google.golang.org/grpc/grpclog ...
 func (a *analysis) withinScope(method string) bool {
 	if a.config.LimitScope {
-		if strings.Contains(method, "command-line-arguments") || strings.HasPrefix(method, "main.") { //default scope and in test cases
+		if strings.Contains(method, "command-line-arguments") || strings.HasPrefix(method, "main.") { //default scope and in test cases TODO: bz: update?
 			return true
 		} else {
 			if len(a.config.Exclusion) > 0 { //user assigned exclusion -> bz: want to exclude all reflection ...
@@ -1005,7 +1004,7 @@ func (a *analysis) withinScope(method string) bool {
 				for _, pkg := range a.config.Scope {
 					if strings.Contains(method, pkg) {
 						return true
-					} // && !strings.Contains(method, "google.golang.org/grpc/grpclog")
+					}
 				}
 			}
 			//if len(a.config.imports) > 0 { //consider imports in scope
@@ -1088,8 +1087,7 @@ func (a *analysis) isInLoop(fn *ssa.Function, inst ssa.Instruction) bool {
 }
 
 //bz: which level of lib/app calls we consider: true -> create func/cgnode; false -> do not create
-//scope:
-//1 < 2 < 3 < 0
+//scope: 1 < 2 < 3 < 0
 func (a *analysis) createForLevelX(caller *ssa.Function, callee *ssa.Function) bool {
 	switch a.config.Level {
 	case 0: //bz: analyze all
@@ -1598,8 +1596,8 @@ func (a *analysis) isFromReflect(fn *ssa.Function) bool {
 func (a *analysis) genStaticCall(caller *cgnode, instr ssa.CallInstruction, site *callsite, call *ssa.CallCommon, result nodeid) {
 	fn := call.StaticCallee()
 	if !a.createForLevelX(caller.fn, fn) {
-		if a.config.DEBUG {
-			fmt.Println("Level excluded: " + fn.String())
+		if a.log != nil {
+			fmt.Fprintf(a.log, "Level excluded: %s\n", fn.String())
 		}
 		if a.config.DoCallback {
 			a.genCallBack(caller, instr, fn, site, call)
@@ -2980,43 +2978,35 @@ func (a *analysis) generate() {
 
 	// Create nodes and constraints for all methods of all types
 	// that are dynamically accessible via reflection or interfaces.
-	skip := 0 //bz: data
-	for _, T := range a.prog.RuntimeTypes() {
-		_type := T.String()
-		if a.considerMyContext(_type) {
-			//bz: we want to make function (called by interfaces) later for context. here uses share contour
+	// default code: use a.genMethodsOf()
+	// bz: skip the following code to generate fn/cgn and their constraints for shared contour,
+	//   we want it on-the-fly, or at least semi-on-the-fly (i.e., callback)
+	if a.log != nil || optHVN {
+		skip := 0 //bz: assist a.skipTypes
+		for _, T := range a.prog.RuntimeTypes() {
+			_type := T.String()
 			if a.log != nil {
-				fmt.Fprintf(a.log, "SKIP genMethodsOf() offline for type: "+T.String()+"\n")
+				if a.considerMyContext(_type) {
+					fmt.Fprintf(a.log, "SKIP genMethodsOf() offline for type: "+T.String()+"\n")
+				} else {
+					fmt.Fprintf(a.log, "EXCLUDE genMethodsOf() offline for type: "+T.String()+"\n")
+				}
 			}
-			if optHVN {
-				a.skipTypes[_type] = _type
-			}
-			skip++
-			continue
-		}
-
-		//bz: generate for app only; previously ->  || a.fromImports(_type)
-		if a.withinScope(_type) {
-			a.genMethodsOf(T)
-		} else {
-			if a.log != nil {
-				fmt.Fprintf(a.log, "EXCLUDE genMethodsOf() offline for type: "+T.String()+"\n")
-			}
-			if optHVN {
+			if optHVN { //record
 				a.skipTypes[_type] = _type
 			}
 			skip++
 		}
-	}
 
-	if a.log != nil {
-		fmt.Fprintf(a.log, "\nDone genMethodsOf() offline. \n\n")
+		if a.log != nil {
+			fmt.Fprintf(a.log, "\nDone genMethodsOf() offline. \n\n")
 
-		if optHVN {
-			fmt.Fprintf(a.log, "\n#Excluded types in genMethodsOf() offline (not function): %d\n", skip)
-			fmt.Fprintf(a.log, "Dump out skipped types:  \n")
-			for _, _type := range a.skipTypes {
-				fmt.Fprintf(a.log, _type+"\n")
+			if optHVN {
+				fmt.Fprintf(a.log, "\n#Excluded types in genMethodsOf() offline (not function): %d\n", skip)
+				fmt.Fprintf(a.log, "Dump out skipped types:  \n")
+				for _, _type := range a.skipTypes {
+					fmt.Fprintf(a.log, _type+"\n")
+				}
 			}
 		}
 	}

@@ -198,12 +198,12 @@ type analysis struct {
 	isMain bool //whether this analysis obj is allocated for a main? otherwise, for a test
 
 	/** bz:
-	    we do have panics when turn on hvn optimization. panics are due to that hvn wrongly computes sccs.
-	    wrong sccs is because some pointers are not marked as indirect (but marked in default).
-	    This not-marked behavior is because we do not create function pointers for those functions that
-	    we skip their cgnode/func/constraints creation in offline generate(). So we keep a record here.
+	  we do have panics when turn on hvn optimization. panics are due to that hvn wrongly computes sccs.
+	  wrong sccs is because some pointers are not marked as indirect (but marked in default).
+	  This not-marked behavior is because we do not create function pointers for those functions that
+	  we skip their cgnode/func/constraints creation in offline generate(). So we keep a record here.
 
-	    we ONLY record this skipTypes when optHVN is on and mark indirect in genStaticCall()
+	  we ONLY record this skipTypes when optHVN is on and mark indirect in genStaticCall()
 	*/
 	skipTypes map[string]string //bz: a record of skipped methods in generate() off-line
 }
@@ -459,12 +459,6 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 			isMain = false
 		}
 
-		//if i == 11 { //bz: tidb only -> when main is /tidb/explaintest
-		//	flags.PTSLimit = 100
-		//}else{
-		//	flags.PTSLimit = 0
-		//}
-
 		_config := &Config{
 			Mains:          _mains,
 			Reflection:     doReflect,
@@ -473,14 +467,14 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 			//CallSiteSensitive: true, //kcfa
 			Origin: config.Origin, //origin
 			//shared config
-			K:             config.K,
-			LimitScope:    config.LimitScope, //bz: only consider app methods now -> no import will be considered
-			DEBUG:         config.DEBUG,      //bz: rm all printed out info in console
-			Scope:         config.Scope,      //bz: analyze scope + input path
-			Exclusion:     config.Exclusion,  //bz: copied from race_checker if any
-			TrackMore:     config.TrackMore,  //bz: track pointers with all types
-			DoCallback:    config.DoCallback, //bz: do callback
-			Level:         config.Level,      //bz: see pointer.Config
+			K:          config.K,
+			LimitScope: config.LimitScope, //bz: only consider app methods now -> no import will be considered
+			DEBUG:      config.DEBUG,      //bz: rm all printed out info in console
+			Scope:      config.Scope,      //bz: analyze scope + input path
+			Exclusion:  config.Exclusion,  //bz: copied from race_checker if any
+			TrackMore:  config.TrackMore,  //bz: track pointers with all types
+			DoCallback: config.DoCallback, //bz: do callback
+			Level:      config.Level,      //bz: see pointer.Config
 		}
 
 		if flags.DoPerformance {
@@ -515,7 +509,7 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 			//bz: i want to see the not covered functions when turn on/off ptsLimit,
 			// so do one time analysis with ptsLimit off and compare; turn this off by setting flags.DoDiff = false
 			ptsLimit := flags.PTSLimit //store original setting
-			flags.PTSLimit = 0 //turn off
+			flags.PTSLimit = 0         //turn off
 
 			//run analysis again
 			fmt.Println("\n\n", i, ": "+main.String(), " (No PTSLimit) ... ")
@@ -550,7 +544,7 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 			}
 			fmt.Println("Finish. #Total: ", s, " (#WithinScope: ", in, ")")
 
-			//done
+			//done comparison
 			flags.PTSLimit = ptsLimit //set it back
 		}
 	}
@@ -728,7 +722,7 @@ func AnalyzeWCtx(config *Config, doPrintConfig bool, isMain bool) (result *Resul
 		a.runtimeSetFinalizer = runtime.Func("SetFinalizer")
 	}
 
-	//a.computeTrackBits() //bz: use when there is input queries before running this analysis; -> update: we do not need this. just update a.track here
+	//a.computeTrackBits() //bz: use when there is input queries before running this analysis; -> update: we do not need this. just set a.track to trackAll below
 	a.track = trackAll
 
 	a.generate()   //bz: a preprocess for reflection/runtime/import libs
@@ -1196,8 +1190,8 @@ func (a *analysis) collectFnsWScope() {
 //bz: when DoCoverage = true: compute (#analyzed fn/#total fn) in a program for this main
 func (a *analysis) computeCoverage() {
 	covered := make(map[string]string)
-	closure := 0
-	other := 0
+	closure := make(map[string]string)
+	other := make(map[string]string) //others can be lib, reflect, <root>
 
 	for fn, _ := range a.result.CallGraph.Fn2CGNode {
 		s := fn.String()
@@ -1206,11 +1200,11 @@ func (a *analysis) computeCoverage() {
 		} else {
 			subs := strings.Split(s, "$")
 			if len(subs) == 1 {
-				other++
+				other[s] = s
 			} else {
 				sub := subs[0]
 				if _, ok := allFns[sub]; ok {
-					closure++
+					closure[s] = s
 				}
 			}
 		}
@@ -1235,7 +1229,7 @@ func (a *analysis) computeCoverage() {
 
 	//TODO: bz: how many uncovered are from cCmplGen?
 	fmt.Println("\n#Coverage: ", (float64(len(covered))/float64(len(allFns)))*100, "%\t (#total: ", len(allFns), ", #compiled: ", len(cCmplFns),
-		", #analyzed: ", len(covered), ", #analyzed$: ", closure, ", #others: ", other, ")") //others can be lib, reflect, <root>
+		", #analyzed: ", len(covered), ", #analyzed$: ", len(closure), ", #others: ", len(other), ")") //others can be lib, reflect, <root>
 }
 
 //bz: when DoCoverage = true: compute (#analyzed fn/#total fn) in a program for ALL mains
@@ -1243,21 +1237,20 @@ func computeTotalCoverage() {
 	covered := make(map[string]string)
 	closure := make(map[string]string)
 	other := make(map[string]string) //others can be lib, reflect, <root>
+
 	for _, result := range main2ResultWCtx {
 		for fn, _ := range result.CallGraph.Fn2CGNode {
 			s := fn.String()
 			if _, ok := allFns[s]; ok {
-				if _, ok := covered[s]; !ok {
-					covered[s] = s
+				covered[s] = s
+			} else {
+				subs := strings.Split(s, "$")
+				if len(subs) == 1 {
+					other[s] = s
 				} else {
-					subs := strings.Split(s, "$")
-					if len(subs) == 1 {
-						other[s] = s
-					} else {
-						sub := subs[0]
-						if _, ok := allFns[sub]; ok {
-							closure[s] = s
-						}
+					sub := subs[0]
+					if _, ok := allFns[sub]; ok {
+						closure[s] = s
 					}
 				}
 			}
@@ -1267,8 +1260,8 @@ func computeTotalCoverage() {
 			//  -> (google.golang.org/grpc/xds/internal/balancer/priority.s).Teardown in our cg
 			// or vice versa. Actaully, these two fn should have no diff when we handle their constraints.
 			// SOLUTION -> convert the mismatch manually
-			if s[0:1] == "(*" { //this is a pointer type
-				s = "(" + s[:2] //remove pointer
+			if s[0:2] == "(*" { //this is a pointer type
+				s = "(" + s[2:] //remove pointer
 				if _, ok := allFns[s]; ok {
 					covered[s] = s
 				}

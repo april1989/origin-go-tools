@@ -100,7 +100,7 @@ pts limit in callback impl, because of the callbacl algorithm (we presolve all c
 for invoke functions with receiver object of types declared in the app), which is proved by 
 the result below.
 
-Check console-ethereum-dist-cb.txt: we have the following founds: 
+Check console-ethereum-dist-cb-lmt10.txt: we have the following founds: 
 
 - The biggest main entry (go-ethereum/cmd/geth) uses 14min when we set the pts limit to 10 
 and 59min without the limit, however, the function coverage are the same 53.46%, which means
@@ -137,6 +137,13 @@ Distribution:
 - pts > 2000 still exist, but for interface related types. 
 
 
+**Update for go-ethereum 2:**
+
+- github.com/ethereum/go-ethereum/cmd/geth  (No PTSLimit, use 59m1.704662239s)
+(#total:  10386 , #compiled:  559 , #analyzed:  5553 , #analyzed$:  586 , #others:  258 )
+
+- github.com/ethereum/go-ethereum/cmd/geth  (PTSLimit = 10, use 12m46.374579834s)  
+(#total:  10386 , #compiled:  559 , #analyzed:  5553 , #analyzed$:  586 , #others:  258 )
 
 
 
