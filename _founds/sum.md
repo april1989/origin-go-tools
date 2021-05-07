@@ -9,7 +9,7 @@ Check console-grpc-dist.txt, console-ethereum-dist.txt (callback), console-kuber
 Similar trends in other benchmarks
 
 
-Specific in grpc, the size of pts is [2500, 3000] (from console-grpc-dist.txt):
+Specifically in grpc, the size of pts is [2500, 3000] (from console-grpc-dist.txt):
 ```go
 Distribution:
 # < 10: 96.9087162435092 %
@@ -30,7 +30,7 @@ Distribution:
 #### Why exists pts > 1000?
 Those pointers are all interface related types: interface{}, *interface{}, []interface{}
 Check console-grpc-dist-detail.txt
-There are three reasons why those pointers are created:
+There are three reasons where those pointers are created:
 1. function parameter is of type interface{}, *interface{}, []interface{}, or will be used as such a function parameter
    e.g., (*fmt.pp).printArg, fmt.intFromArg
 2. reflect.ValueOf() and reflect.TypeOf()
@@ -92,5 +92,64 @@ Check console-ethereum-dist-lmt10-2.txt
 The same as other benchmarks, all pointers have interface related types.
 
 
+**Update for go-ethereum:**
+
+The callback analysis can finish more than 1hour to analyze 18 main entries. 
+There is no function coverage change (specific to app function) when we turn on or off the 
+pts limit in callback impl, because of the callbacl algorithm (we presolve all constraints 
+for invoke functions with receiver object of types declared in the app), which is proved by 
+the result below.
+
+Check console-ethereum-dist-cb.txt: we have the following founds: 
+
+- The biggest main entry (go-ethereum/cmd/geth) uses 14min when we set the pts limit to 10 
+and 59min without the limit, however, the function coverage are the same 53.46%, which means
+they cover the same set of app functions. The uncovered functions are lib functions, such as:
+
+  - (*sync.Once).Do
+  - sort.Search, sort.Slice
+  - time.AfterFunc
+  - (*github.com/huin/goupnp.Device).VisitServices
+  - expvar.Do
+  
+- Similar conditions appear in the comparison for other main entries, but not too much performance 
+gain, since they have small code base. The uncovered functions are also similar.
+
+- The distribution of pts shift a bit: more pointers in the group of # < 100 as shown below, this shift 
+will be bigger if we remove the limit.
+```go
+Distribution:  
+# <  10 : 89.16735545776517 % 
+# < 100 :  8.958305435369846 % 
+# < 200 :  1.2615266689138958 % 
+# < 500 :  0.45223560811403607 % 
+# < 700 :  0.06822495070718451 % 
+# < 1000 : 0.09200555958312362 % 
+# < 1500 : 0 % 
+# < 2000 : 0 % 
+# < 2500 : 0 % 
+# < 3000 : 0.0003463195467369772 % 
+# < 3500 : 0 % 
+# < 4000 : 0 % 
+# others: 0 %
+```
+
+- pts > 2000 still exist, but for interface related types. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 
 
