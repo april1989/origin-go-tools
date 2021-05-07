@@ -248,14 +248,6 @@ func (a *analysis) makeFunctionObject(fn *ssa.Function, callersite *callsite) no
 	if a.log != nil {
 		fmt.Fprintf(a.log, "\t---- makeFunctionObject %s\n", fn)
 	}
-	//if a.config.DEBUG {
-	//	fmt.Println("\t---- makeFunctionObject for " + fn.String())
-	//}
-	//if strings.Contains(fn.String(), "reflect.TypeOf") || //bz: debug
-	//	strings.Contains(fn.String(), "reflect.ValueOf") ||
-	//	strings.Contains(fn.String(), "(*reflect.rtype).Method") {
-	//	fmt.Println(fn, " ", callersite)
-	//}
 
 	// obj is the function object (identity, params, results).
 	obj := a.nextNode()
@@ -304,19 +296,19 @@ func (a *analysis) makeFunctionObjectWithContext(caller *cgnode, fn *ssa.Functio
 	}
 
 	//if we can find an existing cgnode/obj -> update: remove the duplicate cgnode added to a.genq[]
-	var existFnIdx []int
+	var existCGNIdx []int
 	var multiFn bool
 	var existNodeID nodeid
 	var isNew bool
 	if a.config.Origin { //bz: origin -> we only create new callsite[] for specific instr, not everyone
 		assert(callersite != nil, "Unexpected nil callersite.instr @ makeFunctionObjectWithContext().")
 
-		existFnIdx, multiFn, existNodeID, isNew = a.existContext(fn, callersite, caller, loopID)
+		existCGNIdx, multiFn, existNodeID, isNew = a.existContext(fn, callersite, caller, loopID)
 		if !isNew {
 			return existNodeID, isNew
 		}
 	} else if a.config.CallSiteSensitive { //bz: for kcfa
-		existFnIdx, multiFn, existNodeID, isNew = a.existContextForComb(fn, callersite, caller, -1)
+		existCGNIdx, multiFn, existNodeID, isNew = a.existContextForComb(fn, callersite, caller, -1)
 		if !isNew {
 			return existNodeID, isNew
 		}
@@ -332,12 +324,12 @@ func (a *analysis) makeFunctionObjectWithContext(caller *cgnode, fn *ssa.Functio
 	newFnIdx[0] = fnIdx
 
 	//update fn2cgnodeIdx
-	a.updateFn2NodeID(fn, multiFn, newFnIdx, existFnIdx)
+	a.updateFn2NodeID(fn, multiFn, newFnIdx, existCGNIdx)
 
 	return obj, true
 }
 
-//bz: a summary of existContextXXX(); if loopID = -1 -> loopID is not needed
+//bz: a summary of existContextXXX(); if loopID = -1 -> loopID is not needed; return isNew
 func (a *analysis) existContext(fn *ssa.Function, callersite *callsite, caller *cgnode, loopID int) ([]int, bool, nodeid, bool) {
 	if _, ok := callersite.instr.(*ssa.Go); callersite != nil && ok {
 		return a.existContextForComb(fn, callersite, caller, loopID)
@@ -346,11 +338,11 @@ func (a *analysis) existContext(fn *ssa.Function, callersite *callsite, caller *
 	}
 }
 
-//bz: if exist this caller for fn?
+//bz: if exist this caller for fn? return isNew
 func (a *analysis) existContextFor(fn *ssa.Function, caller *cgnode) ([]int, bool, nodeid, bool) {
-	existFnIdx, multiFn := a.fn2cgnodeIdx[fn]
+	existCGNIdx, multiFn := a.fn2cgnodeIdx[fn]
 	if multiFn { //check if we already have the caller + callsite ?? recursive/duplicate call
-		for i, existIdx := range existFnIdx { // idx -> index of fn cgnode in a.cgnodes[]
+		for i, existIdx := range existCGNIdx { // idx -> index of fn cgnode in a.cgnodes[]
 			existCGNode := a.cgnodes[existIdx]
 			if equalCallSite(existCGNode.callersite, caller.callersite) { //check all callsites
 				//duplicate combination, return this
@@ -360,18 +352,21 @@ func (a *analysis) existContextFor(fn *ssa.Function, caller *cgnode) ([]int, boo
 				if a.config.DEBUG {
 					fmt.Printf("    EXIST**: " + strconv.Itoa(i+1) + "th: K-CALLSITE -- " + existCGNode.contourkFull() + "\n")
 				}
-				return existFnIdx, multiFn, existCGNode.obj, false
+				//only one match here, create a wrapper for existIdx
+				idxes := make([]int, 1)
+				idxes[0] = existIdx
+				return idxes, multiFn, existCGNode.obj, false
 			}
 		}
 	}
-	return existFnIdx, multiFn, 0, true
+	return existCGNIdx, multiFn, 0, true
 }
 
-//bz: if exist this callersite (with loopID) + caller for fn?
+//bz: if exist this callersite (with loopID) + caller for fn? return isNew
 func (a *analysis) existContextForComb(fn *ssa.Function, callersite *callsite, caller *cgnode, loopID int) ([]int, bool, nodeid, bool) {
-	existFnIdx, multiFn := a.fn2cgnodeIdx[fn]
+	existCGNIdx, multiFn := a.fn2cgnodeIdx[fn]
 	if multiFn { //check if we already have the caller + callsite ?? recursive/duplicate call
-		for i, existIdx := range existFnIdx { // idx -> index of fn cgnode in a.cgnodes[]
+		for i, existIdx := range existCGNIdx { // idx -> index of fn cgnode in a.cgnodes[]
 			_fnCGNode := a.cgnodes[existIdx]
 			if a.equalContextForComb(_fnCGNode.callersite, callersite, caller.callersite, loopID) { //check all callsites
 				//duplicate combination, return this
@@ -381,11 +376,14 @@ func (a *analysis) existContextForComb(fn *ssa.Function, callersite *callsite, c
 				if a.config.DEBUG {
 					fmt.Printf("    EXIST**: " + strconv.Itoa(i+1) + "th: K-CALLSITE -- " + _fnCGNode.contourkFull() + "\n")
 				}
-				return existFnIdx, multiFn, _fnCGNode.obj, false
+				//only one match here, create a wrapper for existIdx
+				idxes := make([]int, 1)
+				idxes[0] = existIdx
+				return idxes, multiFn, _fnCGNode.obj, false
 			}
 		}
 	}
-	return existFnIdx, multiFn, 0, true
+	return existCGNIdx, multiFn, 0, true
 }
 
 //bz: if two contexts are the same: existCSs == cur (with loopID) + curCallerCSs
@@ -1268,11 +1266,6 @@ func (a *analysis) genCallBack(caller *cgnode, instr ssa.CallInstruction, fn *ss
 		}
 	}
 
-	//if strings.Contains(key, "sort.Search") && //bz: debug
-	//	strings.Contains(key, "go (*innerWorker).run(t29, t16, t31)@(*github.com/pingcap/tidb/executor.IndexLookUpJoin).startWorkers;") {
-	//	fmt.Println(curIter)
-	//}
-
 	//we need to create a whole set (fakefn, fakecgn), since callsite/ctx/origin is different, basicblock/instruction is different
 	if !okFn || !okCS {
 		if a.log != nil {
@@ -1417,7 +1410,7 @@ func (a *analysis) genCallBackCollapse(caller *cgnode, instr ssa.CallInstruction
 		}
 
 		id = a.addNodes(fakeFn.Type(), fakeFn.String()) //fn id
-		a.setValueNode(fakeFn, id, nil)                 //record
+		a.setValueNode(fakeFn, id, nil) //record?? TODO: bz: not sure if new id will overwrite old ones for the same fn
 
 		//create a cgnode
 		obj := a.nextNode()
@@ -1886,20 +1879,28 @@ func (a *analysis) genConstraintsOnline() {
 func (a *analysis) valueNodeInvoke(caller *cgnode, site *callsite, fn *ssa.Function) nodeid {
 	if caller == nil && site == nil { //requires shared contour
 		id := a.valueNode(fn) //bz: we use this to generate fn, cgn and their constraints, no other uses
+		//return cgn vs func ? different algo/settings require different values, only cgn is marked with otFunction
+		//-> apply to all returns in this function
+		if a.config.DoCallback {
+			//optRenumber and optHVN will mess up the routine (cgn = fn + 1), and it needs cgn here
+			//so retrieve this from a.globalobj (shared contour stores here) and id must exist since we already preSolve() all cgnodes
+			return a.globalobj[fn]
+		}
+		//on-the-fly
 		if a.online {
-			return id + 1 // cgn vs func
+			return id + 1 //cgn
 		} else {
-			return id
+			return id //fn
 		}
 	}
 
-	//loopID here should be consistent with caller's loopID -> the context of an invoked target should be consistent with its caller
+	//loopID here should be consistent with caller's loopID -> the context of an invoked target should be consistent with its caller; no go/closure here
 	loopID := 0
 	if caller.callersite[0] != nil {
 		loopID = caller.callersite[0].loopID
 	}
 	//similar with valueNode(), created on demand. Instead of a.globalval[], we use a.fn2cgnodeid[] due to contexts
-	_, _, obj, isNew := a.existContext(fn, site, caller, loopID)
+	existCGNIdx, _, obj, isNew := a.existContext(fn, site, caller, loopID)
 	if isNew {
 		var comment string
 		if a.log != nil {
@@ -1909,18 +1910,27 @@ func (a *analysis) valueNodeInvoke(caller *cgnode, site *callsite, fn *ssa.Funct
 		if obj = a.objectNodeSpecial(caller, nil, site, fn, loopID); obj != 0 {
 			a.addressOf(fn.Type(), id, obj)
 		}
-		a.setValueNode(fn, id, nil) //bz: do we need this?? for now, no since we will not use it
+		//a.setValueNode(fn, id, nil) //bz: this will mess up/overwrite record for shared contour fns
 
 		itf := isInterface(fn.Type()) //bz: not sure if this is equivalent to the one in genMethodOf()
 		if !itf {
 			a.atFuncs[fn] = true // Methods of concrete types are address-taken functions.
 		}
 
-		if a.online {
+		if a.online { //bz: callback should not reach here
 			return obj
 		} else {
 			return id
 		}
+	}
+
+	if a.config.DoCallback {
+		if len(existCGNIdx) > 1 {
+			fmt.Println("PANIC. why do i have multiple match: ", fn, "@", caller, "&", site)
+		}
+		idx := existCGNIdx[0]
+		cgn := a.cgnodes[idx]
+		return cgn.obj
 	}
 	if a.online {
 		return obj
@@ -2809,13 +2819,6 @@ func (a *analysis) genFunc(cgn *cgnode) {
 	//a.localval = make(map[ssa.Value]nodeid)
 	//a.localobj = make(map[ssa.Value]nodeid)
 
-	//if strings.Contains(cgn.fn.String(), "sort.Search") && //bz: debug
-	//	strings.Contains(cgn.contourkFull(), "go (*innerWorker).run(t29, t16, t31)@(*github.com/pingcap/tidb/executor.IndexLookUpJoin).startWorkers;") {
-	//	fmt.Println(curIter)
-	//}
-
-	//fmt.Println("-> ", reuse, " ", cgn)
-
 	if reuse { //bz: from my synthetic fn, and solved in last loop of preSolve() already -> now handle the diff
 		// Create value nodes for all value instructions
 		// since SSA may contain forward references.
@@ -3010,8 +3013,8 @@ func (a *analysis) generate() {
 		fmt.Fprintf(a.log, "\nDone genMethodsOf() offline. \n\n")
 
 		if optHVN {
-			fmt.Println("#Excluded types in genMethodsOf() offline (not function): ", skip)
-			fmt.Fprintf(a.log, "\nDump out skipped types:  \n")
+			fmt.Fprintf(a.log, "\n#Excluded types in genMethodsOf() offline (not function): %d\n", skip)
+			fmt.Fprintf(a.log, "Dump out skipped types:  \n")
 			for _, _type := range a.skipTypes {
 				fmt.Fprintf(a.log, _type+"\n")
 			}
@@ -3132,7 +3135,7 @@ func (a *analysis) preSolve() {
 
 						var fnObj nodeid
 						if c.site != nil && c.caller != nil {
-							//loopID here should be consistent with caller's loopID -> the context of an invoked target should be consistent with its caller
+							//loopID here should be consistent with caller's loopID -> the context of an invoked target should be consistent with its caller; no go/closure here
 							loopID := 0
 							if c.caller.callersite[0] != nil {
 								loopID = c.caller.callersite[0].loopID
@@ -3209,11 +3212,6 @@ func (a *analysis) genMissingFn(fn *ssa.Function, caller *cgnode, site *callsite
 	if a.log != nil { //debug
 		fmt.Fprintln(a.log, "\n------------- GENERATING INVOKE FUNC HERE: (", where, ") "+fn.String()+" ------------------------------ ")
 	}
-
-	//if strings.Contains(fn.String(), "(*github.com/ethereum/go-ethereum/p2p.meteredConn).SetWriteDeadline") &&
-	//	caller == nil && site == nil {
-	//	fmt.Println(where)
-	//} //bz: debug
 
 	var fnObj nodeid
 	if a.considerMyContext(fn.String()) {

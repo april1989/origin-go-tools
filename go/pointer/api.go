@@ -985,7 +985,7 @@ func TotalStatistics(results map[*ssa.Package]*Result) {
 //bz: common part for Statistics and TotalStatistics
 func printStatistics(sPts, nPts int, intervals [12]int, distributes, mins, ranges []int) {
 	fmt.Println("#pts: ", sPts, "\n#total of pts:", nPts, "\n#avg of pts:", float64(nPts)/float64(sPts))
-	fmt.Println("Distribution: ", "\n# < ", intervals[0], ":", float64(distributes[0])/float64(sPts)*100, "%",
+	fmt.Println("\nDistribution: ", "\n# < ", intervals[0], ":", float64(distributes[0])/float64(sPts)*100, "%",
 		"\n# <", intervals[1], ": ", float64(distributes[1])/float64(sPts)*100, "%",
 		"\n# <", intervals[2], ": ", float64(distributes[2])/float64(sPts)*100, "%",
 		"\n# <", intervals[3], ": ", float64(distributes[3])/float64(sPts)*100, "%",

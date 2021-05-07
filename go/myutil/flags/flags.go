@@ -90,7 +90,7 @@ func ParseFlags() {
 	}
 	if *_pts != 0 {
 		PTSLimit = *_pts
-		//DoDiff = true
+		DoDiff = true
 	}
 
 	//my use

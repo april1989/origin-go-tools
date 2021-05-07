@@ -176,7 +176,7 @@ type analysis struct {
 	result        *ResultWCtx                   //bz: our result, dump all
 	closureWOGo   map[nodeid]nodeid             //bz: solution@field actualCallerSite []*callsite of cgnode type
 	isWithinScope bool                          //bz: whether the current genInstr() is working on a method within our scope
-	online        bool                          //bz: whether a constraint is from genInvokeOnline()
+	online        bool                          //bz: whether a constraint is from genInvokeOnline() -> used for on-the-fly only, no callback
 
 	//bz: performance-related data
 	num_constraints int             //bz: performance
@@ -382,10 +382,10 @@ func printConfig(config *Config) {
 	}
 	if flags.DoCallback { //bz: see comments of optHVN
 		optHVN = true
-		//optRenumber = true
+		optRenumber = true
 	} else { //turn it off for on-the-fly
 		optHVN = false
-		//optRenumber = false
+		optRenumber = false
 	}
 
 	if flags.DoPerformance { //bz: this is from my main, i want them to print out
