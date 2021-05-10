@@ -84,8 +84,8 @@ type Config struct {
 	TrackMore  bool     //bz: track pointers with all types
 	DoCallback bool     //bz: we synthesize for callback fn in app
 
-	imports       []string //bz: internal use: store all import pkgs in a main
-	Level         int      //bz: level == 0: traverse all app and lib, but with different ctx; level == 1: traverse 1 level lib call; level == 2: traverse 2 leve lib calls; no other option now
+	imports []string //bz: internal use: store all import pkgs in a main
+	Level   int      //bz: level == 0: traverse all app and lib, but with different ctx; level == 1: traverse 1 level lib call; level == 2: traverse 2 leve lib calls; no other option now
 }
 
 //bz: user API: race checker
@@ -528,9 +528,19 @@ func (r *ResultWCtx) CountMyReachUnreachFunctions(doDetail bool) (map[*ssa.Funct
 	map[int]int, map[int]int, map[*ssa.Function]*ssa.Function) {
 	//cgns
 	reachCGs := make(map[int]int)
+	initIDs := make(map[int]int) //reachable, see below
 	//fn
 	reaches := make(map[*ssa.Function]*ssa.Function)
+	//used when running on-the-fly algo
 	implicits := make(map[*ssa.Function]*ssa.Function)
+	//used when running callback + preSolve
+	unreaches := make(map[*ssa.Function]*ssa.Function)
+	inits := make(map[*ssa.Function]*ssa.Function)       //functions with name format: xxx/xxx.xx.init
+	var initEdges []*Edge //out going cg edge from inits
+	dangleInits := make(map[*ssa.Function]*ssa.Function) //init function but cannot be reached by main
+	var dangleInitsEdges []*Edge //out going cg edge from dangleInits
+	initReaches := make(map[*ssa.Function]*ssa.Function) //non init function that are only reachable by init functions -> they have shared contour
+	dangleInitReaches := make(map[*ssa.Function]*ssa.Function) // fn only reachable by dangleInits, like implicits above
 
 	var checks []*Edge
 	//start from root
@@ -541,6 +551,7 @@ func (r *ResultWCtx) CountMyReachUnreachFunctions(doDetail bool) (map[*ssa.Funct
 		checks = append(checks, out)
 	}
 
+	//all reachable in cg, from root
 	for len(checks) > 0 {
 		var tmp []*Edge
 		for _, check := range checks {
@@ -552,37 +563,144 @@ func (r *ResultWCtx) CountMyReachUnreachFunctions(doDetail bool) (map[*ssa.Funct
 			for _, out := range check.Callee.Out {
 				tmp = append(tmp, out)
 			}
+
+			if r.a.config.DoCallback {
+				fn := check.Callee.GetFunc()
+				fnName := fn.Name()
+				if strings.HasPrefix(fnName, "init") {
+					if _, ok := initIDs[check.Callee.ID]; !ok {
+						initIDs[check.Callee.ID] = check.Callee.ID
+					}
+				}
+			}
 		}
 		checks = tmp
 	}
 
-	//collect implicits
 	for _, node := range r.CallGraph.Nodes {
-		if _, ok := reachCGs[node.ID]; ok { //reached
+		if _, ok := reachCGs[node.ID]; ok { //reached -> store its fn
 			if _, ok2 := reaches[node.GetFunc()]; ok2 {
 				continue //already stored
 			}
 			reaches[node.GetFunc()] = node.GetFunc()
 			continue
 		} else {
-			//these functions in implicits, but are actually reached.
-			//HOWEVER, it is not direct function call,
-			//e.g.
-			//; *t43 = init$2
-			//	create n367 func() interface{} for fmt.init$2
-			//	---- makeFunctionObject fmt.init$2
-			//	create n368 func() interface{} for func.cgnode
-			//	create n369 interface{} for func.results
-			//	----
-			//	globalobj[fmt.init$2] = n368
-			//	addr n367 <- {&n368}
-			//	val[init$2] = n367  (*ssa.Function)
-			//	copy n366 <- n367
-			//===>>>> no call edge created for this ...
-			if _, ok2 := implicits[node.GetFunc()]; ok2 {
-				continue //already stored
+			if r.a.config.DoCallback {
+				//unreachable is possible when turning on callback + preSolve
+				if _, ok2 := unreaches[node.GetFunc()]; ok2 {
+					continue //already stored
+				}
+				unreaches[node.GetFunc()] = node.GetFunc()
+			} else {
+				//collect implicit reachable fns -> this is valid only if running on-the-fly algo
+				//these functions in implicits are not from direct function call,
+				//e.g.
+				//; *t43 = init$2
+				//	create n367 func() interface{} for fmt.init$2
+				//	---- makeFunctionObject fmt.init$2
+				//	create n368 func() interface{} for func.cgnode
+				//	create n369 interface{} for func.results
+				//	----
+				//	globalobj[fmt.init$2] = n368
+				//	addr n367 <- {&n368}
+				//	val[init$2] = n367  (*ssa.Function)
+				//	copy n366 <- n367
+				//===>>>> most such cases happen in xxx.init function, and no call edge created for this,
+				//  since they are prepared for potential future calls, however, it may or may NOT be called ...
+				//  SO, if they are not reachable from cg, they are not called and should count as unreached???
+				if _, ok2 := implicits[node.GetFunc()]; ok2 {
+					continue //already stored
+				}
+				implicits[node.GetFunc()] = node.GetFunc()
 			}
-			implicits[node.GetFunc()] = node.GetFunc()
+		}
+	}
+
+	//let's check inits
+	if r.a.config.DoCallback {
+		for _, node := range r.CallGraph.Nodes {
+			fn := node.GetFunc()
+			if _, ok := initIDs[node.ID]; ok { //reachable init fn
+				if _, ok := inits[fn]; !ok {
+					inits[fn] = fn
+					for _, out := range node.Out {
+						initEdges = append(initEdges, out)
+					}
+				}
+			}else {  //unreachable init fn ???
+				fnName := fn.Name()
+				if strings.HasPrefix(fnName, "init") {
+					if _, ok := dangleInits[fn]; !ok {
+						dangleInits[fn] = fn
+						for _, out := range node.Out {
+							dangleInitsEdges = append(dangleInitsEdges, out)
+						}
+					}
+				}
+			}
+		}
+
+		//do initReaches
+		checks = initEdges
+		for len(checks) > 0 {
+			var tmp []*Edge
+			for _, check := range checks {
+				cgn := check.Callee.cgn
+				fn := cgn.fn
+				fnName := fn.Name()
+				if strings.HasPrefix(fnName, "init") {
+					continue //skip init fns
+				}
+				if _, ok := initReaches[fn]; ok {
+					continue //checked already
+				}
+
+				//if cgn has shared contour
+				if !cgn.IsSharedContour() {
+					continue
+				}
+
+				//if cgn only reachable by init functions
+				reach_by_other := false
+				node := r.CallGraph.GetNodeWCtx(cgn)
+				for _, in := range node.In {
+					callerName := in.Caller.cgn.fn.Name()
+					if !strings.HasPrefix(callerName, "init") {
+						reach_by_other = true
+					}
+				}
+				if reach_by_other {
+					continue
+				}
+
+				initReaches[fn] = fn
+				for _, out := range check.Callee.Out {
+					tmp = append(tmp, out)
+				}
+			}
+			checks = tmp
+		}
+
+		//do initReaches
+		checks = dangleInitsEdges
+		for len(checks) > 0 {
+			var tmp []*Edge
+			for _, check := range checks {
+				fn := check.Callee.cgn.fn
+				fnName := fn.Name()
+				if strings.HasPrefix(fnName, "init") {
+					continue //skip init fns
+				}
+				if _, ok := dangleInitReaches[fn]; ok {
+					continue //checked already
+				}
+
+				dangleInitReaches[fn] = fn
+				for _, out := range check.Callee.Out {
+					tmp = append(tmp, out)
+				}
+			}
+			checks = tmp
 		}
 	}
 
@@ -599,24 +717,66 @@ func (r *ResultWCtx) CountMyReachUnreachFunctions(doDetail bool) (map[*ssa.Funct
 			node := cg.GetNodeWCtx(precgn)
 			prenodes[node.ID] = node.ID
 			preFuncs[node.GetFunc()] = node.GetFunc()
-			for _, out := range node.Out {
-				checks = append(checks, out)
+			//for _, out := range node.Out {
+			//	checks = append(checks, out)
+			//}
+		}
+	}
+
+	//print out all numbers
+	fmt.Println("#Unreach CG Nodes: ", len(cg.Nodes)-(len(reachCGs)))
+	fmt.Println("#Reach CG Nodes: ", len(reachCGs))
+	if r.a.config.DoCallback {
+		fmt.Println("#Unreach Functions: ", len(unreaches))
+	} else {
+		fmt.Println("#Unreach Functions: ", len(implicits)+len(preFuncs), "(#Implicit: ", len(implicits), ")")
+	}
+	fmt.Println("#Reach Functions: ", len(reaches))
+	//fmt.Println("\n#Unreach Nodes from Pre-Gen Nodes: ", len(prenodes))
+	//fmt.Println("#Unreach Functions from Pre-Gen Nodes: ", len(preFuncs))
+	//fmt.Println("#(Pre-Gen are created for reflections)")
+	if r.a.config.DoCallback {
+		fmt.Println("#Init Functions: ", len(inits))
+		fmt.Println("#Init Reachable-Only Functions: ", len(initReaches))
+		fmt.Println("#Dangling Init Functions: ", len(dangleInits))
+		fmt.Println("#Dangling Init Reachable-Only Functions: ", len(dangleInitReaches))
+	}
+
+	if doDetail { //bz: print out all details
+		//fmt.Println("\n\nPre Generated Functions: ")
+		//for _, prefunc := range preFuncs {
+		//	fmt.Println(prefunc)
+		//}
+		fmt.Println("\n\n*****************************************************\nDump Details: ")
+		if r.a.config.DoCallback {
+			fmt.Println("\n\nInit Reachable-Only Functions: ")
+			for _, f := range initReaches {
+				fmt.Println(f)
+			}
+
+			fmt.Println("\n\nDangling Init Functions: ")
+			for _, f := range dangleInits {
+				fmt.Println(f)
+			}
+
+			fmt.Println("\n\nDangling Init Reachable-Only Functions: ")
+			for _, f := range dangleInitReaches {
+				fmt.Println(f)
+			}
+
+			fmt.Println("\n\nUnreach Functions: ")
+			for _, f := range unreaches {
+				fmt.Println(f)
+			}
+		} else {
+			fmt.Println("\n\nImplicit Functions: ")
+			for _, unreach := range implicits {
+				fmt.Println(unreach)
 			}
 		}
 	}
 
-	if doDetail { //bz: print out all details
-		//fmt.Println("\n\nImplicit Functions: ")
-		//for _, unreach := range implicits {
-		//	fmt.Println(unreach)
-		//}
-
-		fmt.Println("\n\nPre Generated Functions: ")
-		for _, prefunc := range preFuncs {
-			fmt.Println(prefunc)
-		}
-	}
-
+	//for further use
 	return reaches, implicits, reachCGs, prenodes, preFuncs
 }
 
@@ -757,12 +917,12 @@ func (r *Result) Statistics() {
 	_result := r.a.result
 	sPts := 0
 	nPts := 0
-	intervals := intervals1 //bz: intervals used to classify pts
+	intervals := intervals1        //bz: intervals used to classify pts
 	distributes := make([]int, 13) //bz: want to know the distribution of pts:
 	//                  idx:  0     1     2     3    4      5      6      7      8      9      10      11    12
 	// the array represents: <10, <100, <200, <500, <700, <1000, <1500, <2000, <2500, <3000, <3500, <4000, all others ...
 	ranges := make([]int, 13) //bz: same as above, but == max obj idx - min obj idx
-	mins := make([]int, 13) //bz: the min obj idx in a pts
+	mins := make([]int, 13)   //bz: the min obj idx in a pts
 	//                  idx:   0       1      2       3       4       5       6        7       8         9       10      11       12
 	// the array represents: <1000, <5000, <10000, <30000, <50000, <70000, <90000, <100000, <200000, <300000, <500000, <700000, all others ...
 
@@ -859,7 +1019,7 @@ func (r *Result) Statistics() {
 			if s > 1000 {
 				if n.obj == nil {
 					fmt.Printf("-> len = %d: pts(n%d : %s)\n", s, id, n.typ)
-				}else{
+				} else {
 					fmt.Printf("-> len = %d: pts(n%d : %s), created at: %s \n", s, id, n.typ, n.obj.cgn)
 				}
 			}
@@ -873,12 +1033,12 @@ func TotalStatistics(results map[*ssa.Package]*Result) {
 	fmt.Println("\n\n*************************************\nTotal Statistics of PTS: ")
 	sPts := 0
 	nPts := 0
-	intervals := intervals1 //bz: intervals used to classify pts
+	intervals := intervals1        //bz: intervals used to classify pts
 	distributes := make([]int, 13) //bz: want to know the distribution of pts:
 	//                  idx:  0     1     2     3    4      5      6      7      8      9      10      11    12
 	// the array represents: <10, <100, <200, <500, <700, <1000, <1500, <2000, <2500, <3000, <3500, <4000, all others ...
 	ranges := make([]int, 13) //bz: same as above, but == max obj idx - min obj idx
-	mins := make([]int, 13) //bz: the min obj idx in a pts
+	mins := make([]int, 13)   //bz: the min obj idx in a pts
 	//                  idx:   0       1      2       3       4       5       6        7       8         9       10      11       12
 	// the array represents: <1000, <5000, <10000, <30000, <50000, <70000, <90000, <100000, <200000, <300000, <500000, <700000, all others ...
 	for main, r := range results {
@@ -977,7 +1137,7 @@ func TotalStatistics(results map[*ssa.Package]*Result) {
 				if s > 1000 { //s > 100 && s < 1000
 					if n.obj == nil {
 						fmt.Printf("-> len = %d: pts(n%d : %s): underlying %s \n", s, id, n.typ, n.typ.Underlying())
-					}else{
+					} else {
 						fmt.Printf("-> len = %d: pts(n%d : %s), created at: %s \n", s, id, n.typ, n.obj.cgn)
 					}
 				}
@@ -1033,7 +1193,6 @@ func printStatistics(sPts, nPts int, intervals [12]int, distributes, mins, range
 		"\n# others:", float64(ranges[12])/float64(sPts)*100, "%")
 }
 
-
 //bz: do comparison with default
 func (r *Result) GetResult() *ResultWCtx {
 	return r.a.result
@@ -1055,13 +1214,13 @@ func (r *Result) GetTests() map[*ssa.Function]*cgnode {
 	a := r.a
 	result := make(map[*ssa.Function]*cgnode)
 	testSig := a.config.Mains[0].Pkg.Path() // this is xx/xx/xxx.test, we need to remove the '.test'
-	testSig = testSig[0:len(testSig)-5]
+	testSig = testSig[0 : len(testSig)-5]
 
 	for v, id := range a.globalobj {
 		if fn, ok := v.(*ssa.Function); ok {
 			name := fn.Name()
 			pkg := fn.String()
-			if (strings.HasPrefix(pkg, testSig) || strings.HasPrefix(pkg, "(" + testSig)) && //static/non-static functions
+			if (strings.HasPrefix(pkg, testSig) || strings.HasPrefix(pkg, "("+testSig)) && //static/non-static functions
 				(strings.HasPrefix(name, "Test") || strings.HasPrefix(name, "Benchmark") || strings.HasPrefix(name, "Example")) && // test format
 				!strings.Contains(name, "$") { //exclude closure
 				obj := a.nodes[id].obj
@@ -1205,6 +1364,12 @@ func (r *Result) DumpToCompare(cgfile *os.File, queryfile *os.File) {
 			fmt.Fprintln(queryfile, "(SSA:"+v.String()+"): {"+p.PointsTo().String()+"}")
 		}
 	}
+}
+
+//bz: for my use; a wrapper of the same function in *ResultWCtx
+func (r *Result) CountMyReachUnreachFunctions(doDetail bool) (map[*ssa.Function]*ssa.Function, map[*ssa.Function]*ssa.Function,
+	map[int]int, map[int]int, map[*ssa.Function]*ssa.Function) {
+	return r.a.result.CountMyReachUnreachFunctions(doDetail)
 }
 
 //bz: user api, return an array of *AllocSite {*ssa.Function, []*callsite}

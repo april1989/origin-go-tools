@@ -187,13 +187,77 @@ Config 4. github.com/ethereum/go-ethereum/cmd/geth  (PTSLimit = 10, exclude fmt 
 Due to the algorithm of callback, we are not missing targets. However, the decreased runtime of pointer analysis from different configs 
 significantly decreases the number of call edges:
 
-*#call edge: 835652 (Config 1: no pts limit) 
--> 504519 (Config 2: limit pts to 10) 
+*#call edge: 
+835652 (Config 1: no pts limit) 
+-> 504519 (Config 2: limit pts to 10, copy then check) 
 -> 502706 (Config 3: exclude pkgs) 
 -> 112221 (Config 4: check then copy)*
 
-We are missing targets, but where do the missing targets come from? Are they over-approximate or real targets? Can we ignore them? 
-Ignore to which extend (which config is acceptable)?  
+We are missing targets, but what are they? Where do the missing targets come from? Are they over-approximate or real targets? Can we ignore them? 
+Ignore to which extend (which config is acceptable)?
+
+###### What are missing targets?
+One type of missing target is from the init function of main entry, e.g., 
+```go
+github.com/ethereum/go-ethereum/cmd/geth.init
+```
+which includes a set of function calls to other init functions, e.g., 
+
+```go
+Generating constraints for cg218:github.com/ethereum/go-ethereum/cmd/geth.init@[0:shared contour; ], shared contour
+# Synthetic: package initializer
+func init():
+0:                                                                entry P:0 S:2
+	t0 = *init$guard                                                   bool
+	if t0 goto 2 else 1
+1:                                                           init.start P:1 S:1
+	*init$guard = true:bool
+	t1 = fmt.init()                                                      ()
+	t2 = io/ioutil.init()                                                ()
+	t3 = github.com/ethereum/go-ethereum/accounts.init()                 ()
+	t4 = github.com/ethereum/go-ethereum/accounts/keystore.init()        ()
+	t5 = github.com/ethereum/go-ethereum/cmd/utils.init()                ()
+	t6 = github.com/ethereum/go-ethereum/crypto.init()                   ()
+	t7 = github.com/ethereum/go-ethereum/log.init()                      ()
+	t8 = gopkg.in/urfave/cli.v1.init()                                   ()
+	t9 = encoding/json.init()                                            ()
+	t10 = os.init()                                                      ()
+	t11 = runtime.init()                                                 ()
+	t12 = strconv.init()                                                 ()
+	t13 = sync/atomic.init()                                             ()
+	t14 = time.init()                                                    ()
+    ...
+```
+
+However, these init function calls can reach some functions that are ONLY reachable from those init functions, 
+but not reachable from app functions starting from main entry, e.g., the target ```github.com/ethereum/go-ethereum/metrics.NewRegistry``` below  
+
+```go
+Generating constraints for cg3805:github.com/ethereum/go-ethereum/metrics.init@[0:shared contour; ], shared contour
+# Synthetic: package initializer
+func init():
+  ...
+; t45 = NewRegistry()
+	---- makeFunctionObjectWithContext (kcfa) github.com/ethereum/go-ethereum/metrics.NewRegistry
+     K-CALLSITE -- [0:shared contour; ]
+	create n11039 func() github.com/ethereum/go-ethereum/metrics.Registry for func.cgnode
+	create n11040 github.com/ethereum/go-ethereum/metrics.Registry for func.results
+	----
+	NewRegistry()@github.com/ethereum/go-ethereum/metrics.init -> cg11039:github.com/ethereum/go-ethereum/metrics.NewRegistry@[0:shared contour; ]
+	copy n10995 <- n11040
+	NewRegistry()@github.com/ethereum/go-ethereum/metrics.init to targets n0 from cg3805:github.com/ethereum/go-ethereum/metrics.init@[0:shared contour; ]
+; *DefaultRegistry = t45
+  ...
+```
+
+So, how many such function (non init function that are only reachable by init functions) exist? 
+do we need to analyze them? how much precision do we lose if we ignore them? 
+
+
+
+
+
+
 
 ###### Where do the missing targets come from?
 

@@ -290,6 +290,7 @@ func DoSeq(mains []*ssa.Package) {
 		////bz: debug
 		//result.Statistics()
 		//result.DumpCG()
+		result.CountMyReachUnreachFunctions(true)
 	}
 
 	//total statistics
@@ -666,6 +667,44 @@ func doEachMainDefault(i int, main *ssa.Package) *default_algo.Result {
 	return result
 }
 
+//baseline: all main in parallel
+//Update: fatal error: concurrent map writes!! --> change to a.track = trackall, no more panic
+//go add lock @container/intsets/util.go for nodeset when doing this setting
+func DoParallel(mains []*ssa.Package) map[*ssa.Package]*pointer.ResultWCtx {
+	ret := make(map[*ssa.Package]*pointer.ResultWCtx) //record of result
+	var _wg sync.WaitGroup
+	start := time.Now()
+	for i, main := range mains[0:3] {
+		fmt.Println("Spawn ", i, ". ", main.String())
+		_wg.Add(1)
+		go func(i int, main *ssa.Package) {
+			start := time.Now()
+			fmt.Println("My Algo: ")
+			r_my := DoEachMainMy(i, main) //mypta
+			t := time.Now()
+			MyElapsed = MyElapsed + t.Sub(start).Milliseconds()
+
+			//update
+			ret[main] = r_my
+			_wg.Done()
+
+			fmt.Println("Join ", i, ". ", main.String())
+		}(i, main)
+	}
+	_wg.Wait()
+
+	elapsed := time.Now().Sub(start)
+	fmt.Println("\nDone  -- PTA/CG Build; Using " + elapsed.String() + ".\n ")
+
+	//check
+	fmt.Println("#Receive Result: ", len(ret))
+	for main, result := range ret {
+		fmt.Println("Receive result (#Queries: ", len(result.Queries), ", #IndirectQueries: ", len(result.IndirectQueries), ") for main: ", main.String())
+	}
+
+	return ret
+}
+
 //bz: for default algo
 //    exclude root, init and main has root as caller
 func countReachUnreachFunctions(result *default_algo.Result) (map[*ssa.Function]*ssa.Function, map[*ssa.Function]*ssa.Function) {
@@ -709,42 +748,4 @@ func countReachUnreachFunctions(result *default_algo.Result) (map[*ssa.Function]
 
 	//preGen and preFuncs are supposed to be the same with mine
 	return reaches, unreaches
-}
-
-//baseline: all main in parallel
-//Update: fatal error: concurrent map writes!! --> change to a.track = trackall, no more panic
-//go add lock @container/intsets/util.go for nodeset when doing this setting
-func DoParallel(mains []*ssa.Package) map[*ssa.Package]*pointer.ResultWCtx {
-	ret := make(map[*ssa.Package]*pointer.ResultWCtx) //record of result
-	var _wg sync.WaitGroup
-	start := time.Now()
-	for i, main := range mains[0:3] {
-		fmt.Println("Spawn ", i, ". ", main.String())
-		_wg.Add(1)
-		go func(i int, main *ssa.Package) {
-			start := time.Now()
-			fmt.Println("My Algo: ")
-			r_my := DoEachMainMy(i, main) //mypta
-			t := time.Now()
-			MyElapsed = MyElapsed + t.Sub(start).Milliseconds()
-
-			//update
-			ret[main] = r_my
-			_wg.Done()
-
-			fmt.Println("Join ", i, ". ", main.String())
-		}(i, main)
-	}
-	_wg.Wait()
-
-	elapsed := time.Now().Sub(start)
-	fmt.Println("\nDone  -- PTA/CG Build; Using " + elapsed.String() + ".\n ")
-
-	//check
-	fmt.Println("#Receive Result: ", len(ret))
-	for main, result := range ret {
-		fmt.Println("Receive result (#Queries: ", len(result.Queries), ", #IndirectQueries: ", len(result.IndirectQueries), ") for main: ", main.String())
-	}
-
-	return ret
 }
