@@ -180,6 +180,11 @@ And its result is:
 Config 4. github.com/ethereum/go-ethereum/cmd/geth  (PTSLimit = 10, exclude fmt and error pkg, check then copy, use 45.261569861s)  
 (#total:  8755 , #compiled:  559 , #analyzed:  5553 , #analyzed$:  586 , #others:  105 )
 
+Meanwhile, after applying check and copy on points-to set, the on-the-fly algorithm can finish now:
+
+Config 5. github.com/ethereum/go-ethereum/cmd/geth  (on-the-fly, PTSLimit = 10, exclude fmt and error pkg, check then copy, use 12.334892954s)  
+(#total:  8755 , #compiled:  559 , #analyzed:  4688 , #analyzed$:  584 , #others:  10102 )
+
 
 ### Questions Now
 
@@ -187,14 +192,19 @@ Config 4. github.com/ethereum/go-ethereum/cmd/geth  (PTSLimit = 10, exclude fmt 
 Due to the algorithm of callback, we are not missing targets. However, the decreased runtime of pointer analysis from different configs 
 significantly decreases the number of call edges:
 
-*#call edge: 
-835652 (Config 1: no pts limit) 
--> 504519 (Config 2: limit pts to 10, copy then check) 
--> 502706 (Config 3: exclude pkgs) 
--> 112221 (Config 4: check then copy)*
+| callback | on-the-fly | 
+| --- | --- |
+| #call nodes: 37642 | #call nodes: 40296 |
+| #call edge:  | #call edge: | 
+| 835652 (Config 1: exclude pkg, no pts limit)  | 143431 (Config 5)  |
+| -> 504519 (Config 2: limit pts to 10, copy then check -> ignore this conparison, similar to Config 3)  |  |
+| -> 502706 (Config 3: exclude pkgs, limit pts to 10, copy then check)  |  |
+| -> 112221 (Config 4: exclude pkgs, limit pts to 10, check then copy)* |  |
 
-We are missing targets, but what are they? Where do the missing targets come from? Are they over-approximate or real targets? Can we ignore them? 
-Ignore to which extend (which config is acceptable)?
+We are missing targets in callback (there is no baseline for on-the-fly, but must be missing targets).
+
+Below we mainly compare the results from Config 1, 3, 4, 5.
+
 
 ###### What are missing targets?
 One type of missing target is from the init function of main entry, e.g., 
@@ -250,14 +260,44 @@ func init():
   ...
 ```
 
-So, how many such function (non init function that are only reachable by init functions) exist? 
-do we need to analyze them? how much precision do we lose if we ignore them? 
+###### How many such function (non init function that are only reachable by init functions) exist?
 
+| | Config 1 | Config 3 | Config 4 | Config 5 |
+| --- | --- | --- | --- | --- | 
+| #Init Functions: | 131 | 131 | 131 | 616 |
+| #Init Reachable-Only Functions: | 41 | 41 | 41 | 163 |
+| #Dangling Init Functions: | 41 | 41 | 41 | 104 |
+| #Dangling Init Reachable-Only Functions: | 1546 | 1529 | 1477 | 7100 |
 
+- Init Functions: functions with name format: xxx/xxx.xx.init
+- Init Reachable-Only Functions: non init function that are only reachable by init functions, they have shared contour
+- Dangling Init Functions: init function but cannot be reached by main; most such cases happen in xxx.init function, and no call edge created for this,
+since they are prepared for potential future calls, however, it may or may NOT be called, e.g., 
+```go
+; *t43 = init$2
+	create n367 func() interface{} for fmt.init$2
+	---- makeFunctionObject fmt.init$2
+	create n368 func() interface{} for func.cgnode
+	create n369 interface{} for func.results
+	----
+	globalobj[fmt.init$2] = n368
+	addr n367 <- {&n368}
+	val[init$2] = n367  (*ssa.Function)
+	copy n366 <- n367
+```
+- Dangling Init Reachable-Only Functions: non init function that are only reachable by dangling init functions
 
+The init functions is necessary. However, Dangling Init Functions and Dangling Init Reachable-Only Functions are not
+necessary, especially Dangling Init Reachable-Only Functions. 
+From the data above, we can see that there is a large number of functions/cgns/constraints created for 
+Dangling Init Reachable-Only Functions (like the above example of function ```NewRegistry``). 
 
+TOOD: ignore Dangling Init Reachable-Only Functions? 
 
-
+###### Do we miss origins? 
+Config 1 and 3 have the same origin (#Origins = 102), however, Config 4 only has 20 origins
+and Config 5 has 184.
+This is scary ... 
 
 ###### Where do the missing targets come from?
 
