@@ -993,11 +993,11 @@ func (a *analysis) withinScope(method string) bool {
 		// preprocess
 		if string(method[0]) == "*" { // from collectFnsWScope(): pointer/named/interface types
 			method = method[1:]
-	    }else if method[0:2] == "(*" { //this is a pointer type -> remove pointer
+		} else if method[0:2] == "(*" { //this is a pointer type -> remove pointer
 			method = method[2:]
-		}else if string(method[0]) == "(" { //this is a wrapper bracket -> remove bracket
+		} else if string(method[0]) == "(" { //this is a wrapper bracket -> remove bracket
 			method = method[1:]
-		}else if len(method) > 8 && method[0:8] == "package " { //package github.com/ethereum/go-ethereum/common/fdlimit
+		} else if len(method) > 8 && method[0:8] == "package " { //package github.com/ethereum/go-ethereum/common/fdlimit
 			method = method[8:]
 		}
 		//compare: must be xxx.xxx.xx/xx
@@ -1419,7 +1419,7 @@ func (a *analysis) genCallBackCollapse(caller *cgnode, instr ssa.CallInstruction
 		}
 
 		id = a.addNodes(fakeFn.Type(), fakeFn.String()) //fn id
-		a.setValueNode(fakeFn, id, nil) //record?? TODO: bz: not sure if new id will overwrite old ones for the same fn
+		a.setValueNode(fakeFn, id, nil)                 //record?? TODO: bz: not sure if new id will overwrite old ones for the same fn
 
 		//create a cgnode
 		obj := a.nextNode()
@@ -3016,7 +3016,7 @@ func (a *analysis) generate() {
 				fmt.Fprintf(a.log, "\n#Excluded types in genMethodsOf() offline (not function): %d\n", skip)
 				fmt.Fprintf(a.log, "Dump out skipped types:  \n")
 				for _, typ := range a.skipTypes {
-					fmt.Fprintf(a.log, typ + "\n")
+					fmt.Fprintf(a.log, typ+"\n")
 				}
 			}
 		}

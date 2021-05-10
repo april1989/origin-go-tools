@@ -286,7 +286,10 @@ func DoSeq(mains []*ssa.Package) {
 	for main, result := range results {
 		fmt.Println("Receive result (#Queries: ", len(result.Queries), ", #IndirectQueries: ", len(result.IndirectQueries),
 			", #GlobalQueries: ", len(result.GlobalQueries), ") for main: ", main.String())
-		result.Statistics()
+
+		////bz: debug
+		//result.Statistics()
+		//result.DumpCG()
 	}
 
 	//total statistics

@@ -139,24 +139,66 @@ Distribution:
 
 **Update for go-ethereum 2:**
 
-- github.com/ethereum/go-ethereum/cmd/geth  (No PTSLimit, use 59m1.704662239s)
+Config 1. github.com/ethereum/go-ethereum/cmd/geth  (No PTSLimit, use 59m1.704662239s)
 (#total:  10386 , #compiled:  559 , #analyzed:  5553 , #analyzed$:  586 , #others:  258 )
 
-- github.com/ethereum/go-ethereum/cmd/geth  (PTSLimit = 10, use 12m46.374579834s)  
+Config 2. github.com/ethereum/go-ethereum/cmd/geth  (PTSLimit = 10, use 12m46.374579834s)  
 (#total:  10386 , #compiled:  559 , #analyzed:  5553 , #analyzed$:  586 , #others:  258 )
 
+Config 3. github.com/ethereum/go-ethereum/cmd/geth  (PTSLimit = 10, exclude fmt and error pkg, use 9m31.996348357s)  
+(#total:  8755 , #compiled:  559 , #analyzed:  5545 , #analyzed$:  585 , #others:  105 )
 
 
+**Update for go-ethereum 3:**
 
+Previously, we handle pts limit like this: we copy the points-to set change then check its size, in order to keep 
+most of points-to sets of receiver pointers, like shown below: 
 
+```go
+n.solve.prevPTS.Copy(&n.solve.pts.Sparse) //bz: copy then check
+if n.solve.pts.Len() >= ptsLimit { //bz: check ptsLimit here
+	skipIDs[x] = x
+}
+```
 
+This config requires 12m46.374579834s (Config 2) or 9m31.996348357s (Config 3). 
 
+Now we check the size of points-to set, then decided if we copy them or not, like shown below: 
 
+```go
+if n.solve.pts.Len() >= ptsLimit { //bz: check then copy
+	skipIDs[x] = x
+	n.solve.prevPTS.Clear()
+	continue
+}else {
+	n.solve.prevPTS.Copy(&n.solve.pts.Sparse)
+}
+```
 
-
-
-
-
+And its result is:
  
+Config 4. github.com/ethereum/go-ethereum/cmd/geth  (PTSLimit = 10, exclude fmt and error pkg, check then copy, use 45.261569861s)  
+(#total:  8755 , #compiled:  559 , #analyzed:  5553 , #analyzed$:  586 , #others:  105 )
 
 
+### Questions Now
+
+#### Imprecise Call Graph Due to Missing Call Edges
+Due to the algorithm of callback, we are not missing targets. However, the decreased runtime of pointer analysis from different configs 
+significantly decreases the number of call edges:
+
+*#call edge: 835652 (Config 1: no pts limit) 
+-> 504519 (Config 2: limit pts to 10) 
+-> 502706 (Config 3: exclude pkgs) 
+-> 112221 (Config 4: check then copy)*
+
+We are missing targets, but where do the missing targets come from? Are they over-approximate or real targets? Can we ignore them? 
+Ignore to which extend (which config is acceptable)?  
+
+###### Where do the missing targets come from?
+
+
+###### Are they over-approximate or real targets?
+
+
+###### Can we ignore them? Ignore to which extend (which config is acceptable)?   

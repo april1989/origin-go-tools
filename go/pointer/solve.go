@@ -161,13 +161,19 @@ func (a *analysis) solveLimit() {
 			fmt.Fprintf(a.log, "\t\tpts(n%d : %s) = %s + ... \n", id, n.typ, &delta)
 		}
 
-		if n.solve.pts.Len() >= ptsLimit { //bz: check ptsLimit here
+		//n.solve.prevPTS.Copy(&n.solve.pts.Sparse) //bz: copy then check
+		//if n.solve.pts.Len() >= ptsLimit {
+		//	skipIDs[x] = x
+		//}
+
+		if n.solve.pts.Len() >= ptsLimit { //bz: check then copy
 			skipIDs[x] = x
 			n.solve.prevPTS.Clear()
 			continue
 		}else {
 			n.solve.prevPTS.Copy(&n.solve.pts.Sparse)
 		}
+
 
 		// Apply all resolution rules attached to n.
 		a.solveConstraints(n, &delta)

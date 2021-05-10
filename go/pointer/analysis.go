@@ -408,14 +408,30 @@ func printConfig(config *Config) {
 		}
 	}
 	fmt.Println(" *********************************** ")
-	fmt.Println(" *** Import Libs ******************* ")
-	if len(config.imports) > 0 {
-		for _, pkg := range config.imports {
-			fmt.Print(pkg + ", ")
+	if len(config.imports) == 0 {
+		fmt.Println(" *** No Import Libs **************** ")
+	}else{
+		fmt.Println(" *** Import Libs ******************* ")
+		if len(config.imports) > 0 {
+			for _, pkg := range config.imports {
+				fmt.Print(pkg + ", ")
+			}
+			fmt.Println()
 		}
-		fmt.Println()
+		fmt.Println(" *********************************** ")
 	}
-	fmt.Println(" *********************************** ")
+	if len(config.Exclusion) == 0 {
+		fmt.Println(" *** No Excluded Pkgs **************** ")
+	}else{
+		fmt.Println(" *** Excluded Pkgs ******************* ")
+		if len(config.imports) > 0 {
+			for _, pkg := range config.Exclusion {
+				fmt.Print(pkg + ", ")
+			}
+			fmt.Println()
+		}
+		fmt.Println(" *********************************** ")
+	}
 }
 
 //bz: user api, to analyze multiple mains sequentially
