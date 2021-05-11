@@ -276,18 +276,91 @@ This kind of functions (e.g., ```NewRegistry```) are non-init function that are 
 - Init Reachable-Only Functions: non init function that are only reachable by init functions, they have shared contour
 - Dangling Init Functions: init function but cannot be reached by main; most such cases happen in xxx.init function, and no call edge created for this,
 since they are prepared for potential future calls, however, it may or may NOT be called, e.g., 
+
 ```go
+Generating constraints for cg3824:github.com/ethereum/go-ethereum/rlp.init@[0:shared contour; ], shared contour
+...
+; t43 = &encbufPool.New [#5]
+	create n21998 *sync.Pool for github.com/ethereum/go-ethereum/rlp.encbufPool
+	create n21999 struct{noCopy sync.noCopy; local unsafe.Pointer; localSize uintptr; victim unsafe.Pointer; victimSize uintptr; New func() interface{}} for global
+	create n22000 struct{} for global.noCopy
+	create n22001 unsafe.Pointer for global.local
+	create n22002 uintptr for global.localSize
+	create n22003 unsafe.Pointer for global.victim
+	create n22004 uintptr for global.victimSize
+	create n22005 func() interface{} for global.New
+	globalobj[github.com/ethereum/go-ethereum/rlp.encbufPool] = n21999
+	addr n21998 <- {&n21999}
+	val[encbufPool] = n21998  (*ssa.Global)
+	localobj[t43] = n22005
+	addr n21936 <- {&n22005}
 ; *t43 = init$2
-	create n367 func() interface{} for fmt.init$2
-	---- makeFunctionObject fmt.init$2
-	create n368 func() interface{} for func.cgnode
-	create n369 interface{} for func.results
+	create n22006 func() interface{} for github.com/ethereum/go-ethereum/rlp.init$2
+	---- makeFunctionObject github.com/ethereum/go-ethereum/rlp.init$2
+	create n22007 func() interface{} for func.cgnode
+	create n22008 interface{} for func.results
 	----
-	globalobj[fmt.init$2] = n368
-	addr n367 <- {&n368}
-	val[init$2] = n367  (*ssa.Function)
-	copy n366 <- n367
+	globalobj[github.com/ethereum/go-ethereum/rlp.init$2] = n22007
+	addr n22006 <- {&n22007}
+	val[init$2] = n22006  (*ssa.Function)
+	copy n22005 <- n22006
+...
 ```
+```*t43 = init$2``` stores a function pointer n22006 to the function type field of ```t43``` (i.e., n22005).
+The corresponding source code is:
+```go
+// encbufs are pooled. from https://github.com/ethereum/go-ethereum/blob/f34f749e8141aa96c25d9ef5d52a7e1235dcad0e/rlp/encode.go#L135
+var encbufPool = sync.Pool{
+	New: func() interface{} {
+		var bytes []byte
+		return &encbuf{bufvalue: reflect.ValueOf(&bytes).Elem()}
+	},
+}
+```
+and the related source code in sync pkg is:
+```go
+type Pool struct { //from https://github.com/golang/go/blob/2520e72d3bbfe6651cd6324077afdb4babb36b9a/src/sync/pool.go#L56
+	... 
+
+	// New optionally specifies a function to generate
+	// a value when Get would otherwise return nil.
+	// It may not be changed concurrently with calls to Get.
+	New func() interface{}
+}
+```
+This ```New``` function only called when we analyze ```(*sync.Pool).Get()```:
+```go
+func (p *Pool) Get() interface{} {
+	...
+	if x == nil && p.New != nil {
+		x = p.New()
+	}
+	return x
+}
+```
+However, we analyzed it multiple times (check my_log_ethereum-cmd-geth-lmt10). Its IR is: 
+```go
+Generating constraints for cg115072:(*sync.Pool).Get@[0:shared contour; ], shared contour
+...
+; Creating nodes for local values
+    create n199074 *func() interface{} for t24
+	val[t24] = n199074  (*ssa.FieldAddr)
+...
+; t24 = &p.New [#5] //this is getting the New function
+	localobj[p] = n0
+	localobj[t24] = n0
+	offsetAddr n199074 <- n115073.#6 //pts(n115073) = { a lot of obj }
+; t25 = *t24
+	load n199075 <- n199074[0]
+; t26 = t25() //this is to invoke function New()
+	localobj[t25] = n0
+	load n199076 <- n199075[1]
+	t25()@(*sync.Pool).Get to targets n199075 from cg115072:(*sync.Pool).Get@[0:shared contour; ]
+
+```
+
+Why?? offset is wrong? 
+
 
 - Dangling Init Reachable-Only Functions: non init function that are only reachable by dangling init functions
 

@@ -32,7 +32,6 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/_founds/sum.md" beforeDir="false" afterPath="$PROJECT_DIR$/_founds/sum.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/go/myutil/myutil.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/myutil/myutil.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go/pointer/analysis.go" beforeDir="false" afterPath="$PROJECT_DIR$/go/pointer/analysis.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -97,7 +96,7 @@
       <recent name="$PROJECT_DIR$/_logs/grpc_cb" />
     </key>
   </component>
-  <component name="RunManager" selected="Go Build.go build main in tidb specific 3">
+  <component name="RunManager" selected="Go Build.go build main.go">
     <configuration name="go build main in beego" type="GoApplicationRunConfiguration" factoryName="Go Application">
       <output_file path="$PROJECT_DIR$/_local/console.txt" is_save="true" />
       <module name="go_tools" />
@@ -161,7 +160,19 @@
       <module name="go_tools" />
       <working_directory value="$PROJECT_DIR$/../go-benchs/go-ethereum/cmd/geth" />
       <go_parameters value="-i" />
-      <parameters value="-doSeq -doCoverage -ptsLimit=70 " />
+      <parameters value="-doSeq -doCoverage -ptsLimit=10 -doLog" />
+      <kind value="FILE" />
+      <filePath value="$PROJECT_DIR$/main/main.go" />
+      <package value="github.tamu.edu/April1989/go_tools" />
+      <directory value="$PROJECT_DIR$" />
+      <method v="2" />
+    </configuration>
+    <configuration name="go build main in ethereum specific test 1 " type="GoApplicationRunConfiguration" factoryName="Go Application">
+      <output_file path="$PROJECT_DIR$/_local/console.txt" is_save="true" />
+      <module name="go_tools" />
+      <working_directory value="$PROJECT_DIR$/../go-benchs/go-ethereum/core" />
+      <go_parameters value="-i" />
+      <parameters value="-doSeq -doCoverage -doTests -doCallback" />
       <kind value="FILE" />
       <filePath value="$PROJECT_DIR$/main/main.go" />
       <package value="github.tamu.edu/April1989/go_tools" />
@@ -195,7 +206,7 @@
       <output_file path="$PROJECT_DIR$/_local/console.txt" is_save="true" />
       <module name="go_tools" />
       <working_directory value="$PROJECT_DIR$/../go-benchs/grpc-go/examples/features/multiplex/client" />
-      <parameters value="-doSeq -doCoverage -doCallback " />
+      <parameters value="-doSeq -doCoverage " />
       <kind value="FILE" />
       <filePath value="$PROJECT_DIR$/main/main.go" />
       <package value="github.tamu.edu/April1989/go_tools" />
@@ -397,7 +408,7 @@
       <output_file path="$PROJECT_DIR$/_local/console.txt" is_save="true" />
       <module name="go_tools" />
       <working_directory value="$PROJECT_DIR$" />
-      <parameters value="-doSeq ../pta_replaced/go2/race_checker/tests/GoBench/Istio/8144/main.go" />
+      <parameters value="-doSeq -doCoverage -doLog ../pta_replaced/go2/race_checker/tests/GoBench/Istio/8144/main.go" />
       <kind value="FILE" />
       <filePath value="$PROJECT_DIR$/main/main.go" />
       <package value="github.tamu.edu/April1989/go_tools" />
@@ -456,6 +467,7 @@
       <item itemvalue="Go Build.go build main in syncthing" />
       <item itemvalue="Go Build.go build main in ethereum" />
       <item itemvalue="Go Build.go build main in ethereum specific 1" />
+      <item itemvalue="Go Build.go build main in ethereum specific test 1 " />
       <item itemvalue="Go Build.go build main in prometheus" />
       <item itemvalue="Go Build.go build main in istio" />
       <item itemvalue="Go Build.go build main in tidb" />
@@ -518,11 +530,11 @@
     </state>
     <state x="506" y="398" key="#GOROOT/0.23.1440.877@0.23.1440.877" timestamp="1614201261896" />
     <state x="675" y="475" key="#GOROOT/0.23.1920.1057@0.23.1920.1057" timestamp="1618929571213" />
-    <state x="667" y="23" width="1227" height="1057" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1620741496699">
+    <state x="667" y="23" width="1227" height="1057" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1620749824514">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state x="184" y="23" width="1071" height="877" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.23.1440.877@0.23.1440.877" timestamp="1614203058621" />
-    <state x="667" y="23" width="1227" height="1057" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.23.1920.1057@0.23.1920.1057" timestamp="1620741496699" />
+    <state x="667" y="23" width="1227" height="1057" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.23.1920.1057@0.23.1920.1057" timestamp="1620749824514" />
     <state x="693" y="360" key="#com.intellij.fileTypes.FileTypeChooser" timestamp="1620662968497">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
@@ -557,26 +569,26 @@
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state x="737" y="322" key="FileChooserDialogImpl/0.23.1920.1057@0.23.1920.1057" timestamp="1618932606675" />
-    <state width="1878" height="354" key="GridCell.Tab.0.bottom" timestamp="1620741905678">
+    <state width="1878" height="388" key="GridCell.Tab.0.bottom" timestamp="1620750171948">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="160" key="GridCell.Tab.0.bottom/0.23.1440.877@0.23.1440.877" timestamp="1614203163002" />
-    <state width="1878" height="354" key="GridCell.Tab.0.bottom/0.23.1920.1057@0.23.1920.1057" timestamp="1620741905678" />
-    <state width="1878" height="354" key="GridCell.Tab.0.center" timestamp="1620741905677">
+    <state width="1878" height="388" key="GridCell.Tab.0.bottom/0.23.1920.1057@0.23.1920.1057" timestamp="1620750171948" />
+    <state width="1878" height="388" key="GridCell.Tab.0.center" timestamp="1620750171948">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="160" key="GridCell.Tab.0.center/0.23.1440.877@0.23.1440.877" timestamp="1614203163002" />
-    <state width="1878" height="354" key="GridCell.Tab.0.center/0.23.1920.1057@0.23.1920.1057" timestamp="1620741905677" />
-    <state width="1878" height="354" key="GridCell.Tab.0.left" timestamp="1620741905677">
+    <state width="1878" height="388" key="GridCell.Tab.0.center/0.23.1920.1057@0.23.1920.1057" timestamp="1620750171948" />
+    <state width="1878" height="388" key="GridCell.Tab.0.left" timestamp="1620750171947">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="160" key="GridCell.Tab.0.left/0.23.1440.877@0.23.1440.877" timestamp="1614203163001" />
-    <state width="1878" height="354" key="GridCell.Tab.0.left/0.23.1920.1057@0.23.1920.1057" timestamp="1620741905677" />
-    <state width="1878" height="354" key="GridCell.Tab.0.right" timestamp="1620741905678">
+    <state width="1878" height="388" key="GridCell.Tab.0.left/0.23.1920.1057@0.23.1920.1057" timestamp="1620750171947" />
+    <state width="1878" height="388" key="GridCell.Tab.0.right" timestamp="1620750171948">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="1398" height="160" key="GridCell.Tab.0.right/0.23.1440.877@0.23.1440.877" timestamp="1614203163002" />
-    <state width="1878" height="354" key="GridCell.Tab.0.right/0.23.1920.1057@0.23.1920.1057" timestamp="1620741905678" />
+    <state width="1878" height="388" key="GridCell.Tab.0.right/0.23.1920.1057@0.23.1920.1057" timestamp="1620750171948" />
     <state x="295" y="116" key="SettingsEditor" timestamp="1619201141346">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
@@ -606,11 +618,11 @@
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state width="600" height="428" key="javadoc.popup/0.23.1920.1057@0.23.1920.1057" timestamp="1619021777612" />
-    <state x="513" y="252" width="894" height="815" key="search.everywhere.popup" timestamp="1620740168222">
+    <state x="513" y="252" width="894" height="815" key="search.everywhere.popup" timestamp="1620750662727">
       <screen x="0" y="23" width="1920" height="1057" />
     </state>
     <state x="385" y="213" width="670" height="676" key="search.everywhere.popup/0.23.1440.877@0.23.1440.877" timestamp="1614202814179" />
-    <state x="513" y="252" width="894" height="815" key="search.everywhere.popup/0.23.1920.1057@0.23.1920.1057" timestamp="1620740168222" />
+    <state x="513" y="252" width="894" height="815" key="search.everywhere.popup/0.23.1920.1057@0.23.1920.1057" timestamp="1620750662727" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
