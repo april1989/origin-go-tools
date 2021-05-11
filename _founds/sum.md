@@ -291,7 +291,7 @@ since they are prepared for potential future calls, however, it may or may NOT b
 
 - Dangling Init Reachable-Only Functions: non init function that are only reachable by dangling init functions
 
-The init functions is necessary. However, Dangling Init Functions and Dangling Init Reachable-Only Functions are not necessary, especially Dangling Init Reachable-Only Functions. 
+The init functions is necessary (https://yourbasic.org/golang/package-init-function-main-execution-order/). However, Dangling Init Functions and Dangling Init Reachable-Only Functions are not necessary, especially Dangling Init Reachable-Only Functions. 
 From the data above, we can see that there is a large number of functions/cgns/constraints created for 
 Dangling Init Reachable-Only Functions (like the above example of function ```NewRegistry``). 
 
