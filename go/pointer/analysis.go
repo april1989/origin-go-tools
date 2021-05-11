@@ -463,9 +463,6 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 	}
 
 	for i, main := range config.Mains { //analyze mains
-		if i == 9 {
-			continue
-		}
 		//create a config
 		var _mains []*ssa.Package
 		_mains = append(_mains, main)

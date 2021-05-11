@@ -171,9 +171,9 @@ func initial(args []string, cfg *packages.Config) []*ssa.Package {
 		//scope = append(scope, "command-line-arguments")
 		//bz: the following are for debug purpose
 		//scope = append(scope, "google.golang.org/grpc")
-		//scope = append(scope, "github.com/pingcap/tidb")
+		scope = append(scope, "github.com/pingcap/tidb")
 		//scope = append(scope, "k8s.io/kubernetes")
-		scope = append(scope, "github.com/ethereum/go-ethereum")
+		//scope = append(scope, "github.com/ethereum/go-ethereum")
 	}
 
 	mains, tests, err := findMainPackages(pkgs)

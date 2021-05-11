@@ -186,9 +186,10 @@ Config 5. github.com/ethereum/go-ethereum/cmd/geth  (on-the-fly, PTSLimit = 10, 
 (#total:  8755 , #compiled:  559 , #analyzed:  4688 , #analyzed$:  584 , #others:  10102 )
 
 
-### Questions Now
 
-#### Imprecise Call Graph Due to Missing Call Edges
+## *Questions Now (both on-the-fly and callback)*
+
+### Imprecise Call Graph Due to Missing Call Edges 
 Due to the algorithm of callback, we are not missing targets. However, the decreased runtime of pointer analysis from different configs 
 significantly decreases the number of call edges:
 
@@ -197,16 +198,16 @@ significantly decreases the number of call edges:
 | #call nodes: 37642 | #call nodes: 40296 |
 | #call edge:  | #call edge: | 
 | 835652 (Config 1: exclude pkg, no pts limit)  | 143431 (Config 5)  |
-| -> 504519 (Config 2: limit pts to 10, copy then check -> ignore this conparison, similar to Config 3)  |  |
-| -> 502706 (Config 3: exclude pkgs, limit pts to 10, copy then check)  |  |
-| -> 112221 (Config 4: exclude pkgs, limit pts to 10, check then copy)* |  |
+| -> 504519 (Config 2: limit pts to 10, copy then check -> ignore this conparison, similar to Config 3)  | -> 205470 (Config 5: lmt = 20) |
+| -> 502706 (Config 3: exclude pkgs, limit pts to 10, copy then check)  | -> 240010 (Config 5: lmt = 30) |
+| -> 112221 (Config 4: exclude pkgs, limit pts to 10, check then copy)* | -> 269084 (Config 5: lmt = 40) |
 
-We are missing targets in callback (there is no baseline for on-the-fly, but must be missing targets).
+We are missing targets in callback; there is no baseline for on-the-fly, but must be missing targets.
 
 Below we mainly compare the results from Config 1, 3, 4, 5.
 
 
-###### What are missing targets?
+### What are missing targets?
 One type of missing target is from the init function of main entry, e.g., 
 ```go
 github.com/ethereum/go-ethereum/cmd/geth.init
@@ -260,14 +261,16 @@ func init():
   ...
 ```
 
-###### How many such function (non init function that are only reachable by init functions) exist?
+This kind of functions (e.g., ```NewRegistry```) are non-init function that are reachable by init functions.
 
-| | Config 1 | Config 3 | Config 4 | Config 5 |
-| --- | --- | --- | --- | --- | 
-| #Init Functions: | 131 | 131 | 131 | 616 |
-| #Init Reachable-Only Functions: | 41 | 41 | 41 | 163 |
-| #Dangling Init Functions: | 41 | 41 | 41 | 104 |
-| #Dangling Init Reachable-Only Functions: | 1546 | 1529 | 1477 | 7100 |
+### How many such function (non-init function that are only reachable by init functions) exist?
+
+| | Config 1 | Config 3 | Config 4 | Config 5 (lmt10) | Config 5 (lmt20) | Config 5 (lmt30) | Config 5 (lmt40) |
+| --- | --- | --- | --- | --- |  --- | --- | --- |
+| #Init Functions: | 131 | 131 | 131 | 616 | 645 | 690 | 699 |
+| #Init Reachable-Only Functions: | 41 | 41 | 41 | 163 | 166 | 179 | 179 |
+| #Dangling Init Functions: | 41 | 41 | 41 | 104 | 77 | 32 | 23 |
+| #Dangling Init Reachable-Only Functions: | 1546 | 1529 | 1477 | 7100 | 7659 | 4322 | 4374 |
 
 - Init Functions: functions with name format: xxx/xxx.xx.init
 - Init Reachable-Only Functions: non init function that are only reachable by init functions, they have shared contour
@@ -288,30 +291,64 @@ since they are prepared for potential future calls, however, it may or may NOT b
 
 - Dangling Init Reachable-Only Functions: non init function that are only reachable by dangling init functions
 
-The init functions is necessary. However, Dangling Init Functions and Dangling Init Reachable-Only Functions are not
-necessary, especially Dangling Init Reachable-Only Functions. 
+The init functions is necessary. However, Dangling Init Functions and Dangling Init Reachable-Only Functions are not necessary, especially Dangling Init Reachable-Only Functions. 
 From the data above, we can see that there is a large number of functions/cgns/constraints created for 
 Dangling Init Reachable-Only Functions (like the above example of function ```NewRegistry``). 
 
+It is obvious callback involves much fewer of all the above functions than on-the-fly. 
+Besides, on-the-fly, #Dangling Init Functions is decreasing as pts limit increases, since the analysis
+can reach their receivers/callers while the pts size increases. So does #Dangling Init Reachable-Only Functions.
+
 TOOD: ignore Dangling Init Reachable-Only Functions? 
 
-###### Do we miss origins? 
-Config 1 and 3 have the same origin (#Origins = 102), however, Config 4 only has 20 origins
-and Config 5 has 184.
-This is scary ... 
+### Do we miss origins? 
 
-###### How about the reachable functions? 
+| | Config 1 | Config 3 | Config 4 | Config 5 (lmt10) | Config 5 (lmt20) | Config 5 (lmt30) | Config 5 (lmt40) |
+| --- | --- | --- | --- | --- |  --- | --- | --- |
+| #Origins: | 102 | 102 | 20 | 184 | 184 | 192 | 192 |
 
-| | Config 1 | Config 3 | Config 4 | Config 5 |
-| --- | --- | --- | --- | --- | 
-| #Reach Functions:  | 476 | 472 | 472 |  12715 | 
-| #Reach App Functions:  | 466 | 466 | 466 |  4577 |
+The number of origins are changing all the time ...
 
-###### Where do the missing targets come from?
+### How about the reachable functions? 
+
+| | Config 1 | Config 3 | Config 4 | Config 5 (lmt10) | Config 5 (lmt20) | Config 5 (lmt30) | Config 5 (lmt40) | Config 5 (lmt50) | Config 5 (lmt60) | Config 5 (lmt70) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | 
+| #Reach Functions:  | 476 | 472 | 472 | 12715 | 13311 | 15036 | 15213 | 15379 | 15547 | 15627 |
+| #Reach App Functions:  | 466 | 466 | 466 | 4577 | 4692 | 5011 | 5031 | 5039 | 5059 | 5068 |
+
+For callback, we create a set of fn/cgn/constraints for a invoke constraint (but do not link their parameter/return value) whenever we see an object that has the same/super type of its receiver pointer (iff the target fn is from the app). So, we have a lot of app functions in call graph (this is also why we have a high coverage, higher than on-the-fly). However, from the data, most of them cannot be reached by main. 
+
+TODO: why? 
+
+### Are the missing targets over-approximate or real targets?
 
 
 
-###### Are they over-approximate or real targets?
+### Can we ignore them? Ignore to which extend (which config is acceptable)?   
 
 
-###### Can we ignore them? Ignore to which extend (which config is acceptable)?   
+
+
+
+
+### Which Config to Use? on-the-fly or callback? 
+Some main entries cannot terminate when using on-the-fly (e.g., github.com/pingcap/tidb/tidb-server, as shown below, check _local/console-tidb.txt), some cannot when using callback (e.g., *fill this place later*), where both configs with pts limit to 10. 
+
+```go
+package github.com/pingcap/tidb/tidb-server  ... 
+#constraints (before solve()):  3772831
+#cgnodes (before solve()):  20007
+#nodes (before solve()):  3871893
+ *** PTS Limit: 10 *** 
+```
+
+The main entry github.com/pingcap/tidb/cmd/explaintest has similar statistics as above, however, it can finish in 7.705830813s.
+
+```go
+package github.com/pingcap/tidb/cmd/explaintest  ... 
+#constraints (before solve()):  3271015
+#cgnodes (before solve()):  10071
+#nodes (before solve()):  3370870
+ *** PTS Limit: 10 *** 
+ ... 
+```
