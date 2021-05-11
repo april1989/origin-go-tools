@@ -531,9 +531,7 @@ func (r *ResultWCtx) CountMyReachUnreachFunctions(doDetail bool) (map[*ssa.Funct
 	initIDs := make(map[int]int) //reachable, see below
 	//fn
 	reaches := make(map[*ssa.Function]*ssa.Function)
-	//used when running on-the-fly algo
-	implicits := make(map[*ssa.Function]*ssa.Function)
-	//used when running callback + preSolve
+	reachApps := make(map[*ssa.Function]*ssa.Function)         //reachable app functions
 	unreaches := make(map[*ssa.Function]*ssa.Function)
 	inits := make(map[*ssa.Function]*ssa.Function)             //functions with name format: xxx/xxx.xx.init
 	var initEdges []*Edge                                      //out going cg edge from inits
@@ -592,34 +590,26 @@ func (r *ResultWCtx) CountMyReachUnreachFunctions(doDetail bool) (map[*ssa.Funct
 			reaches[node.GetFunc()] = node.GetFunc()
 			continue
 		} else {
-			if r.a.config.DoCallback {
-				//unreachable is possible when turning on callback + preSolve
-				if _, ok2 := unreaches[node.GetFunc()]; ok2 {
-					continue //already stored
-				}
-				unreaches[node.GetFunc()] = node.GetFunc()
-			} else {
-				//collect implicit reachable fns -> this code is valid only if running on-the-fly algo
-				//these functions in implicits are not from direct function call,
-				//e.g.
-				//; *t43 = init$2
-				//	create n367 func() interface{} for fmt.init$2
-				//	---- makeFunctionObject fmt.init$2
-				//	create n368 func() interface{} for func.cgnode
-				//	create n369 interface{} for func.results
-				//	----
-				//	globalobj[fmt.init$2] = n368
-				//	addr n367 <- {&n368}
-				//	val[init$2] = n367  (*ssa.Function)
-				//	copy n366 <- n367
-				//===>>>> most such cases happen in xxx.init function, and no call edge created for this,
-				//  since they are prepared for potential future calls, however, it may or may NOT be called ...
-				//  SO, if they are not reachable from cg, they are not called and should count as unreached???
-				if _, ok2 := implicits[node.GetFunc()]; ok2 {
-					continue //already stored
-				}
-				implicits[node.GetFunc()] = node.GetFunc()
+			//collect implicit reachable fns
+			//these functions in implicits are not from direct function call,
+			//e.g.
+			//; *t43 = init$2
+			//	create n367 func() interface{} for fmt.init$2
+			//	---- makeFunctionObject fmt.init$2
+			//	create n368 func() interface{} for func.cgnode
+			//	create n369 interface{} for func.results
+			//	----
+			//	globalobj[fmt.init$2] = n368
+			//	addr n367 <- {&n368}
+			//	val[init$2] = n367  (*ssa.Function)
+			//	copy n366 <- n367
+			//===>>>> most such cases happen in xxx.init function, and no call edge created for this,
+			//  since they are prepared for potential future calls, however, it may or may NOT be called ...
+			//  SO, if they are not reachable from cg, they are not called and should count as unreached???
+			if _, ok2 := unreaches[node.GetFunc()]; ok2 {
+				continue //already stored
 			}
+			unreaches[node.GetFunc()] = node.GetFunc()
 		}
 	}
 
@@ -728,16 +718,19 @@ func (r *ResultWCtx) CountMyReachUnreachFunctions(doDetail bool) (map[*ssa.Funct
 		}
 	}
 
+	//how many of reachable are from app? from lib?
+	for _, f := range reaches {
+		if r.a.withinScope(f.String()) {
+			reachApps[f] = f
+		}
+	}
+
 	//print out all numbers
 	fmt.Println("#Reach Origins: ", len(reachOrgs)+1) //main
 	fmt.Println("#Unreach CG Nodes: ", len(cg.Nodes)-(len(reachCGs)))
 	fmt.Println("#Reach CG Nodes: ", len(reachCGs))
-	if r.a.config.DoCallback {
-		fmt.Println("#Unreach Functions: ", len(unreaches))
-	} else {
-		fmt.Println("#Unreach Functions: ", len(implicits), "(#Implicit: ", len(implicits), ")") //+len(preFuncs),
-	}
-	fmt.Println("#Reach Functions: ", len(reaches))
+	fmt.Println("#Unreach Functions: ", len(unreaches))
+	fmt.Println("#Reach Functions: ", len(reaches), " (#Reach App Functions: ", len(reachApps),")")
 	//fmt.Println("\n#Unreach Nodes from Pre-Gen Nodes: ", len(prenodes))
 	//fmt.Println("#Unreach Functions from Pre-Gen Nodes: ", len(preFuncs))
 	//fmt.Println("#(Pre-Gen are created for reflections)")
@@ -771,17 +764,10 @@ func (r *ResultWCtx) CountMyReachUnreachFunctions(doDetail bool) (map[*ssa.Funct
 		for _, f := range unreaches {
 			fmt.Println(f)
 		}
-
-		if !r.a.config.DoCallback {
-			fmt.Println("\n\nImplicit Functions: ")
-			for _, unreach := range implicits {
-				fmt.Println(unreach)
-			}
-		}
 	}
 
 	//for further use
-	return reaches, implicits, reachCGs, prenodes, preFuncs
+	return reaches, unreaches, reachCGs, prenodes, preFuncs
 }
 
 //bz: user API: for debug to dump all result out

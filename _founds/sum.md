@@ -285,6 +285,7 @@ since they are prepared for potential future calls, however, it may or may NOT b
 	val[init$2] = n367  (*ssa.Function)
 	copy n366 <- n367
 ```
+
 - Dangling Init Reachable-Only Functions: non init function that are only reachable by dangling init functions
 
 The init functions is necessary. However, Dangling Init Functions and Dangling Init Reachable-Only Functions are not
@@ -299,7 +300,15 @@ Config 1 and 3 have the same origin (#Origins = 102), however, Config 4 only has
 and Config 5 has 184.
 This is scary ... 
 
+###### How about the reachable functions? 
+
+| | Config 1 | Config 3 | Config 4 | Config 5 |
+| --- | --- | --- | --- | --- | 
+| #Reach Functions:  | 476 | 472 | 472 |  12715 | 
+| #Reach App Functions:  | 466 | 466 | 466 |  4577 |
+
 ###### Where do the missing targets come from?
+
 
 
 ###### Are they over-approximate or real targets?

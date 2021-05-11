@@ -424,7 +424,7 @@ func printConfig(config *Config) {
 		fmt.Println(" *** No Excluded Pkgs **************** ")
 	}else{
 		fmt.Println(" *** Excluded Pkgs ******************* ")
-		if len(config.imports) > 0 {
+		if len(config.Exclusion) > 0 {
 			for _, pkg := range config.Exclusion {
 				fmt.Print(pkg + ", ")
 			}
@@ -463,6 +463,9 @@ func AnalyzeMultiMains(config *Config) (results map[*ssa.Package]*Result, err er
 	}
 
 	for i, main := range config.Mains { //analyze mains
+		if i == 9 {
+			continue
+		}
 		//create a config
 		var _mains []*ssa.Package
 		_mains = append(_mains, main)
