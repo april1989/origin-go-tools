@@ -252,6 +252,14 @@ func (a *analysis) makeFunctionObject(fn *ssa.Function, callersite *callsite) no
 	// obj is the function object (identity, params, results).
 	obj := a.nextNode()
 	cgn := a.makeCGNode(fn, obj, callersite)
+
+	if !a.isMain && a.isGoTestForm(fn.Name()) {
+		//bz: we create a new context for this test -> in order to separate call edges
+		//TODO: use itself as target? this pattern only works for grpc, not sure others
+		special := &callsite{targets: obj}
+		cgn.callersite = a.createSingleCallSite(special)
+	}
+
 	sig := fn.Signature
 	a.addOneNode(sig, "func.cgnode", nil) // (scalar with Signature type)
 	if recv := sig.Recv(); recv != nil {
@@ -2778,6 +2786,9 @@ func (a *analysis) genRootCalls() *cgnode {
 
 //bz: whether the function name follows the go test form: https://golang.org/pkg/testing/
 func (a *analysis) isGoTestForm(name string) bool {
+	if strings.Contains(name, "$") {
+		return false //closure
+	}
 	if strings.HasPrefix(name, "Test") || strings.HasPrefix(name, "Benchmark") || strings.HasPrefix(name, "Example") {
 		return true
 	}

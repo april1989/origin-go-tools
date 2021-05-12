@@ -168,9 +168,9 @@ func initial(args []string, cfg *packages.Config) []*ssa.Package {
 		parts := strings.Split(mod, " ")
 		scope = append(scope, parts[1])
 	}else {  //else: default input .go file with default scope
-		scope = append(scope, "command-line-arguments")
+		//scope = append(scope, "command-line-arguments")
 		//bz: the following are for debug purpose
-		//scope = append(scope, "google.golang.org/grpc")
+		scope = append(scope, "google.golang.org/grpc")
 		//scope = append(scope, "github.com/pingcap/tidb")
 		//scope = append(scope, "k8s.io/kubernetes")
 		//scope = append(scope, "github.com/ethereum/go-ethereum")
@@ -289,8 +289,8 @@ func DoSeq(mains []*ssa.Package) {
 
 		////bz: debug
 		//result.Statistics()
-		//result.DumpCG()
-		result.CountMyReachUnreachFunctions(true)
+		result.DumpCG()
+		//result.CountMyReachUnreachFunctions(true)
 	}
 
 	//total statistics
