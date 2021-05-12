@@ -289,7 +289,7 @@ func DoSeq(mains []*ssa.Package) {
 
 		////bz: debug
 		//result.Statistics()
-		result.DumpCG()
+		//result.DumpCG()
 		//result.CountMyReachUnreachFunctions(true)
 	}
 
