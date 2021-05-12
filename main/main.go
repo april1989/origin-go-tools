@@ -9,15 +9,10 @@ import (
 
 /*
 non-stop mains:
-/tidb/cmd/explaintest
-/tidb/cmd/benchdb
 /tidb/tidb-server
-
-/go-ethereum/cmd/geth
 
 cockroach: 'go mod vendor' problem -> remove dir /cockroach/vendor
 hugo: "package io/fs is not in GOROOT" on Go 1.15 -> need go 1.16
-
  */
 
 func main() {

@@ -1319,46 +1319,14 @@ func (r *Result) PointsToByGoWithLoopID(v ssa.Value, goInstr *ssa.Go, loopID int
 }
 
 //bz: user API: return PointerWCtx for a ssa.Value used under context of *ssa.GO, and an offset
-// return pts(v + offset), v is base, if base == nil assume its field with offset is also nil
+//   return pts(v + offset), v is base, if base == nil assume its field with offset is also nil
 func (r *Result) PointsToByGoWithLoopIDOffset(base ssa.Value, f int, goInstr *ssa.Go, loopID int) PointerWCtx {
-	ptss := r.a.result.pointsToFreeVar(base)
-	if ptss != nil { // global var
-		if len(ptss) == 0 { //no record for this v
-			return PointerWCtx{a: nil}
-		} else if len(ptss) == 1 {
-			return r.getPointerWithOffset(base, ptss[0], f)
-		} else { // > 1
-			fmt.Println(">1 pts for", base, ": len =", len(ptss))
-			return r.getPointerWithOffset(base, ptss[0], f)
-		}
-	}
-
-	//others
-	ptss = r.a.result.pointsToRegular(base)
-	if ptss == nil { //no record for this v
+	basePtr := r.PointsToByGoWithLoopID(base, goInstr, loopID) //bz: base ptr
+	if basePtr.a == nil {
 		return PointerWCtx{a: nil}
 	}
 
-	for _, pts := range ptss {
-		if pts.cgn.fn == base.Parent() { //many same v (ssa.Value) from different functions, separate them
-			if base.Parent().IsFromApp {
-				if pts.MatchMyContextWithLoopID(goInstr, loopID) {
-					return r.getPointerWithOffset(base, pts, f)
-				}
-			} else {
-				//discard the goInstr input, we use shared contour in real pta, hence only one pts is available
-				return r.getPointerWithOffset(base, pts, f)
-			}
-		}
-	}
-	if r.a.result.DEBUG {
-		if goInstr == nil {
-			fmt.Println(" **** *Result: Pointer Analysis cannot match this ssa.Value: " + base.String() + " with this *ssa.GO: main **** ") //panic
-		} else {
-			fmt.Println(" **** *Result: Pointer Analysis cannot match this ssa.Value: " + base.String() + " with this *ssa.GO: " + goInstr.String() + " **** ") //panic
-		}
-	}
-	return PointerWCtx{a: nil}
+	return r.getPointerWithOffset(base, basePtr, f)
 }
 
 //bz: compute offset nodeid, similar to a.genOffsetAddr()
