@@ -1318,6 +1318,59 @@ func (r *Result) PointsToByGoWithLoopID(v ssa.Value, goInstr *ssa.Go, loopID int
 	return PointerWCtx{a: nil}
 }
 
+//bz: user API: return PointerWCtx for a ssa.Value used under context of *ssa.GO, and an offset
+// return pts(v + offset), v is base, if base == nil assume its field with offset is also nil
+func (r *Result) PointsToByGoWithLoopIDOffset(v ssa.Value, offset int, goInstr *ssa.Go, loopID int) PointerWCtx {
+	ptss := r.a.result.pointsToFreeVar(v)
+	if ptss != nil { // global var
+		if len(ptss) == 0 { //no record for this v
+			return PointerWCtx{a: nil}
+		} else if len(ptss) == 1 {
+			return r.getPointerWithOffset(ptss[0], offset)
+		} else { // > 1
+			fmt.Println(">1 pts for", v, ": len =", len(ptss))
+			return r.getPointerWithOffset(ptss[0], offset)
+		}
+	}
+
+	//others
+	ptss = r.a.result.pointsToRegular(v)
+	if ptss == nil { //no record for this v
+		return PointerWCtx{a: nil}
+	}
+
+	for _, pts := range ptss {
+		if pts.cgn.fn == v.Parent() { //many same v (ssa.Value) from different functions, separate them
+			if v.Parent().IsFromApp {
+				if pts.MatchMyContextWithLoopID(goInstr, loopID) {
+					return r.getPointerWithOffset(pts, offset)
+				}
+			} else {
+				//discard the goInstr input, we use shared contour in real pta, hence only one pts is available
+				return r.getPointerWithOffset(pts, offset)
+			}
+		}
+	}
+	if r.a.result.DEBUG {
+		if goInstr == nil {
+			fmt.Println(" **** *Result: Pointer Analysis cannot match this ssa.Value: " + v.String() + " with this *ssa.GO: main **** ") //panic
+		} else {
+			fmt.Println(" **** *Result: Pointer Analysis cannot match this ssa.Value: " + v.String() + " with this *ssa.GO: " + goInstr.String() + " **** ") //panic
+		}
+	}
+	return PointerWCtx{a: nil}
+}
+
+//bz: compute the nodeid of base + offset, and return its pts
+func (r *Result) getPointerWithOffset(base PointerWCtx, offset int) PointerWCtx {
+	fieldID := base.n + nodeid(offset)
+	f := r.a.nodes[fieldID]
+	if f.obj == nil {
+		return PointerWCtx{a: nil}
+	}
+	return PointerWCtx{a: r.a, n: fieldID, cgn: f.obj.cgn}
+}
+
 //bz: user API: tmp solution for missing invoke callee target if func wrapped in parameters
 func (r *Result) GetFreeVarFunc(caller *ssa.Function, call *ssa.Call, goInstr *ssa.Go) *ssa.Function {
 	return r.a.result.getFreeVarFunc(caller, call, goInstr)
