@@ -185,8 +185,9 @@ type Warning struct {
 //
 // bz: updated
 type Result struct {
-	a         *analysis        // bz: for debug
-	CallGraph *callgraph.Graph // discovered call graph
+	a           *analysis
+	testMainCtx []*callsite      //bz: used when this is for test (a.isMain == false), in order to confirm the correct ctx as main
+	CallGraph   *callgraph.Graph // discovered call graph
 	////bz: default
 	//Queries         map[ssa.Value]Pointer // pts(v) for each v in Config.Queries.
 	//IndirectQueries map[ssa.Value]Pointer // pts(*v) for each v in Config.IndirectQueries.
@@ -447,7 +448,7 @@ func (r *ResultWCtx) pointsToByGo(v ssa.Value, goInstr *ssa.Go) PointerWCtx {
 	}
 	ptss = r.pointsToRegular(v) //return type: []PointerWCtx
 	for _, pts := range ptss {
-		if pts.MatchMyContext(goInstr) {
+		if pts.MatchMyContext(goInstr, nil) {
 			return pts
 		}
 	}
@@ -1229,6 +1230,19 @@ func (r *Result) GetTests() map[*ssa.Function]*cgnode {
 	return result
 }
 
+//bz: user API: when analyzing test only, tell which test is used as main in order to confirm the correct main context
+func (r *Result) AnalyzeTest(test *ssa.Function) {
+	if r.a.isMain {
+		panic("This result is for analyzing a main entry, not a test entry: " + test.String())
+	}
+	cg := r.a.result.CallGraph
+	cgns := cg.Fn2CGNode[test]
+	if len(cgns) > 1 {
+		fmt.Println("cgn(test) > 1: something is wrong ... ")
+	}
+	r.testMainCtx = cgns[0].callersite
+}
+
 //bz: user API: return PointerWCtx for a ssa.Value used under context of *ssa.GO,
 //input: ssa.Value, *ssa.GO
 //output: PointerWCtx; this can be empty if we cannot match any v with its goInstr
@@ -1254,7 +1268,7 @@ func (r *Result) PointsToByGo(v ssa.Value, goInstr *ssa.Go) PointerWCtx {
 	for _, pts := range ptss {
 		if pts.cgn.fn == v.Parent() { //many same v (ssa.Value) from different functions, separate them
 			if v.Parent().IsFromApp {
-				if pts.MatchMyContext(goInstr) {
+				if pts.MatchMyContext(goInstr, r.testMainCtx) {
 					return pts
 				}
 			} else {
@@ -1299,7 +1313,7 @@ func (r *Result) PointsToByGoWithLoopID(v ssa.Value, goInstr *ssa.Go, loopID int
 	for _, pts := range ptss {
 		if pts.cgn.fn == v.Parent() { //many same v (ssa.Value) from different functions, separate them
 			if v.Parent().IsFromApp {
-				if pts.MatchMyContextWithLoopID(goInstr, loopID) {
+				if pts.MatchMyContextWithLoopID(goInstr, loopID, r.testMainCtx) {
 					return pts
 				}
 			} else {
@@ -1551,16 +1565,22 @@ type PointerWCtx struct {
 
 //bz: whether goID is match with the contexts in this pointer
 //TODO: this does not match parent context if callsite.length > 1 (k > 1)
-func (p PointerWCtx) MatchMyContext(go_instr *ssa.Go) bool {
+func (p PointerWCtx) MatchMyContext(go_instr *ssa.Go, testMainCtx []*callsite) bool {
 	if p.cgn == nil || p.cgn.callersite == nil || p.cgn.callersite[0] == nil {
 		if go_instr == nil { //shared contour ~> when using test as entry
 			return true
 		}
 		return false
 	}
-	if go_instr == nil { //when using main as entry
-		if p.cgn.callersite[0].targets == p.a.result.main.callersite[0].targets {
-			return true
+	if go_instr == nil { //when wants main context
+		if p.a.isMain { //when using main as entry
+			if p.cgn.callersite[0].targets == p.a.result.main.callersite[0].targets {
+				return true
+			}
+		}else{ //when using test as entry
+			if p.cgn.callersite[0].targets == testMainCtx[0].targets {
+				return true
+			}
 		}
 		return false
 	}
@@ -1588,16 +1608,22 @@ func (p PointerWCtx) MatchMyContext(go_instr *ssa.Go) bool {
 //bz: whether goID is match with the contexts in this pointer + loopID
 //Update: go_instr can be nil for main go routine
 //TODO: this does not match parent context if callsite.length > 1 (k > 1)
-func (p PointerWCtx) MatchMyContextWithLoopID(go_instr *ssa.Go, loopID int) bool {
+func (p PointerWCtx) MatchMyContextWithLoopID(go_instr *ssa.Go, loopID int, testMainCtx []*callsite) bool {
 	if p.cgn == nil || p.cgn.callersite == nil || p.cgn.callersite[0] == nil {
 		if go_instr == nil && loopID == 0 { //shared contour ~> when using test as entry
 			return true
 		}
 		return false
 	}
-	if go_instr == nil { //when using main as entry
-		if p.cgn.callersite[0].targets == p.a.result.main.callersite[0].targets {
-			return true
+	if go_instr == nil { //when wants main context
+		if p.a.isMain { //when using main as entry
+			if p.cgn.callersite[0].targets == p.a.result.main.callersite[0].targets {
+				return true
+			}
+		}else{ //when using test as entry
+			if p.cgn.callersite[0].targets == testMainCtx[0].targets {
+				return true
+			}
 		}
 		return false
 	}
