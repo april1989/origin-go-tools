@@ -342,7 +342,7 @@ func (r *ResultWCtx) getInvokeFunc(call *ssa.Call, pointer PointerWCtx, goInstr 
 
 //bz: user API: tmp solution for missing invoke callee target if func wrapped in parameters
 //alloc should be a freevar
-func (r *ResultWCtx) getFreeVarFunc(caller *ssa.Function, call *ssa.Call, goInstr *ssa.Go) *ssa.Function {
+func (r *ResultWCtx) getFreeVarFunc(caller *ssa.Function, call *ssa.Call, goInstr *ssa.Go) *cgnode {
 	cg := r.a.result.CallGraph
 	nodes := cg.GetNodesForFn(caller)
 	if nodes == nil {
@@ -359,7 +359,7 @@ func (r *ResultWCtx) getFreeVarFunc(caller *ssa.Function, call *ssa.Call, goInst
 	for _, node := range nodes { //caller
 		for _, out := range node.Out { //outgoing call edge
 			if out.Site == call { //the same call site
-				return out.Callee.cgn.fn
+				return out.Callee.cgn
 			}
 		}
 	}
@@ -532,7 +532,7 @@ func (r *ResultWCtx) CountMyReachUnreachFunctions(doDetail bool) (map[*ssa.Funct
 	initIDs := make(map[int]int) //reachable, see below
 	//fn
 	reaches := make(map[*ssa.Function]*ssa.Function)
-	reachApps := make(map[*ssa.Function]*ssa.Function)         //reachable app functions
+	reachApps := make(map[*ssa.Function]*ssa.Function) //reachable app functions
 	unreaches := make(map[*ssa.Function]*ssa.Function)
 	inits := make(map[*ssa.Function]*ssa.Function)             //functions with name format: xxx/xxx.xx.init
 	var initEdges []*Edge                                      //out going cg edge from inits
@@ -731,7 +731,7 @@ func (r *ResultWCtx) CountMyReachUnreachFunctions(doDetail bool) (map[*ssa.Funct
 	fmt.Println("#Unreach CG Nodes: ", len(cg.Nodes)-(len(reachCGs)))
 	fmt.Println("#Reach CG Nodes: ", len(reachCGs))
 	fmt.Println("#Unreach Functions: ", len(unreaches))
-	fmt.Println("#Reach Functions: ", len(reaches), " (#Reach App Functions: ", len(reachApps),")")
+	fmt.Println("#Reach Functions: ", len(reaches), " (#Reach App Functions: ", len(reachApps), ")")
 	//fmt.Println("\n#Unreach Nodes from Pre-Gen Nodes: ", len(prenodes))
 	//fmt.Println("#Unreach Functions from Pre-Gen Nodes: ", len(preFuncs))
 	//fmt.Println("#(Pre-Gen are created for reflections)")
@@ -1351,17 +1351,88 @@ func (r *Result) getPointerWithOffset(baseV ssa.Value, base PointerWCtx, f int) 
 	var fID nodeid
 	if offset == 0 {
 		fID = baseID
-	}else{
+	} else {
 		fID = baseID + nodeid(offset) + 1
 	}
 	return PointerWCtx{a: r.a, n: fID, cgn: cgn}
 }
 
-
 //bz: user API: tmp solution for missing invoke callee target if func wrapped in parameters
 func (r *Result) GetFreeVarFunc(caller *ssa.Function, call *ssa.Call, goInstr *ssa.Go) *ssa.Function {
-	return r.a.result.getFreeVarFunc(caller, call, goInstr)
+	cgn := r.a.result.getFreeVarFunc(caller, call, goInstr)
+	if cgn == nil {
+		return nil
+	}
+	return cgn.fn
 }
+
+//bz: filter labels when returning many targets
+func (r *Result) FilterTargets(labels []*Label, ptr PointerWCtx, location ssa.Value, goInstr *ssa.Go, theIns ssa.Instruction) []*Label {
+	var result []*Label
+	if theIns.Parent() != nil && theIns.Parent().Name() == "withRetry" {
+		fmt.Println()
+	}
+
+	for _, label := range labels {
+		add := false
+		switch label.Value().(type) {
+		case *ssa.Function:
+			if !r.a.isMain { //match test context
+				cgn := label.obj.cgn
+				add = r.filterByContext(cgn)
+			}
+		case *ssa.MakeInterface:
+			switch theIns.(type) {
+			case *ssa.Call:
+				method := theIns.(*ssa.Call).Call.Method
+				a := r.a
+				p := ptr.PointsTo().DynamicTypes().Keys()[0]
+				if a.prog.MethodSets.MethodSet(p).Lookup(method.Pkg(), method.Name()) == nil { // ignore abstract methods
+					break
+				}
+				fn := a.prog.LookupMethod(p, method.Pkg(), method.Name())
+				cgns := a.result.CallGraph.Fn2CGNode[fn]
+				for _, cgn := range cgns {
+					if r.filterByContext(cgn) {
+						add = true
+						break
+					}
+				}
+
+			case *ssa.Go:
+				add = true
+			}
+		case *ssa.Alloc:
+			if call, ok := theIns.(*ssa.Call); ok {
+				cgn := r.a.result.getFreeVarFunc(theIns.Parent(), call, goInstr)
+				if cgn == nil {
+					continue
+				}else{
+					add = r.filterByContext(cgn)
+				}
+			}
+		default:
+			continue
+		}
+
+		if add {
+			result = append(result, label)
+		}
+	}
+
+	return result
+}
+
+//bz: used by FilterTargets, true -> add this to result
+func (r *Result) filterByContext(cgn *cgnode) bool {
+	if cgn.IsSharedContour() && !r.a.withinScope(cgn.fn.String()) { // lib fn call
+		return  true
+	}else if r.testMainCtx[0].equal(cgn.callersite[0]) { //same ctx as test
+		return true
+	}
+	return false
+}
+
 
 //bz: do comparison with default
 func (r *Result) DumpToCompare(cgfile *os.File, queryfile *os.File) {
@@ -1577,7 +1648,7 @@ func (p PointerWCtx) MatchMyContext(go_instr *ssa.Go, testMainCtx []*callsite) b
 			if p.cgn.callersite[0].targets == p.a.result.main.callersite[0].targets {
 				return true
 			}
-		}else{ //when using test as entry
+		} else { //when using test as entry
 			if p.cgn.callersite[0].targets == testMainCtx[0].targets {
 				return true
 			}
@@ -1620,7 +1691,7 @@ func (p PointerWCtx) MatchMyContextWithLoopID(go_instr *ssa.Go, loopID int, test
 			if p.cgn.callersite[0].targets == p.a.result.main.callersite[0].targets {
 				return true
 			}
-		}else{ //when using test as entry
+		} else { //when using test as entry
 			if p.cgn.callersite[0].targets == testMainCtx[0].targets {
 				return true
 			}

@@ -1033,7 +1033,7 @@ func ext۰reflect۰ChanOf(a *analysis, cgn *cgnode) {
 	// and the channel argument is a constant (as is usual),
 	// only generate the requested direction.
 	var dir reflect.ChanDir // unknown
-	if site := cgn.callersite; site != nil && site[0] != nil{
+	if site := cgn.callersite; site != nil && site[0] != nil && site[0].instr != nil {
 		if c, ok := site[0].instr.Common().Args[0].(*ssa.Const); ok { //bz: adjust to kcfa
 			v, _ := constant.Int64Val(c.Value)
 			if 0 <= v && v <= int64(reflect.BothDir) {
@@ -1342,7 +1342,7 @@ func ext۰reflect۰NewAt(a *analysis, cgn *cgnode) {
 	ext۰reflect۰New(a, cgn)
 
 	// TODO(adonovan): also report dynamic calls to unsound intrinsics.
-	if site := cgn.callersite; site != nil && site[0] != nil{
+	if site := cgn.callersite; site != nil && site[0] != nil && site[0].instr != nil{
 		a.warnf(site[0].pos(), "unsound: %s contains a reflect.NewAt() call", site[0].instr.Parent()) //bz: adjust to kcfa
 	}
 }
@@ -1677,7 +1677,7 @@ func ext۰reflect۰rtype۰FieldByName(a *analysis, cgn *cgnode) {
 	// and the argument is a string constant,
 	// return only that field.
 	var name string
-	if site := cgn.callersite; site != nil && site[0] != nil {
+	if site := cgn.callersite; site != nil && site[0] != nil && site[0].instr != nil {
 		if c, ok := site[0].instr.Common().Args[0].(*ssa.Const); ok { //bz: adjust to kcfa
 			name = constant.StringVal(c.Value)
 		}
@@ -1760,7 +1760,7 @@ func ext۰reflect۰rtype۰InOut(a *analysis, cgn *cgnode, out bool) {
 	// and the argument is an int constant,
 	// return only that parameter.
 	index := -1
-	if site := cgn.callersite; site != nil && site[0] != nil{
+	if site := cgn.callersite; site != nil && site[0] != nil && site[0].instr != nil{
 		if c, ok := site[0].instr.Common().Args[0].(*ssa.Const); ok { //bz: adjust to kcfa
 			v, _ := constant.Int64Val(c.Value)
 			index = int(v)
@@ -1925,7 +1925,7 @@ func ext۰reflect۰rtype۰MethodByName(a *analysis, cgn *cgnode) {
 	// and the argument is a string constant,
 	// return only that method.
 	var name string
-	if site := cgn.callersite; site != nil && site[0] != nil{
+	if site := cgn.callersite; site != nil && site[0] != nil && site[0].instr != nil {
 		if c, ok := site[0].instr.Common().Args[0].(*ssa.Const); ok { //bz: adjust to kcfa
 			name = constant.StringVal(c.Value)
 		}
