@@ -14,7 +14,7 @@ Key files:
  
 Standard libraries: https://pkg.go.dev/std
 
-#### *Update*
+#### *Original*
 
 
 ====================================================================================
